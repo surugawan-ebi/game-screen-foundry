@@ -1,0 +1,17 @@
+{
+  "screenId": "title_moon_lantern_courier",
+  "screenName": "月灯り配達録 タイトル画面",
+  "screenRole": "title_screen",
+  "canvasWidth": 1280,
+  "canvasHeight": 720,
+  "baseResolution": "1280x720",
+  "worldPresetId": "preset_moon_lantern_courier_01",
+  "uiDensity": "light",
+  "safeAreas": {
+    "top": 40,
+    "right": 72,
+    "bottom": 56,
+    "left": 72
+  },
+  "stateVariantKeys": ["normal"]
+}

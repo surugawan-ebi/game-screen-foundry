@@ -1,0 +1,26 @@
+{
+  "name": "game-screen-foundry",
+  "version": "0.1.0",
+  "description": "Spec-driven local workbench for generating and assembling game screen assets.",
+  "license": "MIT",
+  "type": "commonjs",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/surugawan-ebi/game-screen-foundry.git"
+  },
+  "bugs": {
+    "url": "https://github.com/surugawan-ebi/game-screen-foundry/issues"
+  },
+  "homepage": "https://github.com/surugawan-ebi/game-screen-foundry#readme",
+  "keywords": [
+    "game-ui",
+    "game-assets",
+    "screen-layout",
+    "imagegen",
+    "codex"
+  ],
+  "scripts": {
+    "dev": "node server.js",
+    "test": "node --test"
+  }
+}

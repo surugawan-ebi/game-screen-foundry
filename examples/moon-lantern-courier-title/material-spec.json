@@ -1,0 +1,184 @@
+{
+  "screenMeta": {
+    "screenId": "title_moon_lantern_courier",
+    "canvas": {
+      "width": 1280,
+      "height": 720
+    },
+    "coordinateSpace": "screen_pixels",
+    "safeAreas": {
+      "top": 40,
+      "right": 72,
+      "bottom": 56,
+      "left": 72
+    },
+    "defaultState": "normal",
+    "supportedStates": ["normal"]
+  },
+  "placements": [
+    {
+      "placementId": "title_backdrop",
+      "assetId": "bg_moon_lantern_title",
+      "x": 640,
+      "y": 360,
+      "width": 1280,
+      "height": 720,
+      "anchor": "center",
+      "zIndex": 1,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      }
+    },
+    {
+      "placementId": "title_logo",
+      "assetId": "logo_moon_lantern_courier",
+      "x": 640,
+      "y": 180,
+      "width": 760,
+      "height": 220,
+      "anchor": "center",
+      "zIndex": 20,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      }
+    },
+    {
+      "placementId": "start_button",
+      "assetId": "btn_start_game",
+      "x": 640,
+      "y": 500,
+      "width": 340,
+      "height": 92,
+      "anchor": "center",
+      "zIndex": 30,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "nineSliceRect": {
+        "left": 18,
+        "right": 18,
+        "top": 18,
+        "bottom": 18
+      }
+    },
+    {
+      "placementId": "settings_button",
+      "assetId": "btn_open_settings",
+      "x": 640,
+      "y": 612,
+      "width": 280,
+      "height": 82,
+      "anchor": "center",
+      "zIndex": 31,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "nineSliceRect": {
+        "left": 18,
+        "right": 18,
+        "top": 18,
+        "bottom": 18
+      }
+    }
+  ],
+  "assets": [
+    {
+      "assetId": "bg_moon_lantern_title",
+      "assetType": "background",
+      "role": "ambient_backdrop",
+      "purpose": "起動画面全体の世界観を伝える背景",
+      "renderGroup": "background",
+      "visualPriority": "low",
+      "styleNotes": [
+        "月明かりの山道",
+        "配達路に灯る提灯の光",
+        "中央から下寄りはロゴとボタンの可読域として空ける"
+      ],
+      "functionNotes": [
+        "一目でゲームの空気感が伝わること",
+        "ロゴと主ボタンより目立ちすぎないこと"
+      ],
+      "exportRequirements": {
+        "transparent": false,
+        "states": ["normal"]
+      }
+    },
+    {
+      "assetId": "logo_moon_lantern_courier",
+      "assetType": "logo",
+      "role": "title_logo",
+      "purpose": "ゲームタイトルを一目で読ませ、世界観を印象付けるロゴ",
+      "renderGroup": "branding",
+      "visualPriority": "high",
+      "previewLabel": "月灯り配達録",
+      "subLabel": "月夜の配達人",
+      "styleNotes": [
+        "上品なファンタジー調のタイトル処理",
+        "提灯と月のモチーフ",
+        "薄暮の背景でも高い可読性を保つ"
+      ],
+      "functionNotes": [
+        "起動直後に補足なしで読めること",
+        "不穏さより旅立ちの期待感を優先すること"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "sizes": ["760x220"]
+      }
+    },
+    {
+      "assetId": "btn_start_game",
+      "assetType": "button",
+      "role": "primary_cta",
+      "purpose": "ゲーム開始を最優先で押させる主ボタン",
+      "renderGroup": "ui_interactive",
+      "visualPriority": "high",
+      "previewLabel": "はじめる",
+      "styleNotes": [
+        "押したくなる暖色の光",
+        "明確な行動優先度",
+        "少し上質だがシンプル"
+      ],
+      "functionNotes": [
+        "最も目を引く操作要素であること",
+        "装飾より文字の読みやすさを優先すること"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "nineSlice": true,
+        "states": ["default", "hover", "pressed"]
+      }
+    },
+    {
+      "assetId": "btn_open_settings",
+      "assetType": "button",
+      "role": "secondary_cta",
+      "purpose": "設定画面に入るための副ボタン",
+      "renderGroup": "ui_interactive",
+      "visualPriority": "medium",
+      "previewLabel": "設定",
+      "styleNotes": [
+        "開始ボタンと同じ世界観",
+        "やや控えめな強調",
+        "明快で読みやすい"
+      ],
+      "functionNotes": [
+        "開始ボタンと競合せず見つけられること",
+        "同じメニュー群として統一感があること"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "nineSlice": true,
+        "states": ["default", "hover"]
+      }
+    }
+  ]
+}

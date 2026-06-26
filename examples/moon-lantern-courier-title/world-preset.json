@@ -1,0 +1,24 @@
+{
+  "id": "preset_moon_lantern_courier_01",
+  "name": "月灯り配達録 薄暮ファンタジー",
+  "genre": "ファンタジー配達アドベンチャー",
+  "moodKeywords": ["薄暮", "静けさ", "希望", "旅情"],
+  "negativeKeywords": ["フォトリアル", "現代的なモバイルUI", "SFネオン"],
+  "shapeLanguage": "elegant_rounded",
+  "materialKeywords": ["和紙の提灯", "使い込まれた木材", "月明かりの霧", "真鍮の縁取り"],
+  "palette": {
+    "primary": "#d19749",
+    "secondary": "#315170",
+    "accent": "#8fded6",
+    "danger": "#c86d58",
+    "success": "#87b96d",
+    "neutralDark": "#0a1320",
+    "neutralLight": "#f4e3bd"
+  },
+  "lineTreatment": "soft_outline_medium",
+  "lightingStyle": "moonlit_top_glow",
+  "detailDensity": "medium_low",
+  "uiTone": "readable_first",
+  "backgroundPolicy": "transparent_with_shadow",
+  "referenceImages": []
+}

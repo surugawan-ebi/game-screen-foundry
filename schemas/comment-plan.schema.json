@@ -1,0 +1,49 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "action",
+    "summary",
+    "normalizedComment",
+    "rationale",
+    "directives",
+    "relatedAssetIds"
+  ],
+  "properties": {
+    "action": {
+      "type": "string",
+      "enum": ["noop", "retouch", "regenerate", "reposition", "lock"]
+    },
+    "summary": { "type": "string" },
+    "normalizedComment": { "type": "string" },
+    "rationale": { "type": "string" },
+    "relatedAssetIds": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "directives": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "brightnessDelta",
+        "contrastDelta",
+        "ornamentDelta",
+        "emphasisDelta",
+        "roundnessDelta",
+        "materialHint",
+        "readabilityBoost",
+        "moodShift"
+      ],
+      "properties": {
+        "brightnessDelta": { "type": "integer" },
+        "contrastDelta": { "type": "integer" },
+        "ornamentDelta": { "type": "integer" },
+        "emphasisDelta": { "type": "integer" },
+        "roundnessDelta": { "type": "integer" },
+        "materialHint": { "type": "string" },
+        "readabilityBoost": { "type": "integer" },
+        "moodShift": { "type": "string" }
+      }
+    }
+  }
+}

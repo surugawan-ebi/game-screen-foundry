@@ -1,0 +1,53 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "summary",
+    "screenScore",
+    "lockAssetIds",
+    "topFindings",
+    "suggestedActions",
+    "guardrails"
+  ],
+  "properties": {
+    "summary": { "type": "string" },
+    "screenScore": { "type": "integer" },
+    "lockAssetIds": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "guardrails": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "topFindings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["assetId", "severity", "title", "message", "suggestedComment"],
+        "properties": {
+          "assetId": { "type": "string" },
+          "severity": { "type": "string", "enum": ["low", "medium", "high"] },
+          "title": { "type": "string" },
+          "message": { "type": "string" },
+          "suggestedComment": { "type": "string" }
+        }
+      }
+    },
+    "suggestedActions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["assetId", "action", "reason", "suggestedComment"],
+        "properties": {
+          "assetId": { "type": "string" },
+          "action": { "type": "string", "enum": ["lock", "retouch", "regenerate", "reposition"] },
+          "reason": { "type": "string" },
+          "suggestedComment": { "type": "string" }
+        }
+      }
+    }
+  }
+}

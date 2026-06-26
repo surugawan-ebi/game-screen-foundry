@@ -1,0 +1,4149 @@
+{
+  "screenMeta": {
+    "screenId": "home_sky_port_atlas",
+    "canvas": {
+      "width": 1280,
+      "height": 720
+    },
+    "coordinateSpace": "screen_pixels",
+    "safeAreas": {
+      "top": 28,
+      "right": 36,
+      "bottom": 32,
+      "left": 36
+    },
+    "defaultState": "normal",
+    "supportedStates": [
+      "normal"
+    ]
+  },
+  "assemblyPolicy": {
+    "targetFidelity": "modular_reconstruction",
+    "kvRelationship": "kv_inspired_not_pixel_matched",
+    "decompositionRules": [
+      "大きな箱絵は避け、情報UIは土台と中身パーツへ分割する",
+      "文字、数値、通知数、残り時間は生成アセットに焼き込まず overlay blueprint として別管理する",
+      "上部HUBは左プロフィール、複数のリソースカプセル、丸形ユーティリティボタンへ分割する",
+      "左プロフィール枠と右任務枠は、外枠、見出し帯、中身ボタン、進捗バー、報酬チップへ分解する",
+      "同形状のボタンやカプセルは asset を再利用し、placement と overlay で意味を分ける"
+    ],
+    "reusableFamilies": [
+      "resource_capsule",
+      "top_utility_round_button",
+      "profile_action_tile",
+      "mission_row",
+      "nav_button"
+    ],
+    "dynamicOverlayPolicy": {
+      "generatedAssetsShouldExclude": [
+        "player_name",
+        "resource_values",
+        "mission_labels",
+        "button_text",
+        "notification_count"
+      ],
+      "useOverlayBlueprintsFor": [
+        "static_copy_preview",
+        "dynamic_value_binding",
+        "timer_text",
+        "tab_labels"
+      ]
+    },
+    "textSlotPolicy": {
+      "mode": "target_placement_local_rect",
+      "coordinateSystem": "slot.x/y are local top-left pixels inside targetPlacementId canvas",
+      "fallback": "legacy absolute x/y is used when targetPlacementId or slot is absent",
+      "rationale": "Runtime text follows the exact asset surface it belongs to, preventing drift when generated PNGs replace wireframe placeholders.",
+      "checks": [
+        "slot must be sized for sampleText at declared fontSize without runtime auto-shrink",
+        "slot must be inside targetPlacementId bounds",
+        "generated base asset should preserve the slot as a visually readable empty text surface"
+      ]
+    },
+    "layoutSafetyPolicy": {
+      "mode": "explicit_overlap_only",
+      "siblingOverlapDefault": "forbidden",
+      "minimumMajorSurfaceGap": 8,
+      "parentPaddingDefault": 8,
+      "allowedOverlaps": [
+        {
+          "source": "gift_cta_badge",
+          "target": "gift_cta_crate",
+          "reason": "通知バッジはギフト箱アイコン右上へ重ねる"
+        },
+        {
+          "source": "gacha_cta_orb",
+          "target": "gacha_cta_shell",
+          "reason": "ガチャオーブは専用シェル右側ソケットに重ねる"
+        }
+      ]
+    }
+  },
+  "placements": [
+    {
+      "placementId": "home_backdrop",
+      "assetId": "bg_sky_port_home",
+      "x": 640,
+      "y": 360,
+      "width": 1280,
+      "height": 720,
+      "anchor": "center",
+      "zIndex": 1,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      }
+    },
+    {
+      "placementId": "top_profile_hub_shell",
+      "assetId": "hub_profile_shell",
+      "x": 190,
+      "y": 54,
+      "width": 348,
+      "height": 74,
+      "anchor": "center",
+      "zIndex": 20,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      }
+    },
+    {
+      "placementId": "top_profile_hub_badge",
+      "assetId": "crest_anchor_badge",
+      "x": 74,
+      "y": 54,
+      "width": 92,
+      "height": 92,
+      "anchor": "center",
+      "zIndex": 22,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "top_profile_hub_shell"
+    },
+    {
+      "placementId": "top_profile_hub_exp_base",
+      "assetId": "bar_profile_exp_base",
+      "x": 308,
+      "y": 81,
+      "width": 132,
+      "height": 18,
+      "anchor": "center",
+      "zIndex": 23,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "top_profile_hub_shell"
+    },
+    {
+      "placementId": "top_profile_hub_exp_fill",
+      "assetId": "bar_profile_exp_fill",
+      "x": 286,
+      "y": 81,
+      "width": 88,
+      "height": 12,
+      "anchor": "center",
+      "zIndex": 24,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "top_profile_hub_shell"
+    },
+    {
+      "placementId": "top_capsule_stamina_shell",
+      "assetId": "hub_resource_capsule",
+      "x": 654,
+      "y": 44,
+      "width": 148,
+      "height": 50,
+      "anchor": "center",
+      "zIndex": 20,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      }
+    },
+    {
+      "placementId": "top_capsule_stamina_icon",
+      "assetId": "icon_stamina",
+      "x": 594,
+      "y": 44,
+      "width": 30,
+      "height": 30,
+      "anchor": "center",
+      "zIndex": 22,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "top_capsule_stamina_shell"
+    },
+    {
+      "placementId": "top_capsule_gem_shell",
+      "assetId": "hub_resource_capsule",
+      "x": 846,
+      "y": 44,
+      "width": 148,
+      "height": 50,
+      "anchor": "center",
+      "zIndex": 20,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      }
+    },
+    {
+      "placementId": "top_capsule_gem_icon",
+      "assetId": "icon_gem",
+      "x": 786,
+      "y": 44,
+      "width": 30,
+      "height": 30,
+      "anchor": "center",
+      "zIndex": 22,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "top_capsule_gem_shell"
+    },
+    {
+      "placementId": "top_capsule_coin_shell",
+      "assetId": "hub_resource_capsule",
+      "x": 1038,
+      "y": 44,
+      "width": 164,
+      "height": 50,
+      "anchor": "center",
+      "zIndex": 20,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      }
+    },
+    {
+      "placementId": "top_capsule_coin_icon",
+      "assetId": "icon_coin",
+      "x": 972,
+      "y": 44,
+      "width": 30,
+      "height": 30,
+      "anchor": "center",
+      "zIndex": 22,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "top_capsule_coin_shell"
+    },
+    {
+      "placementId": "top_mail_button",
+      "assetId": "btn_top_utility_round",
+      "x": 1130,
+      "y": 44,
+      "width": 50,
+      "height": 50,
+      "anchor": "center",
+      "zIndex": 20,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      }
+    },
+    {
+      "placementId": "top_mail_icon",
+      "assetId": "icon_mail",
+      "x": 1130,
+      "y": 44,
+      "width": 24,
+      "height": 24,
+      "anchor": "center",
+      "zIndex": 22,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "top_mail_button"
+    },
+    {
+      "placementId": "top_notice_button",
+      "assetId": "btn_top_utility_round",
+      "x": 1190,
+      "y": 44,
+      "width": 50,
+      "height": 50,
+      "anchor": "center",
+      "zIndex": 20,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      }
+    },
+    {
+      "placementId": "top_notice_icon",
+      "assetId": "icon_notice",
+      "x": 1190,
+      "y": 44,
+      "width": 24,
+      "height": 24,
+      "anchor": "center",
+      "zIndex": 22,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "top_notice_button"
+    },
+    {
+      "placementId": "top_menu_button",
+      "assetId": "btn_top_utility_round",
+      "x": 1250,
+      "y": 44,
+      "width": 50,
+      "height": 50,
+      "anchor": "center",
+      "zIndex": 20,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      }
+    },
+    {
+      "placementId": "top_menu_icon",
+      "assetId": "icon_menu",
+      "x": 1250,
+      "y": 44,
+      "width": 24,
+      "height": 24,
+      "anchor": "center",
+      "zIndex": 22,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "top_menu_button"
+    },
+    {
+      "placementId": "player_profile_outer",
+      "assetId": "frame_player_profile_outer",
+      "x": 222,
+      "y": 321,
+      "width": 300,
+      "height": 250,
+      "anchor": "center",
+      "zIndex": 30,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      }
+    },
+    {
+      "placementId": "player_profile_header_tab",
+      "assetId": "tab_player_profile_header",
+      "x": 222,
+      "y": 204,
+      "width": 182,
+      "height": 44,
+      "anchor": "center",
+      "zIndex": 31,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "player_profile_outer"
+    },
+    {
+      "placementId": "player_profile_emblem",
+      "assetId": "emblem_rank_compass",
+      "x": 120,
+      "y": 314,
+      "width": 96,
+      "height": 118,
+      "anchor": "center",
+      "zIndex": 32,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "player_profile_outer"
+    },
+    {
+      "placementId": "player_profile_rank_base",
+      "assetId": "bar_rank_progress_base",
+      "x": 294,
+      "y": 358,
+      "width": 136,
+      "height": 20,
+      "anchor": "center",
+      "zIndex": 32,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "player_profile_outer"
+    },
+    {
+      "placementId": "player_profile_rank_fill",
+      "assetId": "bar_rank_progress_fill",
+      "x": 273,
+      "y": 358,
+      "width": 94,
+      "height": 14,
+      "anchor": "center",
+      "zIndex": 33,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "player_profile_outer"
+    },
+    {
+      "placementId": "player_profile_tile_achievement",
+      "assetId": "tile_profile_action",
+      "x": 116,
+      "y": 438,
+      "width": 58,
+      "height": 58,
+      "anchor": "center",
+      "zIndex": 32,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "player_profile_outer"
+    },
+    {
+      "placementId": "player_profile_tile_codex",
+      "assetId": "tile_profile_action",
+      "x": 190,
+      "y": 438,
+      "width": 58,
+      "height": 58,
+      "anchor": "center",
+      "zIndex": 32,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "player_profile_outer"
+    },
+    {
+      "placementId": "player_profile_tile_ranking",
+      "assetId": "tile_profile_action",
+      "x": 264,
+      "y": 438,
+      "width": 58,
+      "height": 58,
+      "anchor": "center",
+      "zIndex": 32,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "player_profile_outer"
+    },
+    {
+      "placementId": "player_profile_tile_friends",
+      "assetId": "tile_profile_action",
+      "x": 338,
+      "y": 438,
+      "width": 58,
+      "height": 58,
+      "anchor": "center",
+      "zIndex": 32,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "player_profile_outer"
+    },
+    {
+      "placementId": "player_profile_icon_achievement",
+      "assetId": "icon_action_achievement",
+      "x": 116,
+      "y": 429,
+      "width": 24,
+      "height": 24,
+      "anchor": "center",
+      "zIndex": 33,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "player_profile_tile_achievement"
+    },
+    {
+      "placementId": "player_profile_icon_codex",
+      "assetId": "icon_action_codex",
+      "x": 190,
+      "y": 429,
+      "width": 24,
+      "height": 24,
+      "anchor": "center",
+      "zIndex": 33,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "player_profile_tile_codex"
+    },
+    {
+      "placementId": "player_profile_icon_ranking",
+      "assetId": "icon_action_ranking",
+      "x": 264,
+      "y": 429,
+      "width": 24,
+      "height": 24,
+      "anchor": "center",
+      "zIndex": 33,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "player_profile_tile_ranking"
+    },
+    {
+      "placementId": "player_profile_icon_friends",
+      "assetId": "icon_action_friends",
+      "x": 338,
+      "y": 429,
+      "width": 24,
+      "height": 24,
+      "anchor": "center",
+      "zIndex": 33,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "player_profile_tile_friends"
+    },
+    {
+      "placementId": "event_banner_art",
+      "assetId": "art_event_banner_fill",
+      "x": 640,
+      "y": 274,
+      "width": 392,
+      "height": 130,
+      "anchor": "center",
+      "zIndex": 30,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      }
+    },
+    {
+      "placementId": "event_banner_outer",
+      "assetId": "frame_event_banner_outer",
+      "x": 640,
+      "y": 274,
+      "width": 418,
+      "height": 152,
+      "anchor": "center",
+      "zIndex": 31,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      }
+    },
+    {
+      "placementId": "event_banner_live_ribbon",
+      "assetId": "ribbon_event_live",
+      "x": 492,
+      "y": 212,
+      "width": 106,
+      "height": 40,
+      "anchor": "center",
+      "zIndex": 33,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "event_banner_outer"
+    },
+    {
+      "placementId": "event_banner_dot_active",
+      "assetId": "carousel_dot_active",
+      "x": 606,
+      "y": 358,
+      "width": 16,
+      "height": 16,
+      "anchor": "center",
+      "zIndex": 33,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      }
+    },
+    {
+      "placementId": "event_banner_dot_idle_1",
+      "assetId": "carousel_dot_idle",
+      "x": 630,
+      "y": 358,
+      "width": 14,
+      "height": 14,
+      "anchor": "center",
+      "zIndex": 33,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      }
+    },
+    {
+      "placementId": "event_banner_dot_idle_2",
+      "assetId": "carousel_dot_idle",
+      "x": 654,
+      "y": 358,
+      "width": 14,
+      "height": 14,
+      "anchor": "center",
+      "zIndex": 33,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      }
+    },
+    {
+      "placementId": "event_banner_dot_idle_3",
+      "assetId": "carousel_dot_idle",
+      "x": 678,
+      "y": 358,
+      "width": 14,
+      "height": 14,
+      "anchor": "center",
+      "zIndex": 33,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      }
+    },
+    {
+      "placementId": "daily_mission_outer",
+      "assetId": "frame_daily_mission_outer",
+      "x": 1038,
+      "y": 332,
+      "width": 324,
+      "height": 292,
+      "anchor": "center",
+      "zIndex": 30,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      }
+    },
+    {
+      "placementId": "daily_mission_header_strip",
+      "assetId": "strip_daily_mission_header",
+      "x": 1038,
+      "y": 210,
+      "width": 300,
+      "height": 42,
+      "anchor": "center",
+      "zIndex": 31,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "daily_mission_outer"
+    },
+    {
+      "placementId": "daily_mission_row_login",
+      "assetId": "panel_mission_row",
+      "x": 1038,
+      "y": 260,
+      "width": 286,
+      "height": 50,
+      "anchor": "center",
+      "zIndex": 32,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "daily_mission_outer"
+    },
+    {
+      "placementId": "daily_mission_row_sortie",
+      "assetId": "panel_mission_row",
+      "x": 1038,
+      "y": 318,
+      "width": 286,
+      "height": 50,
+      "anchor": "center",
+      "zIndex": 32,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "daily_mission_outer"
+    },
+    {
+      "placementId": "daily_mission_row_shop",
+      "assetId": "panel_mission_row",
+      "x": 1038,
+      "y": 376,
+      "width": 286,
+      "height": 50,
+      "anchor": "center",
+      "zIndex": 32,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "daily_mission_outer"
+    },
+    {
+      "placementId": "daily_mission_progress_base_login",
+      "assetId": "bar_mission_progress_base",
+      "x": 967,
+      "y": 276,
+      "width": 116,
+      "height": 12,
+      "anchor": "center",
+      "zIndex": 33,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "daily_mission_row_login"
+    },
+    {
+      "placementId": "daily_mission_progress_fill_login",
+      "assetId": "bar_mission_progress_fill",
+      "x": 967,
+      "y": 276,
+      "width": 112,
+      "height": 8,
+      "anchor": "center",
+      "zIndex": 34,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "daily_mission_row_login"
+    },
+    {
+      "placementId": "daily_mission_progress_base_sortie",
+      "assetId": "bar_mission_progress_base",
+      "x": 967,
+      "y": 334,
+      "width": 116,
+      "height": 12,
+      "anchor": "center",
+      "zIndex": 33,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "daily_mission_row_sortie"
+    },
+    {
+      "placementId": "daily_mission_progress_fill_sortie",
+      "assetId": "bar_mission_progress_fill",
+      "x": 915,
+      "y": 334,
+      "width": 8,
+      "height": 8,
+      "anchor": "center",
+      "zIndex": 34,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "daily_mission_row_sortie"
+    },
+    {
+      "placementId": "daily_mission_progress_base_shop",
+      "assetId": "bar_mission_progress_base",
+      "x": 967,
+      "y": 392,
+      "width": 116,
+      "height": 12,
+      "anchor": "center",
+      "zIndex": 33,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "daily_mission_row_shop"
+    },
+    {
+      "placementId": "daily_mission_progress_fill_shop",
+      "assetId": "bar_mission_progress_fill",
+      "x": 915,
+      "y": 392,
+      "width": 8,
+      "height": 8,
+      "anchor": "center",
+      "zIndex": 34,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "daily_mission_row_shop"
+    },
+    {
+      "placementId": "daily_mission_btn_login",
+      "assetId": "btn_mission_action",
+      "x": 1138,
+      "y": 262,
+      "width": 84,
+      "height": 38,
+      "anchor": "center",
+      "zIndex": 34,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "daily_mission_row_login"
+    },
+    {
+      "placementId": "daily_mission_btn_sortie",
+      "assetId": "btn_mission_action",
+      "x": 1138,
+      "y": 320,
+      "width": 84,
+      "height": 38,
+      "anchor": "center",
+      "zIndex": 34,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "daily_mission_row_sortie"
+    },
+    {
+      "placementId": "daily_mission_btn_shop",
+      "assetId": "btn_mission_action",
+      "x": 1138,
+      "y": 378,
+      "width": 84,
+      "height": 38,
+      "anchor": "center",
+      "zIndex": 34,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "daily_mission_row_shop"
+    },
+    {
+      "placementId": "daily_mission_reward_sortie",
+      "assetId": "chip_reward_small",
+      "x": 1070,
+      "y": 320,
+      "width": 44,
+      "height": 34,
+      "anchor": "center",
+      "zIndex": 34,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "daily_mission_row_sortie"
+    },
+    {
+      "placementId": "daily_mission_reward_shop",
+      "assetId": "chip_reward_small",
+      "x": 1070,
+      "y": 378,
+      "width": 44,
+      "height": 34,
+      "anchor": "center",
+      "zIndex": 34,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "daily_mission_row_shop"
+    },
+    {
+      "placementId": "daily_mission_receive_all",
+      "assetId": "btn_receive_all",
+      "x": 1038,
+      "y": 448,
+      "width": 188,
+      "height": 44,
+      "anchor": "center",
+      "zIndex": 34,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "daily_mission_outer"
+    },
+    {
+      "placementId": "gift_cta_shell",
+      "assetId": "card_gift_cta_shell",
+      "x": 194,
+      "y": 544,
+      "width": 248,
+      "height": 96,
+      "anchor": "center",
+      "zIndex": 26,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      }
+    },
+    {
+      "placementId": "gift_cta_crate",
+      "assetId": "icon_gift_crate",
+      "x": 88,
+      "y": 544,
+      "width": 92,
+      "height": 92,
+      "anchor": "center",
+      "zIndex": 27,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      }
+    },
+    {
+      "placementId": "gift_cta_badge",
+      "assetId": "badge_notification_count",
+      "x": 132,
+      "y": 506,
+      "width": 30,
+      "height": 30,
+      "anchor": "center",
+      "zIndex": 28,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      }
+    },
+    {
+      "placementId": "sortie_button_base",
+      "assetId": "btn_start_sortie",
+      "x": 640,
+      "y": 536,
+      "width": 392,
+      "height": 114,
+      "anchor": "center",
+      "zIndex": 28,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "nineSliceRect": {
+        "left": 20,
+        "right": 20,
+        "top": 20,
+        "bottom": 20
+      }
+    },
+    {
+      "placementId": "sortie_button_anchor",
+      "assetId": "emblem_sortie_anchor",
+      "x": 640,
+      "y": 574,
+      "width": 40,
+      "height": 40,
+      "anchor": "center",
+      "zIndex": 29,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "sortie_button_base"
+    },
+    {
+      "placementId": "gacha_cta_shell",
+      "assetId": "card_gacha_cta_shell",
+      "x": 1086,
+      "y": 544,
+      "width": 248,
+      "height": 96,
+      "anchor": "center",
+      "zIndex": 26,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      }
+    },
+    {
+      "placementId": "gacha_cta_orb",
+      "assetId": "icon_gacha_orb",
+      "x": 1184,
+      "y": 544,
+      "width": 96,
+      "height": 96,
+      "anchor": "center",
+      "zIndex": 27,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      }
+    },
+    {
+      "placementId": "bottom_nav_shell",
+      "assetId": "panel_bottom_nav",
+      "x": 640,
+      "y": 662,
+      "width": 1260,
+      "height": 116,
+      "anchor": "center",
+      "zIndex": 40,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      }
+    },
+    {
+      "placementId": "bottom_nav_home",
+      "assetId": "btn_nav_active",
+      "x": 140,
+      "y": 662,
+      "width": 228,
+      "height": 96,
+      "anchor": "center",
+      "zIndex": 41,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "bottom_nav_shell"
+    },
+    {
+      "placementId": "bottom_nav_fleet",
+      "assetId": "btn_nav_default",
+      "x": 390,
+      "y": 662,
+      "width": 228,
+      "height": 96,
+      "anchor": "center",
+      "zIndex": 41,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "bottom_nav_shell"
+    },
+    {
+      "placementId": "bottom_nav_shop",
+      "assetId": "btn_nav_default",
+      "x": 640,
+      "y": 662,
+      "width": 228,
+      "height": 96,
+      "anchor": "center",
+      "zIndex": 41,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "bottom_nav_shell"
+    },
+    {
+      "placementId": "bottom_nav_mission",
+      "assetId": "btn_nav_default",
+      "x": 890,
+      "y": 662,
+      "width": 228,
+      "height": 96,
+      "anchor": "center",
+      "zIndex": 41,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "bottom_nav_shell"
+    },
+    {
+      "placementId": "bottom_nav_settings",
+      "assetId": "btn_nav_default",
+      "x": 1140,
+      "y": 662,
+      "width": 228,
+      "height": 96,
+      "anchor": "center",
+      "zIndex": 41,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "bottom_nav_shell"
+    },
+    {
+      "placementId": "bottom_nav_home_icon",
+      "assetId": "icon_nav_home",
+      "x": 84,
+      "y": 662,
+      "width": 40,
+      "height": 40,
+      "anchor": "center",
+      "zIndex": 42,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "bottom_nav_home"
+    },
+    {
+      "placementId": "bottom_nav_fleet_icon",
+      "assetId": "icon_nav_fleet",
+      "x": 334,
+      "y": 662,
+      "width": 40,
+      "height": 40,
+      "anchor": "center",
+      "zIndex": 42,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "bottom_nav_fleet"
+    },
+    {
+      "placementId": "bottom_nav_shop_icon",
+      "assetId": "icon_nav_shop",
+      "x": 584,
+      "y": 662,
+      "width": 40,
+      "height": 40,
+      "anchor": "center",
+      "zIndex": 42,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "bottom_nav_shop"
+    },
+    {
+      "placementId": "bottom_nav_mission_icon",
+      "assetId": "icon_nav_mission",
+      "x": 834,
+      "y": 662,
+      "width": 40,
+      "height": 40,
+      "anchor": "center",
+      "zIndex": 42,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "bottom_nav_mission"
+    },
+    {
+      "placementId": "bottom_nav_settings_icon",
+      "assetId": "icon_nav_settings",
+      "x": 1084,
+      "y": 662,
+      "width": 40,
+      "height": 40,
+      "anchor": "center",
+      "zIndex": 42,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      },
+      "parentId": "bottom_nav_settings"
+    }
+  ],
+  "contentOverlays": [
+    {
+      "overlayId": "ov_top_player_name",
+      "kind": "text",
+      "sampleText": "航路管理者",
+      "x": 198,
+      "y": 40,
+      "width": 170,
+      "height": 30,
+      "anchor": "center",
+      "zIndex": 26,
+      "stateVisibility": {
+        "normal": true
+      },
+      "align": "left",
+      "valign": "top",
+      "fontSize": 22,
+      "fontWeight": 700,
+      "color": "#f5efe5",
+      "textOwnership": "runtime_overlay",
+      "targetPlacementId": "top_profile_hub_shell",
+      "slot": {
+        "x": 97,
+        "y": 8,
+        "width": 170,
+        "height": 30
+      },
+      "layoutMode": "target_slot"
+    },
+    {
+      "overlayId": "ov_top_player_level",
+      "kind": "text",
+      "sampleText": "Lv. 28",
+      "x": 178,
+      "y": 74,
+      "width": 84,
+      "height": 18,
+      "anchor": "center",
+      "zIndex": 26,
+      "stateVisibility": {
+        "normal": true
+      },
+      "align": "left",
+      "fontSize": 18,
+      "fontWeight": 600,
+      "color": "#f5efe5",
+      "textOwnership": "runtime_overlay",
+      "targetPlacementId": "top_profile_hub_shell",
+      "slot": {
+        "x": 120,
+        "y": 48,
+        "width": 84,
+        "height": 18
+      },
+      "layoutMode": "target_slot"
+    },
+    {
+      "overlayId": "ov_top_player_exp",
+      "kind": "text",
+      "sampleText": "62%",
+      "x": 349,
+      "y": 81,
+      "width": 42,
+      "height": 16,
+      "anchor": "center",
+      "zIndex": 26,
+      "stateVisibility": {
+        "normal": true
+      },
+      "align": "center",
+      "fontSize": 14,
+      "fontWeight": 700,
+      "color": "#f6d47d",
+      "textOwnership": "runtime_overlay",
+      "targetPlacementId": "top_profile_hub_exp_base",
+      "slot": {
+        "x": 86,
+        "y": 1,
+        "width": 42,
+        "height": 16
+      },
+      "layoutMode": "target_slot"
+    },
+    {
+      "overlayId": "ov_top_stamina_value",
+      "kind": "text",
+      "sampleText": "120/120",
+      "x": 669,
+      "y": 44,
+      "width": 94,
+      "height": 24,
+      "anchor": "center",
+      "zIndex": 26,
+      "stateVisibility": {
+        "normal": true
+      },
+      "fontSize": 19,
+      "fontWeight": 700,
+      "color": "#f5efe5",
+      "textOwnership": "runtime_overlay",
+      "targetPlacementId": "top_capsule_stamina_shell",
+      "slot": {
+        "x": 42,
+        "y": 13,
+        "width": 94,
+        "height": 24
+      },
+      "layoutMode": "target_slot"
+    },
+    {
+      "overlayId": "ov_top_gem_value",
+      "kind": "text",
+      "sampleText": "2,450",
+      "x": 861,
+      "y": 44,
+      "width": 88,
+      "height": 24,
+      "anchor": "center",
+      "zIndex": 26,
+      "stateVisibility": {
+        "normal": true
+      },
+      "fontSize": 19,
+      "fontWeight": 700,
+      "color": "#f5efe5",
+      "textOwnership": "runtime_overlay",
+      "targetPlacementId": "top_capsule_gem_shell",
+      "slot": {
+        "x": 45,
+        "y": 13,
+        "width": 88,
+        "height": 24
+      },
+      "layoutMode": "target_slot"
+    },
+    {
+      "overlayId": "ov_top_coin_value",
+      "kind": "text",
+      "sampleText": "128,750",
+      "x": 1058,
+      "y": 44,
+      "width": 104,
+      "height": 24,
+      "anchor": "center",
+      "zIndex": 26,
+      "stateVisibility": {
+        "normal": true
+      },
+      "fontSize": 19,
+      "fontWeight": 700,
+      "color": "#f5efe5",
+      "textOwnership": "runtime_overlay",
+      "targetPlacementId": "top_capsule_coin_shell",
+      "slot": {
+        "x": 50,
+        "y": 13,
+        "width": 104,
+        "height": 24
+      },
+      "layoutMode": "target_slot"
+    },
+    {
+      "overlayId": "ov_profile_header",
+      "kind": "text",
+      "sampleText": "プレイヤー情報",
+      "x": 222,
+      "y": 204,
+      "width": 144,
+      "height": 26,
+      "anchor": "center",
+      "zIndex": 36,
+      "stateVisibility": {
+        "normal": true
+      },
+      "fontSize": 18,
+      "fontWeight": 700,
+      "color": "#f8f1e6",
+      "textOwnership": "runtime_overlay",
+      "targetPlacementId": "player_profile_header_tab",
+      "slot": {
+        "x": 19,
+        "y": 9,
+        "width": 144,
+        "height": 26
+      },
+      "layoutMode": "target_slot"
+    },
+    {
+      "overlayId": "ov_profile_rank_label",
+      "kind": "text",
+      "sampleText": "航路ランク",
+      "x": 252,
+      "y": 261,
+      "width": 104,
+      "height": 18,
+      "anchor": "center",
+      "zIndex": 36,
+      "stateVisibility": {
+        "normal": true
+      },
+      "align": "left",
+      "fontSize": 16,
+      "fontWeight": 600,
+      "color": "#5a4634",
+      "textOwnership": "runtime_overlay",
+      "targetPlacementId": "player_profile_outer",
+      "slot": {
+        "x": 128,
+        "y": 56,
+        "width": 104,
+        "height": 18
+      },
+      "layoutMode": "target_slot"
+    },
+    {
+      "overlayId": "ov_profile_rank_value",
+      "kind": "text",
+      "sampleText": "ブロンズIII",
+      "x": 272,
+      "y": 296,
+      "width": 144,
+      "height": 28,
+      "anchor": "center",
+      "zIndex": 36,
+      "stateVisibility": {
+        "normal": true
+      },
+      "align": "left",
+      "fontSize": 22,
+      "fontWeight": 700,
+      "color": "#382a20",
+      "textOwnership": "runtime_overlay",
+      "targetPlacementId": "player_profile_outer",
+      "slot": {
+        "x": 128,
+        "y": 86,
+        "width": 144,
+        "height": 28
+      },
+      "layoutMode": "target_slot"
+    },
+    {
+      "overlayId": "ov_profile_rank_progress",
+      "kind": "text",
+      "sampleText": "480/1,000",
+      "x": 294,
+      "y": 358,
+      "width": 108,
+      "height": 18,
+      "anchor": "center",
+      "zIndex": 36,
+      "stateVisibility": {
+        "normal": true
+      },
+      "fontSize": 16,
+      "fontWeight": 700,
+      "color": "#f8f6ee",
+      "textOwnership": "runtime_overlay",
+      "targetPlacementId": "player_profile_rank_base",
+      "slot": {
+        "x": 14,
+        "y": 1,
+        "width": 108,
+        "height": 18
+      },
+      "layoutMode": "target_slot"
+    },
+    {
+      "overlayId": "ov_profile_tile_achievement",
+      "kind": "text",
+      "sampleText": "実績",
+      "x": 116,
+      "y": 454,
+      "width": 58,
+      "height": 18,
+      "anchor": "center",
+      "zIndex": 36,
+      "stateVisibility": {
+        "normal": true
+      },
+      "fontSize": 12,
+      "fontWeight": 700,
+      "color": "#f5efe5",
+      "textOwnership": "runtime_overlay",
+      "targetPlacementId": "player_profile_tile_achievement",
+      "slot": {
+        "x": 0,
+        "y": 36,
+        "width": 58,
+        "height": 18
+      },
+      "layoutMode": "target_slot",
+      "strokeColor": "#1a120a",
+      "strokeWidth": 1
+    },
+    {
+      "overlayId": "ov_profile_tile_codex",
+      "kind": "text",
+      "sampleText": "図鑑",
+      "x": 190,
+      "y": 454,
+      "width": 58,
+      "height": 18,
+      "anchor": "center",
+      "zIndex": 36,
+      "stateVisibility": {
+        "normal": true
+      },
+      "fontSize": 12,
+      "fontWeight": 700,
+      "color": "#f5efe5",
+      "textOwnership": "runtime_overlay",
+      "targetPlacementId": "player_profile_tile_codex",
+      "slot": {
+        "x": 0,
+        "y": 36,
+        "width": 58,
+        "height": 18
+      },
+      "layoutMode": "target_slot",
+      "strokeColor": "#1a120a",
+      "strokeWidth": 1
+    },
+    {
+      "overlayId": "ov_profile_tile_ranking",
+      "kind": "text",
+      "sampleText": "ランキング",
+      "x": 264,
+      "y": 454,
+      "width": 58,
+      "height": 18,
+      "anchor": "center",
+      "zIndex": 36,
+      "stateVisibility": {
+        "normal": true
+      },
+      "fontSize": 10,
+      "fontWeight": 700,
+      "color": "#f5efe5",
+      "textOwnership": "runtime_overlay",
+      "targetPlacementId": "player_profile_tile_ranking",
+      "slot": {
+        "x": 0,
+        "y": 36,
+        "width": 58,
+        "height": 18
+      },
+      "layoutMode": "target_slot",
+      "strokeColor": "#1a120a",
+      "strokeWidth": 1
+    },
+    {
+      "overlayId": "ov_profile_tile_friends",
+      "kind": "text",
+      "sampleText": "フレンド",
+      "x": 338,
+      "y": 454,
+      "width": 58,
+      "height": 18,
+      "anchor": "center",
+      "zIndex": 36,
+      "stateVisibility": {
+        "normal": true
+      },
+      "fontSize": 11,
+      "fontWeight": 700,
+      "color": "#f5efe5",
+      "textOwnership": "runtime_overlay",
+      "targetPlacementId": "player_profile_tile_friends",
+      "slot": {
+        "x": 0,
+        "y": 36,
+        "width": 58,
+        "height": 18
+      },
+      "layoutMode": "target_slot",
+      "strokeColor": "#1a120a",
+      "strokeWidth": 1
+    },
+    {
+      "overlayId": "ov_mission_header",
+      "kind": "text",
+      "sampleText": "デイリー任務",
+      "x": 969,
+      "y": 204,
+      "width": 126,
+      "height": 24,
+      "anchor": "center",
+      "zIndex": 36,
+      "stateVisibility": {
+        "normal": true
+      },
+      "align": "left",
+      "fontSize": 17,
+      "fontWeight": 700,
+      "color": "#f7efe4",
+      "textOwnership": "runtime_overlay",
+      "targetPlacementId": "daily_mission_header_strip",
+      "slot": {
+        "x": 18,
+        "y": 9,
+        "width": 126,
+        "height": 24
+      },
+      "layoutMode": "target_slot"
+    },
+    {
+      "overlayId": "ov_mission_timer_label",
+      "kind": "text",
+      "sampleText": "リセットまで",
+      "x": 1081,
+      "y": 204,
+      "width": 74,
+      "height": 16,
+      "anchor": "center",
+      "zIndex": 36,
+      "stateVisibility": {
+        "normal": true
+      },
+      "align": "left",
+      "fontSize": 11,
+      "fontWeight": 600,
+      "color": "#f7efe4",
+      "textOwnership": "runtime_overlay",
+      "targetPlacementId": "daily_mission_header_strip",
+      "slot": {
+        "x": 156,
+        "y": 13,
+        "width": 74,
+        "height": 16
+      },
+      "layoutMode": "target_slot"
+    },
+    {
+      "overlayId": "ov_mission_timer_value",
+      "kind": "text",
+      "sampleText": "12:34:56",
+      "x": 1153,
+      "y": 204,
+      "width": 62,
+      "height": 16,
+      "anchor": "center",
+      "zIndex": 36,
+      "stateVisibility": {
+        "normal": true
+      },
+      "align": "center",
+      "fontSize": 11,
+      "fontWeight": 700,
+      "color": "#2bd0ff",
+      "textOwnership": "runtime_overlay",
+      "targetPlacementId": "daily_mission_header_strip",
+      "slot": {
+        "x": 234,
+        "y": 13,
+        "width": 62,
+        "height": 16
+      },
+      "layoutMode": "target_slot"
+    },
+    {
+      "overlayId": "ov_mission_login_label",
+      "kind": "text",
+      "sampleText": "デイリーログイン",
+      "x": 980,
+      "y": 270,
+      "width": 142,
+      "height": 20,
+      "anchor": "center",
+      "zIndex": 36,
+      "stateVisibility": {
+        "normal": true
+      },
+      "align": "left",
+      "fontSize": 14,
+      "fontWeight": 700,
+      "color": "#35271c",
+      "textOwnership": "runtime_overlay",
+      "targetPlacementId": "daily_mission_row_login",
+      "slot": {
+        "x": 14,
+        "y": 9,
+        "width": 142,
+        "height": 20
+      },
+      "layoutMode": "target_slot"
+    },
+    {
+      "overlayId": "ov_mission_login_count",
+      "kind": "text",
+      "sampleText": "1/1",
+      "x": 971,
+      "y": 273,
+      "width": 42,
+      "height": 16,
+      "anchor": "center",
+      "zIndex": 36,
+      "stateVisibility": {
+        "normal": true
+      },
+      "fontSize": 11,
+      "fontWeight": 700,
+      "color": "#35271c",
+      "textOwnership": "runtime_overlay",
+      "targetPlacementId": "daily_mission_row_login",
+      "slot": {
+        "x": 55,
+        "y": 30,
+        "width": 42,
+        "height": 16
+      },
+      "layoutMode": "target_slot"
+    },
+    {
+      "overlayId": "ov_mission_login_btn",
+      "kind": "text",
+      "sampleText": "受け取る",
+      "x": 1138,
+      "y": 278,
+      "width": 70,
+      "height": 20,
+      "anchor": "center",
+      "zIndex": 36,
+      "stateVisibility": {
+        "normal": true
+      },
+      "fontSize": 14,
+      "fontWeight": 700,
+      "color": "#f8f2ea",
+      "textOwnership": "runtime_overlay",
+      "targetPlacementId": "daily_mission_btn_login",
+      "slot": {
+        "x": 7,
+        "y": 9,
+        "width": 70,
+        "height": 20
+      },
+      "layoutMode": "target_slot"
+    },
+    {
+      "overlayId": "ov_mission_sortie_label",
+      "kind": "text",
+      "sampleText": "艦隊を1回出航させる",
+      "x": 994,
+      "y": 344,
+      "width": 170,
+      "height": 20,
+      "anchor": "center",
+      "zIndex": 36,
+      "stateVisibility": {
+        "normal": true
+      },
+      "align": "left",
+      "fontSize": 13,
+      "fontWeight": 700,
+      "color": "#35271c",
+      "textOwnership": "runtime_overlay",
+      "targetPlacementId": "daily_mission_row_sortie",
+      "slot": {
+        "x": 14,
+        "y": 9,
+        "width": 170,
+        "height": 20
+      },
+      "layoutMode": "target_slot"
+    },
+    {
+      "overlayId": "ov_mission_sortie_count",
+      "kind": "text",
+      "sampleText": "0/1",
+      "x": 971,
+      "y": 331,
+      "width": 42,
+      "height": 16,
+      "anchor": "center",
+      "zIndex": 36,
+      "stateVisibility": {
+        "normal": true
+      },
+      "fontSize": 11,
+      "fontWeight": 700,
+      "color": "#35271c",
+      "textOwnership": "runtime_overlay",
+      "targetPlacementId": "daily_mission_row_sortie",
+      "slot": {
+        "x": 55,
+        "y": 30,
+        "width": 42,
+        "height": 16
+      },
+      "layoutMode": "target_slot"
+    },
+    {
+      "overlayId": "ov_mission_sortie_btn",
+      "kind": "text",
+      "sampleText": "移動",
+      "x": 1138,
+      "y": 352,
+      "width": 70,
+      "height": 20,
+      "anchor": "center",
+      "zIndex": 36,
+      "stateVisibility": {
+        "normal": true
+      },
+      "fontSize": 14,
+      "fontWeight": 700,
+      "color": "#f8f2ea",
+      "textOwnership": "runtime_overlay",
+      "targetPlacementId": "daily_mission_btn_sortie",
+      "slot": {
+        "x": 7,
+        "y": 9,
+        "width": 70,
+        "height": 20
+      },
+      "layoutMode": "target_slot"
+    },
+    {
+      "overlayId": "ov_mission_sortie_reward",
+      "kind": "text",
+      "sampleText": "x30",
+      "x": 1070,
+      "y": 328,
+      "width": 42,
+      "height": 14,
+      "anchor": "center",
+      "zIndex": 36,
+      "stateVisibility": {
+        "normal": true
+      },
+      "fontSize": 8,
+      "fontWeight": 700,
+      "color": "#f8f2ea",
+      "textOwnership": "runtime_overlay",
+      "targetPlacementId": "daily_mission_reward_sortie",
+      "slot": {
+        "x": 1,
+        "y": 18,
+        "width": 42,
+        "height": 14
+      },
+      "layoutMode": "target_slot"
+    },
+    {
+      "overlayId": "ov_mission_shop_label",
+      "kind": "text",
+      "sampleText": "ショップで1回購入する",
+      "x": 994,
+      "y": 418,
+      "width": 170,
+      "height": 20,
+      "anchor": "center",
+      "zIndex": 36,
+      "stateVisibility": {
+        "normal": true
+      },
+      "align": "left",
+      "fontSize": 13,
+      "fontWeight": 700,
+      "color": "#35271c",
+      "textOwnership": "runtime_overlay",
+      "targetPlacementId": "daily_mission_row_shop",
+      "slot": {
+        "x": 14,
+        "y": 9,
+        "width": 170,
+        "height": 20
+      },
+      "layoutMode": "target_slot"
+    },
+    {
+      "overlayId": "ov_mission_shop_count",
+      "kind": "text",
+      "sampleText": "0/1",
+      "x": 971,
+      "y": 389,
+      "width": 42,
+      "height": 16,
+      "anchor": "center",
+      "zIndex": 36,
+      "stateVisibility": {
+        "normal": true
+      },
+      "fontSize": 11,
+      "fontWeight": 700,
+      "color": "#35271c",
+      "textOwnership": "runtime_overlay",
+      "targetPlacementId": "daily_mission_row_shop",
+      "slot": {
+        "x": 55,
+        "y": 30,
+        "width": 42,
+        "height": 16
+      },
+      "layoutMode": "target_slot"
+    },
+    {
+      "overlayId": "ov_mission_shop_btn",
+      "kind": "text",
+      "sampleText": "移動",
+      "x": 1138,
+      "y": 426,
+      "width": 70,
+      "height": 20,
+      "anchor": "center",
+      "zIndex": 36,
+      "stateVisibility": {
+        "normal": true
+      },
+      "fontSize": 14,
+      "fontWeight": 700,
+      "color": "#f8f2ea",
+      "textOwnership": "runtime_overlay",
+      "targetPlacementId": "daily_mission_btn_shop",
+      "slot": {
+        "x": 7,
+        "y": 9,
+        "width": 70,
+        "height": 20
+      },
+      "layoutMode": "target_slot"
+    },
+    {
+      "overlayId": "ov_mission_shop_reward",
+      "kind": "text",
+      "sampleText": "x10,000",
+      "x": 1070,
+      "y": 386,
+      "width": 42,
+      "height": 14,
+      "anchor": "center",
+      "zIndex": 36,
+      "stateVisibility": {
+        "normal": true
+      },
+      "fontSize": 8,
+      "fontWeight": 700,
+      "color": "#f8f2ea",
+      "textOwnership": "runtime_overlay",
+      "targetPlacementId": "daily_mission_reward_shop",
+      "slot": {
+        "x": 1,
+        "y": 18,
+        "width": 42,
+        "height": 14
+      },
+      "layoutMode": "target_slot"
+    },
+    {
+      "overlayId": "ov_mission_receive_all",
+      "kind": "text",
+      "sampleText": "すべて受け取る",
+      "x": 1038,
+      "y": 449,
+      "width": 132,
+      "height": 22,
+      "anchor": "center",
+      "zIndex": 36,
+      "stateVisibility": {
+        "normal": true
+      },
+      "fontSize": 17,
+      "fontWeight": 700,
+      "color": "#f8f2ea",
+      "textOwnership": "runtime_overlay",
+      "targetPlacementId": "daily_mission_receive_all",
+      "slot": {
+        "x": 28,
+        "y": 11,
+        "width": 132,
+        "height": 22
+      },
+      "layoutMode": "target_slot"
+    },
+    {
+      "overlayId": "ov_gift_count",
+      "kind": "text",
+      "sampleText": "3",
+      "x": 132,
+      "y": 506,
+      "width": 20,
+      "height": 18,
+      "anchor": "center",
+      "zIndex": 36,
+      "stateVisibility": {
+        "normal": true
+      },
+      "fontSize": 16,
+      "fontWeight": 800,
+      "color": "#ffffff",
+      "textOwnership": "runtime_overlay",
+      "targetPlacementId": "gift_cta_badge",
+      "slot": {
+        "x": 5,
+        "y": 6,
+        "width": 20,
+        "height": 18
+      },
+      "layoutMode": "target_slot"
+    },
+    {
+      "overlayId": "ov_gift_title",
+      "kind": "text",
+      "sampleText": "ギフト",
+      "x": 219,
+      "y": 529,
+      "width": 118,
+      "height": 30,
+      "anchor": "center",
+      "zIndex": 36,
+      "stateVisibility": {
+        "normal": true
+      },
+      "align": "left",
+      "valign": "top",
+      "fontSize": 24,
+      "fontWeight": 700,
+      "color": "#f4eadc",
+      "textOwnership": "runtime_overlay",
+      "targetPlacementId": "gift_cta_shell",
+      "slot": {
+        "x": 90,
+        "y": 18,
+        "width": 118,
+        "height": 30
+      },
+      "layoutMode": "target_slot"
+    },
+    {
+      "overlayId": "ov_gift_copy",
+      "kind": "text",
+      "sampleText": "受け取り可能",
+      "x": 220,
+      "y": 561,
+      "width": 120,
+      "height": 26,
+      "anchor": "center",
+      "zIndex": 36,
+      "stateVisibility": {
+        "normal": true
+      },
+      "align": "left",
+      "valign": "top",
+      "fontSize": 14,
+      "fontWeight": 700,
+      "color": "#f5d86c",
+      "textOwnership": "runtime_overlay",
+      "targetPlacementId": "gift_cta_shell",
+      "slot": {
+        "x": 90,
+        "y": 52,
+        "width": 120,
+        "height": 26
+      },
+      "layoutMode": "target_slot"
+    },
+    {
+      "overlayId": "ov_sortie_cta",
+      "kind": "text",
+      "sampleText": "出航する",
+      "x": 640,
+      "y": 558,
+      "width": 220,
+      "height": 46,
+      "anchor": "center",
+      "zIndex": 36,
+      "stateVisibility": {
+        "normal": true
+      },
+      "fontSize": 44,
+      "fontWeight": 800,
+      "color": "#f5f8fb",
+      "strokeColor": "#244765",
+      "strokeWidth": 2,
+      "textOwnership": "runtime_overlay",
+      "targetPlacementId": "sortie_button_base",
+      "slot": {
+        "x": 86,
+        "y": 34,
+        "width": 220,
+        "height": 46
+      },
+      "layoutMode": "target_slot"
+    },
+    {
+      "overlayId": "ov_gacha_title",
+      "kind": "text",
+      "sampleText": "ガチャ",
+      "x": 1034,
+      "y": 529,
+      "width": 104,
+      "height": 30,
+      "anchor": "center",
+      "zIndex": 36,
+      "stateVisibility": {
+        "normal": true
+      },
+      "align": "left",
+      "valign": "top",
+      "fontSize": 24,
+      "fontWeight": 700,
+      "color": "#f4eadc",
+      "textOwnership": "runtime_overlay",
+      "targetPlacementId": "gacha_cta_shell",
+      "slot": {
+        "x": 20,
+        "y": 18,
+        "width": 104,
+        "height": 30
+      },
+      "layoutMode": "target_slot"
+    },
+    {
+      "overlayId": "ov_gacha_copy",
+      "kind": "text",
+      "sampleText": "新しい出会いが\n待っています",
+      "x": 1038,
+      "y": 563,
+      "width": 112,
+      "height": 34,
+      "anchor": "center",
+      "zIndex": 36,
+      "stateVisibility": {
+        "normal": true
+      },
+      "align": "left",
+      "valign": "top",
+      "fontSize": 13,
+      "lineHeight": 15,
+      "fontWeight": 700,
+      "color": "#f5d86c",
+      "textOwnership": "runtime_overlay",
+      "targetPlacementId": "gacha_cta_shell",
+      "slot": {
+        "x": 20,
+        "y": 50,
+        "width": 112,
+        "height": 34
+      },
+      "layoutMode": "target_slot"
+    },
+    {
+      "overlayId": "ov_nav_home",
+      "kind": "text",
+      "sampleText": "ホーム",
+      "x": 168,
+      "y": 678,
+      "width": 92,
+      "height": 28,
+      "anchor": "center",
+      "zIndex": 44,
+      "stateVisibility": {
+        "normal": true
+      },
+      "fontSize": 23,
+      "fontWeight": 700,
+      "color": "#f4f6fb",
+      "textOwnership": "runtime_overlay",
+      "targetPlacementId": "bottom_nav_home",
+      "slot": {
+        "x": 96,
+        "y": 50,
+        "width": 92,
+        "height": 28
+      },
+      "layoutMode": "target_slot"
+    },
+    {
+      "overlayId": "ov_nav_fleet",
+      "kind": "text",
+      "sampleText": "艦隊",
+      "x": 418,
+      "y": 678,
+      "width": 92,
+      "height": 28,
+      "anchor": "center",
+      "zIndex": 44,
+      "stateVisibility": {
+        "normal": true
+      },
+      "fontSize": 23,
+      "fontWeight": 700,
+      "color": "#f4eadc",
+      "textOwnership": "runtime_overlay",
+      "targetPlacementId": "bottom_nav_fleet",
+      "slot": {
+        "x": 96,
+        "y": 50,
+        "width": 92,
+        "height": 28
+      },
+      "layoutMode": "target_slot"
+    },
+    {
+      "overlayId": "ov_nav_shop",
+      "kind": "text",
+      "sampleText": "ショップ",
+      "x": 668,
+      "y": 678,
+      "width": 112,
+      "height": 28,
+      "anchor": "center",
+      "zIndex": 44,
+      "stateVisibility": {
+        "normal": true
+      },
+      "fontSize": 23,
+      "fontWeight": 700,
+      "color": "#f4eadc",
+      "textOwnership": "runtime_overlay",
+      "targetPlacementId": "bottom_nav_shop",
+      "slot": {
+        "x": 86,
+        "y": 50,
+        "width": 112,
+        "height": 28
+      },
+      "layoutMode": "target_slot"
+    },
+    {
+      "overlayId": "ov_nav_mission",
+      "kind": "text",
+      "sampleText": "任務",
+      "x": 918,
+      "y": 678,
+      "width": 92,
+      "height": 28,
+      "anchor": "center",
+      "zIndex": 44,
+      "stateVisibility": {
+        "normal": true
+      },
+      "fontSize": 23,
+      "fontWeight": 700,
+      "color": "#f4eadc",
+      "textOwnership": "runtime_overlay",
+      "targetPlacementId": "bottom_nav_mission",
+      "slot": {
+        "x": 96,
+        "y": 50,
+        "width": 92,
+        "height": 28
+      },
+      "layoutMode": "target_slot"
+    },
+    {
+      "overlayId": "ov_nav_settings",
+      "kind": "text",
+      "sampleText": "設定",
+      "x": 1168,
+      "y": 678,
+      "width": 92,
+      "height": 28,
+      "anchor": "center",
+      "zIndex": 44,
+      "stateVisibility": {
+        "normal": true
+      },
+      "fontSize": 23,
+      "fontWeight": 700,
+      "color": "#f4eadc",
+      "textOwnership": "runtime_overlay",
+      "targetPlacementId": "bottom_nav_settings",
+      "slot": {
+        "x": 96,
+        "y": 50,
+        "width": 92,
+        "height": 28
+      },
+      "layoutMode": "target_slot"
+    }
+  ],
+  "assets": [
+    {
+      "assetId": "bg_sky_port_home",
+      "assetType": "background",
+      "role": "ambient_backdrop",
+      "purpose": "HOME 画面全体の空港都市世界観を伝える背景全景",
+      "renderGroup": "background",
+      "visualPriority": "low",
+      "styleNotes": [
+        "空中港の全景",
+        "中央広場はCTAの可読域として空ける",
+        "橋や塔はあるがHUD裏で騒がしくしすぎない"
+      ],
+      "functionNotes": [
+        "画面の最背面として常時敷く",
+        "大型UIの背後でも輪郭が保てる"
+      ],
+      "exportRequirements": {
+        "transparent": false,
+        "states": [
+          "normal"
+        ]
+      },
+      "compositionRole": "scene_backdrop",
+      "contentModel": {
+        "mode": "baked_background",
+        "externalText": false
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_all_assets",
+        "firstPassModeLabel": "一括で本生成",
+        "backendClass": "image_batch",
+        "backendClassLabel": "imagegen実画像候補",
+        "batchGroup": "bg_sky_port_home",
+        "targetedRegenerate": true,
+        "note": "KVの雰囲気を運ぶ主要素材として、初回一括生成で実画像ジョブを走らせる対象。"
+      }
+    },
+    {
+      "assetId": "hub_profile_shell",
+      "assetType": "panel",
+      "role": "status_profile_shell",
+      "purpose": "左上プロフィールHUBの外殻",
+      "renderGroup": "ui_foundation",
+      "visualPriority": "high",
+      "styleNotes": [
+        "黒紺の金縁カプセル",
+        "左端に大型紋章が食い込む構造",
+        "名前と経験値が載る余白を確保"
+      ],
+      "functionNotes": [
+        "文字を焼き込まない",
+        "上部HUDのひとかたまりを定義する"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "sizes": [
+          "348x74"
+        ]
+      },
+      "contentModel": {
+        "mode": "frame_only",
+        "slots": [
+          "name",
+          "level",
+          "exp_track",
+          "exp_value"
+        ]
+      },
+      "textHandling": {
+        "ownership": "runtime_overlay",
+        "rationale": "プレイヤー名、レベル、経験値割合はプレイ状況で変わるため、素材には焼き込まない。",
+        "runtimeTextSlots": [
+          "player_name",
+          "player_level",
+          "exp_percent"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_all_assets",
+        "firstPassModeLabel": "一括で本生成",
+        "backendClass": "image_batch",
+        "backendClassLabel": "imagegen実画像候補",
+        "batchGroup": "hub_profile_shell",
+        "targetedRegenerate": true,
+        "note": "KVの雰囲気を運ぶ主要素材として、初回一括生成で実画像ジョブを走らせる対象。"
+      }
+    },
+    {
+      "assetId": "crest_anchor_badge",
+      "assetType": "icon",
+      "role": "player_crest",
+      "purpose": "プロフィールHUB左端の錨紋章",
+      "renderGroup": "ui_symbol",
+      "visualPriority": "high",
+      "styleNotes": [
+        "金属エンブレム",
+        "円形リース付き",
+        "プロフィールの象徴として最も装飾密度が高い"
+      ],
+      "functionNotes": [
+        "単体でもプレイヤー識別記号に使える"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "sizes": [
+          "92x92"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_all_assets",
+        "firstPassModeLabel": "一括で本生成",
+        "backendClass": "image_batch",
+        "backendClassLabel": "imagegen実画像候補",
+        "batchGroup": "crest_anchor_badge",
+        "targetedRegenerate": true,
+        "note": "KVの雰囲気を運ぶ主要素材として、初回一括生成で実画像ジョブを走らせる対象。"
+      }
+    },
+    {
+      "assetId": "bar_profile_exp_base",
+      "assetType": "panel",
+      "role": "progress_track",
+      "purpose": "プロフィールHUB内の経験値トラック土台",
+      "renderGroup": "ui_foundation",
+      "visualPriority": "medium",
+      "styleNotes": [
+        "暗い金属枠",
+        "細い横長",
+        "HUDに埋め込みやすい"
+      ],
+      "functionNotes": [
+        "値テキストと重ねても可読性を崩さない"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "sizes": [
+          "132x18"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_family_shared",
+        "firstPassModeLabel": "一括でファミリー生成",
+        "backendClass": "template_family_batch",
+        "backendClassLabel": "SVGテンプレ生成",
+        "batchGroup": "bar_profile_exp_base",
+        "targetedRegenerate": true,
+        "note": "初回一括生成で部品ファミリーをまとめて確定する対象。"
+      }
+    },
+    {
+      "assetId": "bar_profile_exp_fill",
+      "assetType": "panel",
+      "role": "progress_fill",
+      "purpose": "プロフィールHUB内の経験値フィル",
+      "renderGroup": "ui_feedback",
+      "visualPriority": "medium",
+      "styleNotes": [
+        "黄金色の細い発光帯",
+        "短くても達成率が分かる"
+      ],
+      "functionNotes": [
+        "横方向スケールで割合表現できる"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "sizes": [
+          "88x12"
+        ],
+        "scalableAxis": "x"
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_family_shared",
+        "firstPassModeLabel": "一括でファミリー生成",
+        "backendClass": "template_family_batch",
+        "backendClassLabel": "SVGテンプレ生成",
+        "batchGroup": "bar_profile_exp_fill",
+        "targetedRegenerate": true,
+        "note": "初回一括生成で部品ファミリーをまとめて確定する対象。"
+      }
+    },
+    {
+      "assetId": "hub_resource_capsule",
+      "assetType": "panel",
+      "role": "resource_shell",
+      "purpose": "スタミナ・宝石・コインに使う共通リソースカプセル",
+      "renderGroup": "ui_foundation",
+      "visualPriority": "high",
+      "styleNotes": [
+        "黒紺ベースの金縁ピル型",
+        "左にアイコン、中央に値、右に加算導線が乗る"
+      ],
+      "functionNotes": [
+        "複数通貨で使い回す",
+        "数値が差し替わっても幅破綻しない"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "nineSlice": true,
+        "sizes": [
+          "148x50",
+          "164x50"
+        ]
+      },
+      "contentModel": {
+        "mode": "frame_only",
+        "slots": [
+          "icon",
+          "value",
+          "plus_button"
+        ]
+      },
+      "textHandling": {
+        "ownership": "runtime_overlay",
+        "rationale": "スタミナや通貨の数値は常時変動するため、器だけ生成して値は後載せする。",
+        "runtimeTextSlots": [
+          "resource_value"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_all_assets",
+        "firstPassModeLabel": "一括で本生成",
+        "backendClass": "image_batch",
+        "backendClassLabel": "imagegen実画像候補",
+        "batchGroup": "hub_resource_capsule",
+        "targetedRegenerate": true,
+        "note": "KVの雰囲気を運ぶ主要素材として、初回一括生成で実画像ジョブを走らせる対象。"
+      }
+    },
+    {
+      "assetId": "btn_top_utility_round",
+      "assetType": "button",
+      "role": "utility_round_button",
+      "purpose": "メール・通知・メニューに使う共通丸ボタン",
+      "renderGroup": "ui_interactive",
+      "visualPriority": "medium",
+      "styleNotes": [
+        "丸形金縁",
+        "黒い面と軽いハイライト",
+        "上部右端でも埋もれない"
+      ],
+      "functionNotes": [
+        "中身の記号は別アイコンで差し替える"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "states": [
+          "default",
+          "hover"
+        ],
+        "sizes": [
+          "50x50"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_all_assets",
+        "firstPassModeLabel": "一括で本生成",
+        "backendClass": "image_batch",
+        "backendClassLabel": "imagegen実画像候補",
+        "batchGroup": "btn_top_utility_round",
+        "targetedRegenerate": true,
+        "note": "KVの雰囲気を運ぶ主要素材として、初回一括生成で実画像ジョブを走らせる対象。"
+      }
+    },
+    {
+      "assetId": "icon_stamina",
+      "assetType": "icon",
+      "role": "resource_icon",
+      "purpose": "スタミナを示す稲妻アイコン",
+      "renderGroup": "ui_symbol",
+      "visualPriority": "medium",
+      "styleNotes": [
+        "黄緑の稲妻",
+        "小さくても識別できる"
+      ],
+      "functionNotes": [
+        "カプセル左側に固定配置する"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "sizes": [
+          "30x30"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_symbol_set",
+        "firstPassModeLabel": "一括で記号セット生成",
+        "backendClass": "symbol_batch",
+        "backendClassLabel": "SVGアイコン生成",
+        "batchGroup": "resource_icon_symbols",
+        "targetedRegenerate": true,
+        "note": "小型記号は同一トンマナのセットとしてまとめて生成する対象。"
+      }
+    },
+    {
+      "assetId": "icon_gem",
+      "assetType": "icon",
+      "role": "resource_icon",
+      "purpose": "課金通貨を示す宝石アイコン",
+      "renderGroup": "ui_symbol",
+      "visualPriority": "medium",
+      "styleNotes": [
+        "青い結晶",
+        "高級感のある光沢"
+      ],
+      "functionNotes": [
+        "黒背景でも抜ける明度が必要"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "sizes": [
+          "30x30"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_symbol_set",
+        "firstPassModeLabel": "一括で記号セット生成",
+        "backendClass": "symbol_batch",
+        "backendClassLabel": "SVGアイコン生成",
+        "batchGroup": "resource_icon_symbols",
+        "targetedRegenerate": true,
+        "note": "小型記号は同一トンマナのセットとしてまとめて生成する対象。"
+      }
+    },
+    {
+      "assetId": "icon_coin",
+      "assetType": "icon",
+      "role": "resource_icon",
+      "purpose": "通常通貨を示すコインアイコン",
+      "renderGroup": "ui_symbol",
+      "visualPriority": "medium",
+      "styleNotes": [
+        "金貨",
+        "中央刻印がある"
+      ],
+      "functionNotes": [
+        "値と並んだ時に潰れない"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "sizes": [
+          "30x30"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_symbol_set",
+        "firstPassModeLabel": "一括で記号セット生成",
+        "backendClass": "symbol_batch",
+        "backendClassLabel": "SVGアイコン生成",
+        "batchGroup": "resource_icon_symbols",
+        "targetedRegenerate": true,
+        "note": "小型記号は同一トンマナのセットとしてまとめて生成する対象。"
+      }
+    },
+    {
+      "assetId": "icon_mail",
+      "assetType": "icon",
+      "role": "utility_icon",
+      "purpose": "メール導線の封筒記号",
+      "renderGroup": "ui_symbol",
+      "visualPriority": "medium",
+      "styleNotes": [
+        "封筒のシルエット",
+        "白すぎず金属UIに馴染む"
+      ],
+      "functionNotes": [
+        "丸ボタンの中央で見やすい"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "sizes": [
+          "24x24"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_symbol_set",
+        "firstPassModeLabel": "一括で記号セット生成",
+        "backendClass": "symbol_batch",
+        "backendClassLabel": "SVGアイコン生成",
+        "batchGroup": "utility_icon_symbols",
+        "targetedRegenerate": true,
+        "note": "小型記号は同一トンマナのセットとしてまとめて生成する対象。"
+      }
+    },
+    {
+      "assetId": "icon_notice",
+      "assetType": "icon",
+      "role": "utility_icon",
+      "purpose": "お知らせ導線のメガホン記号",
+      "renderGroup": "ui_symbol",
+      "visualPriority": "medium",
+      "styleNotes": [
+        "メガホンのシルエット",
+        "少し動きがある"
+      ],
+      "functionNotes": [
+        "丸ボタンの中央で読める"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "sizes": [
+          "24x24"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_symbol_set",
+        "firstPassModeLabel": "一括で記号セット生成",
+        "backendClass": "symbol_batch",
+        "backendClassLabel": "SVGアイコン生成",
+        "batchGroup": "utility_icon_symbols",
+        "targetedRegenerate": true,
+        "note": "小型記号は同一トンマナのセットとしてまとめて生成する対象。"
+      }
+    },
+    {
+      "assetId": "icon_menu",
+      "assetType": "icon",
+      "role": "utility_icon",
+      "purpose": "メニュー導線のハンバーガー記号",
+      "renderGroup": "ui_symbol",
+      "visualPriority": "medium",
+      "styleNotes": [
+        "3本線",
+        "機能記号として素直"
+      ],
+      "functionNotes": [
+        "他の丸ボタンと同一トーン"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "sizes": [
+          "24x24"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_symbol_set",
+        "firstPassModeLabel": "一括で記号セット生成",
+        "backendClass": "symbol_batch",
+        "backendClassLabel": "SVGアイコン生成",
+        "batchGroup": "utility_icon_symbols",
+        "targetedRegenerate": true,
+        "note": "小型記号は同一トンマナのセットとしてまとめて生成する対象。"
+      }
+    },
+    {
+      "assetId": "frame_player_profile_outer",
+      "assetType": "card_frame",
+      "role": "info_panel_shell",
+      "purpose": "左のプレイヤー情報パネル外枠",
+      "renderGroup": "ui_foundation",
+      "visualPriority": "high",
+      "styleNotes": [
+        "羊皮紙系の内側と真鍮フレーム",
+        "中身を載せるための無地の外枠",
+        "見出しタブや内部ボタン枠は焼き込まない",
+        "下部に4つの小ボタンを並べられる余白"
+      ],
+      "functionNotes": [
+        "文字や数値を焼き込まない",
+        "中身差し替え前提の土台",
+        "見出しは tab_player_profile_header placement が担当する"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "sizes": [
+          "300x250"
+        ]
+      },
+      "contentModel": {
+        "mode": "frame_only",
+        "slots": [
+          "content_area"
+        ],
+        "forbiddenBakedElements": [
+          "title_tab",
+          "panel_title",
+          "emblem",
+          "rank_text",
+          "rank_progress",
+          "action_tiles"
+        ]
+      },
+      "textHandling": {
+        "ownership": "runtime_overlay",
+        "rationale": "ランク名や進捗値、各導線ラベルは状態や翻訳差し替え対象なので overlay 管理にする。",
+        "runtimeTextSlots": [
+          "panel_title",
+          "rank_label",
+          "rank_value",
+          "progress_value",
+          "action_tile_labels"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_all_assets",
+        "firstPassModeLabel": "一括で本生成",
+        "backendClass": "image_batch",
+        "backendClassLabel": "imagegen実画像候補",
+        "batchGroup": "frame_player_profile_outer",
+        "targetedRegenerate": true,
+        "note": "KVの雰囲気を運ぶ主要素材として、初回一括生成で実画像ジョブを走らせる対象。"
+      }
+    },
+    {
+      "assetId": "tab_player_profile_header",
+      "assetType": "panel",
+      "role": "title_tab",
+      "purpose": "プレイヤー情報パネル上部の見出しタブ",
+      "renderGroup": "ui_foundation",
+      "visualPriority": "medium",
+      "styleNotes": [
+        "短い黒紺タブ",
+        "左右に金具",
+        "白文字が中央に載る"
+      ],
+      "functionNotes": [
+        "情報パネル見出しに再利用可能"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "sizes": [
+          "182x44"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_family_shared",
+        "firstPassModeLabel": "一括でファミリー生成",
+        "backendClass": "template_family_batch",
+        "backendClassLabel": "SVGテンプレ生成",
+        "batchGroup": "tab_player_profile_header",
+        "targetedRegenerate": true,
+        "note": "初回一括生成で部品ファミリーをまとめて確定する対象。"
+      }
+    },
+    {
+      "assetId": "emblem_rank_compass",
+      "assetType": "icon",
+      "role": "rank_emblem",
+      "purpose": "左パネル中央の航海等級エンブレム",
+      "renderGroup": "ui_symbol",
+      "visualPriority": "high",
+      "styleNotes": [
+        "羅針盤モチーフ",
+        "ランク数字を中央に載せられる",
+        "装飾的だが視認性優先"
+      ],
+      "functionNotes": [
+        "ランク帯演出の中心部材"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "sizes": [
+          "96x118"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_all_assets",
+        "firstPassModeLabel": "一括で本生成",
+        "backendClass": "image_batch",
+        "backendClassLabel": "imagegen実画像候補",
+        "batchGroup": "emblem_rank_compass",
+        "targetedRegenerate": true,
+        "note": "KVの雰囲気を運ぶ主要素材として、初回一括生成で実画像ジョブを走らせる対象。"
+      }
+    },
+    {
+      "assetId": "bar_rank_progress_base",
+      "assetType": "panel",
+      "role": "progress_track",
+      "purpose": "左パネル用ランク進行バーの土台",
+      "renderGroup": "ui_foundation",
+      "visualPriority": "medium",
+      "styleNotes": [
+        "暗色の丸みあるトラック",
+        "羊皮紙上で映える"
+      ],
+      "functionNotes": [
+        "値ラベルを中央に重ねられる"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "sizes": [
+          "136x20"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_family_shared",
+        "firstPassModeLabel": "一括でファミリー生成",
+        "backendClass": "template_family_batch",
+        "backendClassLabel": "SVGテンプレ生成",
+        "batchGroup": "bar_rank_progress_base",
+        "targetedRegenerate": true,
+        "note": "初回一括生成で部品ファミリーをまとめて確定する対象。"
+      }
+    },
+    {
+      "assetId": "bar_rank_progress_fill",
+      "assetType": "panel",
+      "role": "progress_fill",
+      "purpose": "左パネル用ランク進行バーのフィル",
+      "renderGroup": "ui_feedback",
+      "visualPriority": "medium",
+      "styleNotes": [
+        "青系のフィル",
+        "進行感があるが派手すぎない"
+      ],
+      "functionNotes": [
+        "横方向スケールで比率表現"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "sizes": [
+          "94x14"
+        ],
+        "scalableAxis": "x"
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_family_shared",
+        "firstPassModeLabel": "一括でファミリー生成",
+        "backendClass": "template_family_batch",
+        "backendClassLabel": "SVGテンプレ生成",
+        "batchGroup": "bar_rank_progress_fill",
+        "targetedRegenerate": true,
+        "note": "初回一括生成で部品ファミリーをまとめて確定する対象。"
+      }
+    },
+    {
+      "assetId": "tile_profile_action",
+      "assetType": "button",
+      "role": "square_action_tile",
+      "purpose": "左パネル下部に並ぶ共通小ボタン土台",
+      "renderGroup": "ui_interactive",
+      "visualPriority": "medium",
+      "styleNotes": [
+        "小さな角丸スクエア",
+        "濃色に金縁",
+        "アイコンと短いラベルが入る"
+      ],
+      "functionNotes": [
+        "4つ並べても情報密度が暴れない"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "states": [
+          "default",
+          "hover"
+        ],
+        "sizes": [
+          "58x58"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_family_shared",
+        "firstPassModeLabel": "一括でファミリー生成",
+        "backendClass": "template_family_batch",
+        "backendClassLabel": "SVGテンプレ生成",
+        "batchGroup": "profile_action_tile_family",
+        "targetedRegenerate": true,
+        "note": "同形状の共通部品を一括で1回生成し、placementで再利用する対象。"
+      }
+    },
+    {
+      "assetId": "icon_action_achievement",
+      "assetType": "icon",
+      "role": "action_tile_icon",
+      "purpose": "実績タイル用トロフィー記号",
+      "renderGroup": "ui_symbol",
+      "visualPriority": "low",
+      "styleNotes": [
+        "トロフィー型"
+      ],
+      "functionNotes": [
+        "小ボタン中央で読める"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "sizes": [
+          "26x26"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_symbol_set",
+        "firstPassModeLabel": "一括で記号セット生成",
+        "backendClass": "symbol_batch",
+        "backendClassLabel": "SVGアイコン生成",
+        "batchGroup": "action_tile_icon_symbols",
+        "targetedRegenerate": true,
+        "note": "小型記号は同一トンマナのセットとしてまとめて生成する対象。"
+      }
+    },
+    {
+      "assetId": "icon_action_codex",
+      "assetType": "icon",
+      "role": "action_tile_icon",
+      "purpose": "図鑑タイル用ブック記号",
+      "renderGroup": "ui_symbol",
+      "visualPriority": "low",
+      "styleNotes": [
+        "開いた本"
+      ],
+      "functionNotes": [
+        "小ボタン中央で読める"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "sizes": [
+          "26x26"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_symbol_set",
+        "firstPassModeLabel": "一括で記号セット生成",
+        "backendClass": "symbol_batch",
+        "backendClassLabel": "SVGアイコン生成",
+        "batchGroup": "action_tile_icon_symbols",
+        "targetedRegenerate": true,
+        "note": "小型記号は同一トンマナのセットとしてまとめて生成する対象。"
+      }
+    },
+    {
+      "assetId": "icon_action_ranking",
+      "assetType": "icon",
+      "role": "action_tile_icon",
+      "purpose": "ランキングタイル用王冠記号",
+      "renderGroup": "ui_symbol",
+      "visualPriority": "low",
+      "styleNotes": [
+        "王冠型"
+      ],
+      "functionNotes": [
+        "小ボタン中央で読める"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "sizes": [
+          "26x26"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_symbol_set",
+        "firstPassModeLabel": "一括で記号セット生成",
+        "backendClass": "symbol_batch",
+        "backendClassLabel": "SVGアイコン生成",
+        "batchGroup": "action_tile_icon_symbols",
+        "targetedRegenerate": true,
+        "note": "小型記号は同一トンマナのセットとしてまとめて生成する対象。"
+      }
+    },
+    {
+      "assetId": "icon_action_friends",
+      "assetType": "icon",
+      "role": "action_tile_icon",
+      "purpose": "フレンドタイル用人物記号",
+      "renderGroup": "ui_symbol",
+      "visualPriority": "low",
+      "styleNotes": [
+        "2人シルエット"
+      ],
+      "functionNotes": [
+        "小ボタン中央で読める"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "sizes": [
+          "26x26"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_symbol_set",
+        "firstPassModeLabel": "一括で記号セット生成",
+        "backendClass": "symbol_batch",
+        "backendClassLabel": "SVGアイコン生成",
+        "batchGroup": "action_tile_icon_symbols",
+        "targetedRegenerate": true,
+        "note": "小型記号は同一トンマナのセットとしてまとめて生成する対象。"
+      }
+    },
+    {
+      "assetId": "art_event_banner_fill",
+      "assetType": "background",
+      "role": "event_banner_art",
+      "purpose": "イベントバナー内部の絵面",
+      "renderGroup": "promotion_in_game",
+      "visualPriority": "high",
+      "styleNotes": [
+        "空中都市や飛行船が見える",
+        "イベント感があるが常設HOMEで浮きすぎない",
+        "中央タイトルが載る余白を持つ"
+      ],
+      "functionNotes": [
+        "フレーム外枠とは分離する",
+        "イベント差し替え時に絵だけ入れ替えられる"
+      ],
+      "exportRequirements": {
+        "transparent": false,
+        "sizes": [
+          "392x130"
+        ]
+      },
+      "contentModel": {
+        "mode": "art_only",
+        "externalText": true
+      },
+      "textHandling": {
+        "ownership": "baked_in_asset",
+        "rationale": "イベントロゴとコピーはバナー演出の一部であり、素材内で作り込む。",
+        "bakedTextBlocks": [
+          {
+            "slotId": "event_title",
+            "text": "青空交易祭",
+            "x": 196,
+            "y": 78,
+            "fontSize": 34,
+            "fontWeight": 800,
+            "color": "#ffe39d",
+            "strokeColor": "#473423",
+            "strokeWidth": 2
+          },
+          {
+            "slotId": "event_copy",
+            "text": "限定スキンや豪華報酬をGET！",
+            "x": 196,
+            "y": 112,
+            "fontSize": 15,
+            "fontWeight": 700,
+            "color": "#fff8ea",
+            "strokeColor": "#35271c",
+            "strokeWidth": 1
+          }
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_all_assets",
+        "firstPassModeLabel": "一括で本生成",
+        "backendClass": "image_batch",
+        "backendClassLabel": "imagegen実画像候補",
+        "batchGroup": "art_event_banner_fill",
+        "targetedRegenerate": true,
+        "note": "KVの雰囲気を運ぶ主要素材として、初回一括生成で実画像ジョブを走らせる対象。"
+      }
+    },
+    {
+      "assetId": "frame_event_banner_outer",
+      "assetType": "card_frame",
+      "role": "event_banner_shell",
+      "purpose": "イベントバナーの額縁フレーム",
+      "renderGroup": "promotion_in_game",
+      "visualPriority": "high",
+      "styleNotes": [
+        "金属の角金具",
+        "横長",
+        "内部アートを囲う"
+      ],
+      "functionNotes": [
+        "イベントアートと分離して差し替え容易にする"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "sizes": [
+          "418x152"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_all_assets",
+        "firstPassModeLabel": "一括で本生成",
+        "backendClass": "image_batch",
+        "backendClassLabel": "imagegen実画像候補",
+        "batchGroup": "frame_event_banner_outer",
+        "targetedRegenerate": true,
+        "note": "KVの雰囲気を運ぶ主要素材として、初回一括生成で実画像ジョブを走らせる対象。"
+      }
+    },
+    {
+      "assetId": "ribbon_event_live",
+      "assetType": "panel",
+      "role": "ribbon_tag",
+      "purpose": "イベント開催中を示す左上リボン",
+      "renderGroup": "promotion_in_game",
+      "visualPriority": "medium",
+      "styleNotes": [
+        "赤い布リボン",
+        "角度が少しつく"
+      ],
+      "functionNotes": [
+        "短い見出しコピーを外部テキストで乗せる"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "sizes": [
+          "106x40"
+        ]
+      },
+      "textHandling": {
+        "ownership": "baked_in_asset",
+        "rationale": "開催中リボンはバナー一式の装飾コピーとして素材内で保持する。",
+        "bakedTextBlocks": [
+          {
+            "slotId": "event_live",
+            "text": "開催中！",
+            "x": 53,
+            "y": 24,
+            "fontSize": 16,
+            "fontWeight": 700,
+            "color": "#fff4df"
+          }
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_all_assets",
+        "firstPassModeLabel": "一括で本生成",
+        "backendClass": "image_batch",
+        "backendClassLabel": "imagegen実画像候補",
+        "batchGroup": "ribbon_event_live",
+        "targetedRegenerate": true,
+        "note": "KVの雰囲気を運ぶ主要素材として、初回一括生成で実画像ジョブを走らせる対象。"
+      }
+    },
+    {
+      "assetId": "carousel_dot_active",
+      "assetType": "icon",
+      "role": "carousel_dot",
+      "purpose": "イベントカルーセルの現在位置ドット",
+      "renderGroup": "ui_feedback",
+      "visualPriority": "low",
+      "styleNotes": [
+        "明るいアクティブドット"
+      ],
+      "functionNotes": [
+        "下部の状態表示に使う"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "sizes": [
+          "16x16"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_symbol_set",
+        "firstPassModeLabel": "一括で記号セット生成",
+        "backendClass": "symbol_batch",
+        "backendClassLabel": "SVGアイコン生成",
+        "batchGroup": "carousel_dot_symbols",
+        "targetedRegenerate": true,
+        "note": "小型記号は同一トンマナのセットとしてまとめて生成する対象。"
+      }
+    },
+    {
+      "assetId": "carousel_dot_idle",
+      "assetType": "icon",
+      "role": "carousel_dot",
+      "purpose": "イベントカルーセルの非アクティブドット",
+      "renderGroup": "ui_feedback",
+      "visualPriority": "low",
+      "styleNotes": [
+        "暗い非アクティブドット"
+      ],
+      "functionNotes": [
+        "並べた時に現在位置だけ強く見せる"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "sizes": [
+          "14x14"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_symbol_set",
+        "firstPassModeLabel": "一括で記号セット生成",
+        "backendClass": "symbol_batch",
+        "backendClassLabel": "SVGアイコン生成",
+        "batchGroup": "carousel_dot_symbols",
+        "targetedRegenerate": true,
+        "note": "小型記号は同一トンマナのセットとしてまとめて生成する対象。"
+      }
+    },
+    {
+      "assetId": "frame_daily_mission_outer",
+      "assetType": "card_frame",
+      "role": "mission_panel_shell",
+      "purpose": "右のデイリー任務パネル外枠",
+      "renderGroup": "ui_foundation",
+      "visualPriority": "high",
+      "styleNotes": [
+        "羊皮紙系の情報枠",
+        "中身を載せるための無地の外枠",
+        "見出し帯や任務行の罫線は焼き込まない",
+        "3行の行ブロックと下部ボタンが入る余白を持つ"
+      ],
+      "functionNotes": [
+        "任務パネルは1枚絵化せず中身部品に分ける",
+        "見出しは strip_daily_mission_header placement が担当する",
+        "任務行は panel_mission_row placement が担当する"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "sizes": [
+          "324x292"
+        ]
+      },
+      "contentModel": {
+        "mode": "frame_only",
+        "slots": [
+          "content_area"
+        ],
+        "forbiddenBakedElements": [
+          "header_strip",
+          "mission_title",
+          "reset_timer",
+          "mission_rows",
+          "row_separators",
+          "footer_button"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_all_assets",
+        "firstPassModeLabel": "一括で本生成",
+        "backendClass": "image_batch",
+        "backendClassLabel": "imagegen実画像候補",
+        "batchGroup": "frame_daily_mission_outer",
+        "targetedRegenerate": true,
+        "note": "KVの雰囲気を運ぶ主要素材として、初回一括生成で実画像ジョブを走らせる対象。"
+      }
+    },
+    {
+      "assetId": "strip_daily_mission_header",
+      "assetType": "panel",
+      "role": "mission_header_strip",
+      "purpose": "デイリー任務の見出し帯",
+      "renderGroup": "ui_foundation",
+      "visualPriority": "medium",
+      "styleNotes": [
+        "黒紺の細長い見出し帯",
+        "左にタイトル、右にタイマーが載る"
+      ],
+      "functionNotes": [
+        "タイマー文字は外部overlayで扱う"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "sizes": [
+          "300x42"
+        ]
+      },
+      "textHandling": {
+        "ownership": "runtime_overlay",
+        "rationale": "残り時間や任務タイトルは更新や翻訳差し替え対象なので overlay 管理にする。",
+        "runtimeTextSlots": [
+          "mission_header",
+          "reset_timer_label",
+          "reset_timer_value"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_family_shared",
+        "firstPassModeLabel": "一括でファミリー生成",
+        "backendClass": "template_family_batch",
+        "backendClassLabel": "SVGテンプレ生成",
+        "batchGroup": "strip_daily_mission_header",
+        "targetedRegenerate": true,
+        "note": "初回一括生成で部品ファミリーをまとめて確定する対象。"
+      }
+    },
+    {
+      "assetId": "panel_mission_row",
+      "assetType": "panel",
+      "role": "mission_row_shell",
+      "purpose": "デイリー任務1行分の共通土台",
+      "renderGroup": "ui_foundation",
+      "visualPriority": "medium",
+      "styleNotes": [
+        "羊皮紙調の行パネル",
+        "左ラベル、中段バー、右アクションを並べる",
+        "報酬チップやボタン枠は焼き込まない"
+      ],
+      "functionNotes": [
+        "3行共通で使い回す",
+        "報酬チップと行ボタンは別placementが担当する"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "sizes": [
+          "286x50"
+        ]
+      },
+      "contentModel": {
+        "mode": "frame_only",
+        "slots": [
+          "mission_content_area"
+        ],
+        "forbiddenBakedElements": [
+          "reward_chip",
+          "action_button",
+          "mission_text",
+          "progress_text"
+        ]
+      },
+      "textHandling": {
+        "ownership": "runtime_overlay",
+        "rationale": "任務文言、進捗値、行ごとの報酬値は状態依存なので overlay で扱う。",
+        "runtimeTextSlots": [
+          "mission_label",
+          "progress_value",
+          "reward_value"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_family_shared",
+        "firstPassModeLabel": "一括でファミリー生成",
+        "backendClass": "template_family_batch",
+        "backendClassLabel": "SVGテンプレ生成",
+        "batchGroup": "mission_row_family",
+        "targetedRegenerate": true,
+        "note": "同形状の共通部品を一括で1回生成し、placementで再利用する対象。"
+      }
+    },
+    {
+      "assetId": "bar_mission_progress_base",
+      "assetType": "panel",
+      "role": "progress_track",
+      "purpose": "任務行内の進捗バー土台",
+      "renderGroup": "ui_foundation",
+      "visualPriority": "low",
+      "styleNotes": [
+        "短い黒系トラック",
+        "行の中央付近に収まる"
+      ],
+      "functionNotes": [
+        "空進捗も違和感なく見える"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "sizes": [
+          "116x12"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_family_shared",
+        "firstPassModeLabel": "一括でファミリー生成",
+        "backendClass": "template_family_batch",
+        "backendClassLabel": "SVGテンプレ生成",
+        "batchGroup": "bar_mission_progress_base",
+        "targetedRegenerate": true,
+        "note": "初回一括生成で部品ファミリーをまとめて確定する対象。"
+      }
+    },
+    {
+      "assetId": "bar_mission_progress_fill",
+      "assetType": "panel",
+      "role": "progress_fill",
+      "purpose": "任務行内の進捗バーのフィル",
+      "renderGroup": "ui_feedback",
+      "visualPriority": "low",
+      "styleNotes": [
+        "水色の細いフィル",
+        "進捗達成時に伸びる"
+      ],
+      "functionNotes": [
+        "横スケールで比率表現"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "sizes": [
+          "112x8"
+        ],
+        "scalableAxis": "x"
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_family_shared",
+        "firstPassModeLabel": "一括でファミリー生成",
+        "backendClass": "template_family_batch",
+        "backendClassLabel": "SVGテンプレ生成",
+        "batchGroup": "bar_mission_progress_fill",
+        "targetedRegenerate": true,
+        "note": "初回一括生成で部品ファミリーをまとめて確定する対象。"
+      }
+    },
+    {
+      "assetId": "btn_mission_action",
+      "assetType": "button",
+      "role": "compact_action_button",
+      "purpose": "各任務行の小型アクションボタン",
+      "renderGroup": "ui_interactive",
+      "visualPriority": "medium",
+      "styleNotes": [
+        "小型青ボタン",
+        "短い文字が1語入る"
+      ],
+      "functionNotes": [
+        "受け取る/移動などで使い回す"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "nineSlice": true,
+        "states": [
+          "default",
+          "hover"
+        ],
+        "sizes": [
+          "84x38"
+        ]
+      },
+      "textHandling": {
+        "ownership": "runtime_overlay",
+        "rationale": "受け取る/移動など短い文言はローカライズ対象なのでボタン上に後載せする。",
+        "runtimeTextSlots": [
+          "button_label"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_family_shared",
+        "firstPassModeLabel": "一括でファミリー生成",
+        "backendClass": "template_family_batch",
+        "backendClassLabel": "SVGテンプレ生成",
+        "batchGroup": "btn_mission_action",
+        "targetedRegenerate": true,
+        "note": "初回一括生成で部品ファミリーをまとめて確定する対象。"
+      }
+    },
+    {
+      "assetId": "chip_reward_small",
+      "assetType": "panel",
+      "role": "reward_chip",
+      "purpose": "報酬アイコンと数値を載せる小型チップ",
+      "renderGroup": "ui_feedback",
+      "visualPriority": "low",
+      "styleNotes": [
+        "小さな報酬表示土台",
+        "宝石やコインの記号が入る"
+      ],
+      "functionNotes": [
+        "任務行右寄りで使う"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "sizes": [
+          "44x34"
+        ]
+      },
+      "contentModel": {
+        "mode": "frame_only",
+        "slots": [
+          "reward_icon",
+          "reward_value"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_family_shared",
+        "firstPassModeLabel": "一括でファミリー生成",
+        "backendClass": "template_family_batch",
+        "backendClassLabel": "SVGテンプレ生成",
+        "batchGroup": "reward_chip_family",
+        "targetedRegenerate": true,
+        "note": "同形状の共通部品を一括で1回生成し、placementで再利用する対象。"
+      }
+    },
+    {
+      "assetId": "btn_receive_all",
+      "assetType": "button",
+      "role": "secondary_cta",
+      "purpose": "任務パネル下部の一括受取ボタン",
+      "renderGroup": "ui_interactive",
+      "visualPriority": "medium",
+      "styleNotes": [
+        "横長の濃色ボタン",
+        "小さすぎない主張"
+      ],
+      "functionNotes": [
+        "フッターCTAとして機能する"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "nineSlice": true,
+        "states": [
+          "default",
+          "hover"
+        ],
+        "sizes": [
+          "188x44"
+        ]
+      },
+      "textHandling": {
+        "ownership": "runtime_overlay",
+        "rationale": "一括受取ラベルは文言差し替え対象なので overlay で扱う。",
+        "runtimeTextSlots": [
+          "button_label"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_family_shared",
+        "firstPassModeLabel": "一括でファミリー生成",
+        "backendClass": "template_family_batch",
+        "backendClassLabel": "SVGテンプレ生成",
+        "batchGroup": "btn_receive_all",
+        "targetedRegenerate": true,
+        "note": "初回一括生成で部品ファミリーをまとめて確定する対象。"
+      }
+    },
+    {
+      "assetId": "btn_start_sortie",
+      "assetType": "button",
+      "role": "primary_cta",
+      "purpose": "中央下の最優先出航ボタン",
+      "renderGroup": "ui_interactive",
+      "visualPriority": "high",
+      "styleNotes": [
+        "大型青ボタン",
+        "金の翼状装飾",
+        "中央の文字が最も目立つ"
+      ],
+      "functionNotes": [
+        "HOME最大導線として視認性を最優先"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "nineSlice": true,
+        "states": [
+          "default",
+          "hover",
+          "pressed"
+        ],
+        "sizes": [
+          "392x114"
+        ]
+      },
+      "contentModel": {
+        "mode": "frame_only",
+        "slots": [
+          "cta_label",
+          "center_emblem"
+        ]
+      },
+      "textHandling": {
+        "ownership": "runtime_overlay",
+        "rationale": "主CTA文言はローカライズや画面差し替え対象のため、器と分離しておく。",
+        "runtimeTextSlots": [
+          "cta_label"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_all_assets",
+        "firstPassModeLabel": "一括で本生成",
+        "backendClass": "image_batch",
+        "backendClassLabel": "imagegen実画像候補",
+        "batchGroup": "btn_start_sortie",
+        "targetedRegenerate": true,
+        "note": "KVの雰囲気を運ぶ主要素材として、初回一括生成で実画像ジョブを走らせる対象。"
+      }
+    },
+    {
+      "assetId": "emblem_sortie_anchor",
+      "assetType": "icon",
+      "role": "cta_emblem",
+      "purpose": "出航ボタン下部の錨エンブレム",
+      "renderGroup": "ui_symbol",
+      "visualPriority": "medium",
+      "styleNotes": [
+        "錨モチーフ",
+        "ボタン下部中央に食い込む"
+      ],
+      "functionNotes": [
+        "主ボタンの世界観強化"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "sizes": [
+          "40x40"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_symbol_set",
+        "firstPassModeLabel": "一括で記号セット生成",
+        "backendClass": "symbol_batch",
+        "backendClassLabel": "SVGアイコン生成",
+        "batchGroup": "cta_emblem_symbols",
+        "targetedRegenerate": true,
+        "note": "小型記号は同一トンマナのセットとしてまとめて生成する対象。"
+      }
+    },
+    {
+      "assetId": "card_gift_cta_shell",
+      "assetType": "card_frame",
+      "role": "gift_cta_shell",
+      "purpose": "ギフト専用の横長CTA土台",
+      "renderGroup": "ui_interactive",
+      "visualPriority": "medium",
+      "styleNotes": [
+        "横長の濃色札",
+        "右側にガチャ用の丸座を持たない",
+        "左のギフト箱と右の文字レーンが干渉しない"
+      ],
+      "functionNotes": [
+        "ギフト箱、通知バッジ、runtimeタイトルを別部品として載せる"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "sizes": [
+          "248x96"
+        ]
+      },
+      "contentModel": {
+        "mode": "frame_only",
+        "slots": [
+          "title",
+          "subtitle",
+          "gift_icon",
+          "notification_badge"
+        ],
+        "forbiddenBakedElements": [
+          "gacha_orb_socket",
+          "notification_count",
+          "title_text",
+          "subtitle_text"
+        ]
+      },
+      "textHandling": {
+        "ownership": "runtime_overlay",
+        "rationale": "ギフト/ガチャのタイトルとコピーは導線内容に応じて差し替えるため overlay 管理にする。",
+        "runtimeTextSlots": [
+          "title",
+          "subtitle"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_all_assets",
+        "firstPassModeLabel": "一括で本生成",
+        "backendClass": "image_batch",
+        "backendClassLabel": "imagegen実画像候補",
+        "batchGroup": "card_gift_cta_shell",
+        "targetedRegenerate": true,
+        "note": "ギフト専用CTA土台。ガチャ用丸座を焼き込まない。"
+      }
+    },
+    {
+      "assetId": "card_gacha_cta_shell",
+      "assetType": "card_frame",
+      "role": "gacha_cta_shell",
+      "purpose": "ガチャ専用の横長CTA土台",
+      "renderGroup": "ui_interactive",
+      "visualPriority": "medium",
+      "styleNotes": [
+        "横長の濃色札",
+        "右側にオーブ用の丸座を持つ",
+        "左側の文字レーンはオーブ安全域に入らない"
+      ],
+      "functionNotes": [
+        "ガチャオーブとruntimeタイトルを別部品として載せる"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "sizes": [
+          "248x96"
+        ]
+      },
+      "contentModel": {
+        "mode": "frame_only",
+        "slots": [
+          "title",
+          "subtitle",
+          "orb_socket"
+        ],
+        "forbiddenBakedElements": [
+          "title_text",
+          "subtitle_text",
+          "gacha_orb"
+        ]
+      },
+      "textHandling": {
+        "ownership": "runtime_overlay",
+        "rationale": "ガチャのタイトルとコピーは導線内容に応じて差し替えるため overlay 管理にする。",
+        "runtimeTextSlots": [
+          "title",
+          "subtitle"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_all_assets",
+        "firstPassModeLabel": "一括で本生成",
+        "backendClass": "image_batch",
+        "backendClassLabel": "imagegen実画像候補",
+        "batchGroup": "card_gacha_cta_shell",
+        "targetedRegenerate": true,
+        "note": "ガチャ専用CTA土台。オーブ本体は別素材で重ねる。"
+      }
+    },
+    {
+      "assetId": "icon_gift_crate",
+      "assetType": "icon",
+      "role": "side_cta_icon",
+      "purpose": "ギフト箱の大型アイコン",
+      "renderGroup": "ui_symbol",
+      "visualPriority": "medium",
+      "styleNotes": [
+        "赤いリボン付き木箱",
+        "報酬感が強い"
+      ],
+      "functionNotes": [
+        "左下導線のアイコンとして単体でも存在感がある"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "sizes": [
+          "92x92"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_all_assets",
+        "firstPassModeLabel": "一括で本生成",
+        "backendClass": "image_batch",
+        "backendClassLabel": "imagegen実画像候補",
+        "batchGroup": "icon_gift_crate",
+        "targetedRegenerate": true,
+        "note": "KVの雰囲気を運ぶ主要素材として、初回一括生成で実画像ジョブを走らせる対象。"
+      }
+    },
+    {
+      "assetId": "badge_notification_count",
+      "assetType": "icon",
+      "role": "notification_badge",
+      "purpose": "未処理件数を示す通知バッジ",
+      "renderGroup": "ui_feedback",
+      "visualPriority": "low",
+      "styleNotes": [
+        "赤い丸バッジ",
+        "白数字が中央に乗る"
+      ],
+      "functionNotes": [
+        "ギフトなど他導線にも再利用できる"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "sizes": [
+          "30x30"
+        ]
+      },
+      "contentModel": {
+        "mode": "frame_only",
+        "slots": [
+          "count"
+        ]
+      },
+      "textHandling": {
+        "ownership": "runtime_overlay",
+        "rationale": "通知件数は動的値なのでバッジ土台と数字を分ける。",
+        "runtimeTextSlots": [
+          "count"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_symbol_set",
+        "firstPassModeLabel": "一括で記号セット生成",
+        "backendClass": "symbol_batch",
+        "backendClassLabel": "SVGアイコン生成",
+        "batchGroup": "notification_badge_symbols",
+        "targetedRegenerate": true,
+        "note": "小型記号は同一トンマナのセットとしてまとめて生成する対象。"
+      }
+    },
+    {
+      "assetId": "icon_gacha_orb",
+      "assetType": "icon",
+      "role": "side_cta_icon",
+      "purpose": "ガチャ導線の発光オーブ装置",
+      "renderGroup": "ui_symbol",
+      "visualPriority": "medium",
+      "styleNotes": [
+        "青いオーブ",
+        "金属外輪",
+        "少し豪華"
+      ],
+      "functionNotes": [
+        "右下導線で目を引く"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "sizes": [
+          "96x96"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_all_assets",
+        "firstPassModeLabel": "一括で本生成",
+        "backendClass": "image_batch",
+        "backendClassLabel": "imagegen実画像候補",
+        "batchGroup": "icon_gacha_orb",
+        "targetedRegenerate": true,
+        "note": "KVの雰囲気を運ぶ主要素材として、初回一括生成で実画像ジョブを走らせる対象。"
+      }
+    },
+    {
+      "assetId": "panel_bottom_nav",
+      "assetType": "panel",
+      "role": "nav_bar_shell",
+      "purpose": "下部ナビ全体の土台パネル",
+      "renderGroup": "ui_foundation",
+      "visualPriority": "high",
+      "styleNotes": [
+        "幅広の濃色バー",
+        "底辺の常設UIらしい重量感",
+        "個別タブのボタン枠やラベルは焼き込まない",
+        "上に載る btn_nav_active / btn_nav_default の背面レールに徹する"
+      ],
+      "functionNotes": [
+        "全ナビの背面土台として常設",
+        "タブのクリック領域や選択状態は個別ボタン placement が担当する"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "sizes": [
+          "1260x116"
+        ]
+      },
+      "contentModel": {
+        "mode": "foundation_only",
+        "forbiddenBakedElements": [
+          "tab_button_frames",
+          "tab_labels",
+          "tab_icons",
+          "vertical_tab_separators"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_all_assets",
+        "firstPassModeLabel": "一括で本生成",
+        "backendClass": "image_batch",
+        "backendClassLabel": "imagegen実画像候補",
+        "batchGroup": "panel_bottom_nav",
+        "targetedRegenerate": true,
+        "note": "KVの雰囲気を運ぶ主要素材として、初回一括生成で実画像ジョブを走らせる対象。"
+      }
+    },
+    {
+      "assetId": "btn_nav_active",
+      "assetType": "button",
+      "role": "nav_button_active",
+      "purpose": "選択中タブ用の下部ナビボタン",
+      "renderGroup": "ui_navigation",
+      "visualPriority": "medium",
+      "styleNotes": [
+        "水色に光る選択中ボタン",
+        "他より明るい"
+      ],
+      "functionNotes": [
+        "選択状態が即座に分かる"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "states": [
+          "active"
+        ],
+        "sizes": [
+          "228x96"
+        ]
+      },
+      "textHandling": {
+        "ownership": "runtime_overlay",
+        "rationale": "ナビラベルはローカライズ対象なのでボタン土台と分離する。",
+        "runtimeTextSlots": [
+          "tab_label"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_all_assets",
+        "firstPassModeLabel": "一括で本生成",
+        "backendClass": "image_batch",
+        "backendClassLabel": "imagegen実画像候補",
+        "batchGroup": "btn_nav_active",
+        "targetedRegenerate": true,
+        "note": "KVの雰囲気を運ぶ主要素材として、初回一括生成で実画像ジョブを走らせる対象。"
+      }
+    },
+    {
+      "assetId": "btn_nav_default",
+      "assetType": "button",
+      "role": "nav_button_default",
+      "purpose": "通常状態の下部ナビボタン",
+      "renderGroup": "ui_navigation",
+      "visualPriority": "medium",
+      "styleNotes": [
+        "暗色の通常ナビボタン",
+        "金縁あり",
+        "主張しすぎない"
+      ],
+      "functionNotes": [
+        "4つ並べても視覚ノイズが揃う"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "states": [
+          "default"
+        ],
+        "sizes": [
+          "228x96"
+        ]
+      },
+      "textHandling": {
+        "ownership": "runtime_overlay",
+        "rationale": "ナビラベルはローカライズ対象なのでボタン土台と分離する。",
+        "runtimeTextSlots": [
+          "tab_label"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_all_assets",
+        "firstPassModeLabel": "一括で本生成",
+        "backendClass": "image_batch",
+        "backendClassLabel": "imagegen実画像候補",
+        "batchGroup": "btn_nav_default",
+        "targetedRegenerate": true,
+        "note": "KVの雰囲気を運ぶ主要素材として、初回一括生成で実画像ジョブを走らせる対象。"
+      }
+    },
+    {
+      "assetId": "icon_nav_home",
+      "assetType": "icon",
+      "role": "nav_icon",
+      "purpose": "ホームタブ用アイコン",
+      "renderGroup": "ui_symbol",
+      "visualPriority": "low",
+      "styleNotes": [
+        "家の記号"
+      ],
+      "functionNotes": [
+        "アクティブ背景上でも読める"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "sizes": [
+          "40x40"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_symbol_set",
+        "firstPassModeLabel": "一括で記号セット生成",
+        "backendClass": "symbol_batch",
+        "backendClassLabel": "SVGアイコン生成",
+        "batchGroup": "nav_icon_symbols",
+        "targetedRegenerate": true,
+        "note": "小型記号は同一トンマナのセットとしてまとめて生成する対象。"
+      }
+    },
+    {
+      "assetId": "icon_nav_fleet",
+      "assetType": "icon",
+      "role": "nav_icon",
+      "purpose": "艦隊タブ用アイコン",
+      "renderGroup": "ui_symbol",
+      "visualPriority": "low",
+      "styleNotes": [
+        "舵輪の記号"
+      ],
+      "functionNotes": [
+        "通常背景上でも読める"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "sizes": [
+          "40x40"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_symbol_set",
+        "firstPassModeLabel": "一括で記号セット生成",
+        "backendClass": "symbol_batch",
+        "backendClassLabel": "SVGアイコン生成",
+        "batchGroup": "nav_icon_symbols",
+        "targetedRegenerate": true,
+        "note": "小型記号は同一トンマナのセットとしてまとめて生成する対象。"
+      }
+    },
+    {
+      "assetId": "icon_nav_shop",
+      "assetType": "icon",
+      "role": "nav_icon",
+      "purpose": "ショップタブ用アイコン",
+      "renderGroup": "ui_symbol",
+      "visualPriority": "low",
+      "styleNotes": [
+        "箱や店の記号"
+      ],
+      "functionNotes": [
+        "通常背景上でも読める"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "sizes": [
+          "40x40"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_symbol_set",
+        "firstPassModeLabel": "一括で記号セット生成",
+        "backendClass": "symbol_batch",
+        "backendClassLabel": "SVGアイコン生成",
+        "batchGroup": "nav_icon_symbols",
+        "targetedRegenerate": true,
+        "note": "小型記号は同一トンマナのセットとしてまとめて生成する対象。"
+      }
+    },
+    {
+      "assetId": "icon_nav_mission",
+      "assetType": "icon",
+      "role": "nav_icon",
+      "purpose": "任務タブ用アイコン",
+      "renderGroup": "ui_symbol",
+      "visualPriority": "low",
+      "styleNotes": [
+        "巻物の記号"
+      ],
+      "functionNotes": [
+        "通常背景上でも読める"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "sizes": [
+          "40x40"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_symbol_set",
+        "firstPassModeLabel": "一括で記号セット生成",
+        "backendClass": "symbol_batch",
+        "backendClassLabel": "SVGアイコン生成",
+        "batchGroup": "nav_icon_symbols",
+        "targetedRegenerate": true,
+        "note": "小型記号は同一トンマナのセットとしてまとめて生成する対象。"
+      }
+    },
+    {
+      "assetId": "icon_nav_settings",
+      "assetType": "icon",
+      "role": "nav_icon",
+      "purpose": "設定タブ用アイコン",
+      "renderGroup": "ui_symbol",
+      "visualPriority": "low",
+      "styleNotes": [
+        "歯車の記号"
+      ],
+      "functionNotes": [
+        "通常背景上でも読める"
+      ],
+      "exportRequirements": {
+        "transparent": true,
+        "sizes": [
+          "40x40"
+        ]
+      },
+      "generationPlan": {
+        "firstPassMode": "bulk_generate_symbol_set",
+        "firstPassModeLabel": "一括で記号セット生成",
+        "backendClass": "symbol_batch",
+        "backendClassLabel": "SVGアイコン生成",
+        "batchGroup": "nav_icon_symbols",
+        "targetedRegenerate": true,
+        "note": "小型記号は同一トンマナのセットとしてまとめて生成する対象。"
+      }
+    }
+  ]
+}

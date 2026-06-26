@@ -1,0 +1,41 @@
+{
+  "screenId": "home_sky_port_atlas",
+  "screenName": "星港アトラス HOME",
+  "screenRole": "home_screen",
+  "canvasWidth": 1280,
+  "canvasHeight": 720,
+  "baseResolution": "1280x720",
+  "worldPresetId": "preset_sky_port_atlas_01",
+  "uiDensity": "rich",
+  "assemblyGranularity": "modular_ui_frame_plus_inner_parts",
+  "kvReferenceMode": "full_home_mock",
+  "kvIntent": {
+    "purpose": "背景単体ではなく、主要UIまで含めた完成HOME画面の目標形を共有する",
+    "mustInclude": [
+      "top_status_bar",
+      "player_profile_panel",
+      "event_banner",
+      "daily_mission_panel",
+      "primary_sortie_cta",
+      "secondary_gift_button",
+      "secondary_gacha_button",
+      "bottom_navigation"
+    ],
+    "visualDirection": [
+      "空港都市の運営感が一目で伝わること",
+      "中央下の主導線が最優先に見えること",
+      "常設HOMEとして情報量は多いが破綻しないこと"
+    ],
+    "assemblyNotes": [
+      "大枠のパネル1枚ではなく、中身の小ボタンや進捗バーまで分解する",
+      "動的テキストは asset に焼き込まず overlay blueprint として別管理する"
+    ]
+  },
+  "safeAreas": {
+    "top": 28,
+    "right": 36,
+    "bottom": 32,
+    "left": 36
+  },
+  "stateVariantKeys": ["normal"]
+}

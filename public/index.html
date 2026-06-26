@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ゲーム用クリエイティブ生成ツール ベータ</title>
+    <link rel="stylesheet" href="./app.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">ベータワークスペース</p>
+          <h1>ゲーム用クリエイティブ生成ツール</h1>
+          <p class="lede">
+            `screen KV + 素材仕様書` から、事前に対話生成した素材セットを採用し、組み立て画面を見ながら AI 補助付きで差分再生成を回す。
+          </p>
+        </div>
+      </header>
+
+      <section class="toolbar">
+        <button id="loadDemoButton" class="primary">デモを読み込む</button>
+        <label class="file-import">
+          <span>Bundle JSON を読み込む</span>
+          <input id="bundleFileInput" type="file" accept=".json,application/json" />
+        </label>
+        <input id="folderPathInput" class="path-input" type="text" placeholder="/path/to/creative または /path/to/creative#home" />
+        <button id="loadFolderButton">フォルダから読み込む</button>
+        <button id="imagegenJobButton">対話用imagegenジョブ作成</button>
+        <button id="imagegenRefreshButton">生成済みPNGを再取り込み</button>
+        <button id="draftButton">仮組み確認</button>
+        <button id="generateButton" class="primary">生成後を表示</button>
+        <button id="reviewButton">AI で画面レビュー</button>
+        <button id="applyLocksButton">固定候補を反映</button>
+      </section>
+      <section class="source-bar">
+        <div id="sourceStatus" class="source-status">読み込み元: デモバンドル</div>
+        <div id="imagegenStatus" class="imagegen-status">imagegen: 未実行</div>
+        <div id="activityStatus" class="activity-status">待機中</div>
+      </section>
+
+      <section class="flow-panel panel" aria-label="画像生成フロー">
+        <div class="panel-header">
+          <h2>画像生成フロー</h2>
+          <span id="flowCurrentLabel" class="panel-note">現在: 読み込み待ち</span>
+        </div>
+        <div id="flowSteps" class="flow-steps">
+          <div class="flow-step" data-flow-step="load">
+            <span class="flow-index">1</span>
+            <strong>設計図を読み込む</strong>
+            <small>KV / 素材仕様 / 世界観</small>
+          </div>
+          <div class="flow-link" aria-hidden="true"></div>
+          <div class="flow-step" data-flow-step="draft">
+            <span class="flow-index">2</span>
+            <strong>仮組み確認</strong>
+            <small>構造と配置を見る</small>
+          </div>
+          <div class="flow-link" aria-hidden="true"></div>
+          <div class="flow-step" data-flow-step="show">
+            <span class="flow-index">3</span>
+            <strong>生成後を表示</strong>
+            <small>事前PNGを採用</small>
+          </div>
+          <div class="flow-link" aria-hidden="true"></div>
+          <div class="flow-step" data-flow-step="review">
+            <span class="flow-index">4</span>
+            <strong>レビュー/コメント</strong>
+            <small>AI指摘と人の修正意図</small>
+          </div>
+          <div class="flow-link" aria-hidden="true"></div>
+          <div class="flow-step" data-flow-step="queue">
+            <span class="flow-index">5</span>
+            <strong>再生成キュー</strong>
+            <small>作り直す素材を溜める</small>
+          </div>
+          <div class="flow-link" aria-hidden="true"></div>
+          <div class="flow-step" data-flow-step="prompt">
+            <span class="flow-index">6</span>
+            <strong>Codex依頼文</strong>
+            <small>対話用プロンプト化</small>
+          </div>
+          <div class="flow-link" aria-hidden="true"></div>
+          <div class="flow-step" data-flow-step="dialogue">
+            <span class="flow-index">7</span>
+            <strong>対話で生成</strong>
+            <small>imagegen PNGを作る</small>
+          </div>
+          <div class="flow-link" aria-hidden="true"></div>
+          <div class="flow-step" data-flow-step="import">
+            <span class="flow-index">8</span>
+            <strong>再取り込み</strong>
+            <small>ブラウザで確認へ戻る</small>
+          </div>
+        </div>
+      </section>
+
+      <section class="layout">
+        <aside class="sidebar">
+          <div class="sidebar-overview">
+            <article class="panel kv-panel">
+              <div class="panel-header">
+                <h2>KV 参照</h2>
+                <span id="kvStatus" class="panel-note">未読み込み</span>
+              </div>
+              <div id="kvPreviewWrap" class="kv-preview-wrap empty">
+                <img id="kvPreviewImage" class="kv-preview-image" alt="キービジュアル参照" />
+                <div id="kvEmptyState" class="kv-empty-state">KV 画像がありません</div>
+              </div>
+            </article>
+            <div class="status-panel">
+              <div class="status-row">
+                <span>AI モード</span>
+                <strong id="aiModeLabel">読み込み中</strong>
+              </div>
+              <div class="status-row">
+                <span>セッション</span>
+                <strong>ベータ反復</strong>
+              </div>
+              <div class="status-row">
+                <span>目的</span>
+                <strong>ガチャ再生成を止める</strong>
+              </div>
+            </div>
+          </div>
+          <article class="panel">
+            <div class="panel-header">
+              <h2>画面 KV</h2>
+              <span class="panel-note">編集可能な JSON</span>
+            </div>
+            <textarea id="screenKvInput" spellcheck="false"></textarea>
+          </article>
+          <article class="panel">
+            <div class="panel-header">
+              <h2>素材仕様書</h2>
+              <span class="panel-note">組み立て仕様</span>
+            </div>
+            <textarea id="specInput" spellcheck="false"></textarea>
+          </article>
+          <article class="panel">
+            <div class="panel-header">
+              <h2>世界観プリセット</h2>
+              <span class="panel-note">スタイル基準</span>
+            </div>
+            <textarea id="presetInput" spellcheck="false"></textarea>
+          </article>
+        </aside>
+
+        <section class="workspace">
+          <article class="panel preview-panel">
+            <div class="panel-header">
+              <h2>組み立て画面</h2>
+              <span class="panel-note">素材カードを見ながら調整</span>
+            </div>
+            <div id="screenMeta" class="screen-meta"></div>
+            <div id="screenCanvasWrap" class="screen-wrap">
+              <div id="screenCanvas" class="screen-canvas"></div>
+            </div>
+          </article>
+
+          <article class="panel review-panel">
+            <div class="panel-header">
+              <h2>AI レビュー</h2>
+              <span class="panel-note">指摘、固定、調整方針</span>
+            </div>
+            <div id="reviewOutput" class="review-output empty">
+              まず「生成後を表示」で事前生成済み素材を反映してから AI レビューを実行してください。
+            </div>
+          </article>
+
+          <article id="regenQueuePanel" class="panel regen-queue-panel">
+            <div class="panel-header">
+              <h2>再生成キュー</h2>
+              <span id="regenQueueCountLabel" class="panel-note">0 件</span>
+            </div>
+            <div id="regenQueueList" class="regen-queue-list empty">
+              素材カードのコメント欄に修正方針を書き、「再生成キューに追加」を押してください。
+            </div>
+            <div class="regen-queue-actions">
+              <button id="buildRegenPromptButton" class="primary">Codex依頼文を作成</button>
+              <button id="clearRegenQueueButton">キューを空にする</button>
+            </div>
+            <textarea
+              id="regenPromptOutput"
+              class="regen-prompt-output"
+              readonly
+              placeholder="キューが溜まったら、ここにCodexへ渡す依頼文が生成されます。"
+              spellcheck="false"
+            ></textarea>
+          </article>
+
+          <article id="assetPanel" class="panel asset-panel">
+            <div class="panel-header">
+              <h2>素材一覧</h2>
+              <span id="assetCountLabel" class="panel-note">素材ごとにコメントしてキュー追加</span>
+            </div>
+            <div id="assetGrid" class="asset-grid"></div>
+          </article>
+        </section>
+      </section>
+      <div id="activityOverlay" class="activity-overlay hidden" aria-live="polite" aria-busy="true">
+        <div class="activity-card">
+          <div class="activity-spinner"></div>
+          <div id="activityOverlayLabel" class="activity-label">処理中...</div>
+        </div>
+      </div>
+    </main>
+
+    <template id="assetCardTemplate">
+      <article class="asset-card">
+        <div class="asset-preview-wrap">
+          <img class="asset-preview" alt="" />
+        </div>
+        <div class="asset-meta">
+          <div class="asset-title-row">
+            <h3 class="asset-title"></h3>
+            <label class="lock-toggle">
+              <input type="checkbox" class="asset-lock" />
+              <span>固定</span>
+            </label>
+          </div>
+          <p class="asset-role"></p>
+          <p class="asset-purpose"></p>
+          <p class="asset-generation"></p>
+          <p class="asset-text-handling"></p>
+          <p class="asset-revision"></p>
+          <p class="asset-comment-log"></p>
+        </div>
+        <textarea class="asset-comment" placeholder="この素材に対する具体的なコメントを入れる"></textarea>
+        <div class="asset-actions">
+          <button class="asset-regenerate">再生成キューに追加</button>
+          <button class="asset-suggestion">AI 提案を入れる</button>
+        </div>
+        <div class="asset-import">
+          <input class="asset-image-path" type="text" placeholder="/path/to/generated-asset.png" />
+          <button class="asset-import-button">PNGを採用</button>
+        </div>
+        <details class="asset-history">
+          <summary class="asset-history-header">
+            <strong>履歴</strong>
+            <span class="asset-history-note">差分確認と再採用</span>
+          </summary>
+          <div class="asset-history-list"></div>
+        </details>
+      </article>
+    </template>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" role="img" aria-labelledby="title desc">
+  <title id="title">月灯り配達録 タイトル画面キービジュアル</title>
+  <desc id="desc">月明かりの山道と提灯の光、大きなタイトルロゴ、開始ボタンと設定ボタンを配置した薄暮ファンタジーのタイトル画面。</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0a1320" />
+      <stop offset="55%" stop-color="#244260" />
+      <stop offset="100%" stop-color="#315170" />
+    </linearGradient>
+    <radialGradient id="moonGlow" cx="78%" cy="20%" r="28%">
+      <stop offset="0%" stop-color="#f4e3bd" stop-opacity="0.42" />
+      <stop offset="100%" stop-color="#f4e3bd" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="buttonGold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f0bc6d" />
+      <stop offset="100%" stop-color="#d19749" />
+    </linearGradient>
+    <linearGradient id="buttonBlue" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#4f7294" />
+      <stop offset="100%" stop-color="#315170" />
+    </linearGradient>
+  </defs>
+
+  <rect width="1280" height="720" fill="url(#sky)" />
+  <rect width="1280" height="720" fill="url(#moonGlow)" />
+  <circle cx="1000" cy="130" r="58" fill="#f4e3bd" opacity="0.4" />
+  <circle cx="1000" cy="130" r="92" fill="url(#moonGlow)" />
+
+  <path d="M0 500 C180 340, 320 600, 540 430 S930 620, 1280 420 L1280 720 L0 720 Z" fill="#101b2b" opacity="0.72" />
+  <path d="M0 560 C190 430, 370 650, 620 500 S1010 670, 1280 520 L1280 720 L0 720 Z" fill="#0a1320" opacity="0.88" />
+
+  <path d="M180 610 C250 540, 320 520, 390 590 C430 632, 470 660, 540 676" fill="none" stroke="#f4e3bd" stroke-opacity="0.16" stroke-width="8" stroke-linecap="round" />
+
+  <g opacity="0.9">
+    <circle cx="320" cy="470" r="7" fill="#f4e3bd" />
+    <circle cx="320" cy="470" r="30" fill="#f4e3bd" opacity="0.08" />
+    <rect x="315" y="430" width="10" height="52" rx="4" fill="#2f2419" />
+  </g>
+  <g opacity="0.86">
+    <circle cx="465" cy="520" r="6" fill="#f4e3bd" />
+    <circle cx="465" cy="520" r="26" fill="#f4e3bd" opacity="0.08" />
+    <rect x="460" y="487" width="10" height="44" rx="4" fill="#2f2419" />
+  </g>
+  <g opacity="0.82">
+    <circle cx="850" cy="505" r="6" fill="#f4e3bd" />
+    <circle cx="850" cy="505" r="24" fill="#f4e3bd" opacity="0.08" />
+    <rect x="845" y="472" width="10" height="44" rx="4" fill="#2f2419" />
+  </g>
+
+  <g transform="translate(260 84)">
+    <ellipse cx="380" cy="112" rx="310" ry="94" fill="#8fded6" opacity="0.12" />
+    <path d="M100 62 C132 10, 180 6, 214 62 C184 98, 134 102, 100 62 Z" fill="#d19749" opacity="0.88" />
+    <path d="M546 62 C578 10, 626 6, 660 62 C630 98, 580 102, 546 62 Z" fill="#d19749" opacity="0.88" />
+    <text x="380" y="118" text-anchor="middle" font-family="Georgia, serif" font-size="84" font-weight="700" letter-spacing="2" fill="#f4e3bd">月灯り配達録</text>
+    <text x="380" y="176" text-anchor="middle" font-family="'Courier New', monospace" font-size="28" letter-spacing="3" fill="#f4e3bd" opacity="0.9">月夜の配達人</text>
+  </g>
+
+  <g transform="translate(470 454)">
+    <rect x="0" y="0" width="340" height="92" rx="28" fill="#f4e3bd" opacity="0.1" />
+    <rect x="12" y="12" width="316" height="68" rx="26" fill="#d19749" stroke="#0a1320" stroke-width="4" />
+    <rect x="22" y="22" width="296" height="48" rx="22" fill="url(#buttonGold)" />
+    <text x="170" y="58" text-anchor="middle" font-family="'Courier New', monospace" font-size="30" font-weight="700" fill="#f4e3bd">はじめる</text>
+  </g>
+
+  <g transform="translate(500 566)">
+    <rect x="12" y="12" width="256" height="58" rx="24" fill="#315170" stroke="#0a1320" stroke-width="4" />
+    <rect x="22" y="22" width="236" height="38" rx="18" fill="url(#buttonBlue)" />
+    <text x="140" y="50" text-anchor="middle" font-family="'Courier New', monospace" font-size="24" font-weight="700" fill="#f4e3bd">設定</text>
+  </g>
+</svg>

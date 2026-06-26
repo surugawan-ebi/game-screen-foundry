@@ -1,0 +1,196 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" role="img" aria-labelledby="title desc">
+  <title id="title">星港アトラス HOME キービジュアル</title>
+  <desc id="desc">雲海に浮かぶ星港都市を背景に、上部ステータス、プロフィール、イベント、任務、主導線ボタン、補助導線、下部ナビまで載せた完成画面モック。</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#c7f6ff" />
+      <stop offset="42%" stop-color="#78cfe2" />
+      <stop offset="100%" stop-color="#24537a" />
+    </linearGradient>
+    <linearGradient id="cloudGlow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f8ffff" stop-opacity="0.95" />
+      <stop offset="100%" stop-color="#d2eef7" stop-opacity="0.12" />
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1c4465" />
+      <stop offset="100%" stop-color="#10273d" />
+    </linearGradient>
+    <linearGradient id="panelSoft" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#295677" />
+      <stop offset="100%" stop-color="#16324d" />
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f6d583" />
+      <stop offset="100%" stop-color="#d49a3d" />
+    </linearGradient>
+    <linearGradient id="goldSoft" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffeaac" />
+      <stop offset="100%" stop-color="#d8a148" />
+    </linearGradient>
+    <linearGradient id="teal" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#8de3ef" />
+      <stop offset="100%" stop-color="#4db8ca" />
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="12" flood-color="#07131f" flood-opacity="0.38" />
+    </filter>
+    <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="14" result="blur" />
+      <feColorMatrix in="blur" type="matrix" values="1 0 0 0 0.47  0 1 0 0 0.85  0 0 1 0 0.89  0 0 0 0.6 0" />
+    </filter>
+  </defs>
+
+  <rect width="1280" height="720" fill="url(#sky)" />
+  <circle cx="1038" cy="88" r="46" fill="#fff8c9" opacity="0.86" />
+  <g opacity="0.55">
+    <ellipse cx="210" cy="122" rx="132" ry="34" fill="url(#cloudGlow)" />
+    <ellipse cx="360" cy="110" rx="92" ry="24" fill="url(#cloudGlow)" />
+    <ellipse cx="1000" cy="144" rx="148" ry="38" fill="url(#cloudGlow)" />
+  </g>
+
+  <g opacity="0.28">
+    <path d="M54 300 L140 240 L198 260 L252 212 L312 230 L312 340 L54 340 Z" fill="#d9f0f7" />
+    <path d="M970 284 L1048 224 L1108 246 L1188 206 L1228 224 L1228 332 L970 332 Z" fill="#d9f0f7" />
+    <path d="M520 232 L584 180 L650 202 L716 170 L768 190 L768 282 L520 282 Z" fill="#eaf7fb" />
+  </g>
+
+  <g>
+    <ellipse cx="658" cy="330" rx="278" ry="46" fill="#ffffff" opacity="0.2" filter="url(#softGlow)" />
+    <path d="M328 350 L462 274 L564 294 L638 238 L728 260 L832 224 L930 260 L1042 326 L1042 470 L328 470 Z" fill="#f0efe0" opacity="0.92" />
+    <path d="M384 374 L504 312 L576 330 L640 284 L716 302 L812 266 L920 302 L986 344 L986 486 L384 486 Z" fill="#d7c6a0" opacity="0.5" />
+    <rect x="566" y="182" width="56" height="170" rx="22" fill="#e6d4a3" />
+    <rect x="584" y="138" width="20" height="86" rx="10" fill="#c69243" />
+    <circle cx="594" cy="126" r="24" fill="#96e0ea" opacity="0.95" />
+    <rect x="854" y="236" width="26" height="96" rx="12" fill="#d7b46a" />
+    <rect x="902" y="220" width="22" height="112" rx="11" fill="#cfad67" />
+    <rect x="432" y="258" width="22" height="88" rx="11" fill="#cfad67" />
+    <path d="M420 338 H1000" stroke="#6f8d9f" stroke-opacity="0.54" stroke-width="8" stroke-linecap="round" />
+    <path d="M394 370 H976" stroke="#c38a45" stroke-opacity="0.6" stroke-width="10" stroke-linecap="round" />
+    <rect x="632" y="304" width="68" height="88" rx="24" fill="#f5e7ba" />
+    <rect x="650" y="278" width="32" height="58" rx="16" fill="#dfbc71" />
+    <circle cx="666" cy="270" r="18" fill="#94dce7" />
+    <path d="M666 168 L646 214 H686 Z" fill="#f7f0cb" opacity="0.84" />
+    <path d="M446 268 L432 306 H460 Z" fill="#fbf3d6" opacity="0.78" />
+    <path d="M914 222 L900 260 H928 Z" fill="#fbf3d6" opacity="0.78" />
+  </g>
+
+  <g opacity="0.78">
+    <path d="M130 514 C260 456, 406 498, 540 456 S860 518, 1150 454 L1280 484 L1280 720 L0 720 L0 536 Z" fill="#1a3957" />
+    <ellipse cx="198" cy="498" rx="130" ry="28" fill="#f6fdff" opacity="0.2" />
+    <ellipse cx="936" cy="514" rx="184" ry="36" fill="#f6fdff" opacity="0.18" />
+  </g>
+
+  <g opacity="0.7">
+    <path d="M180 226 L216 214 L254 226 L232 250 Z" fill="#f4e19b" />
+    <path d="M1040 198 L1080 186 L1124 200 L1098 228 Z" fill="#f4e19b" />
+    <path d="M236 220 C258 198, 294 194, 324 214" stroke="#f1f6fa" stroke-width="3" fill="none" />
+    <path d="M1092 194 C1112 172, 1142 168, 1172 186" stroke="#f1f6fa" stroke-width="3" fill="none" />
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="52" y="22" width="1176" height="64" rx="26" fill="url(#panel)" stroke="#eef7fa" stroke-opacity="0.22" />
+    <rect x="72" y="126" width="288" height="174" rx="28" fill="url(#panelSoft)" stroke="#f2f7f8" stroke-opacity="0.18" />
+    <rect x="378" y="126" width="524" height="168" rx="28" fill="url(#panelSoft)" stroke="#8adfeb" stroke-opacity="0.24" />
+    <rect x="922" y="126" width="288" height="188" rx="28" fill="url(#panelSoft)" stroke="#f2f7f8" stroke-opacity="0.18" />
+    <rect x="428" y="390" width="424" height="112" rx="34" fill="url(#gold)" stroke="#0d1a29" stroke-width="4" />
+    <rect x="74" y="404" width="238" height="88" rx="26" fill="url(#panelSoft)" stroke="#0d1a29" stroke-width="4" />
+    <rect x="968" y="404" width="238" height="88" rx="26" fill="url(#panelSoft)" stroke="#0d1a29" stroke-width="4" />
+    <rect x="54" y="606" width="1172" height="88" rx="30" fill="url(#panel)" stroke="#eef7fa" stroke-opacity="0.16" />
+  </g>
+
+  <g>
+    <circle cx="116" cy="54" r="20" fill="#79d0df" />
+    <text x="148" y="49" font-family="Arial, 'Hiragino Sans', sans-serif" font-size="14" fill="#b9d5df">艦長 Lv</text>
+    <text x="148" y="69" font-family="Arial, 'Hiragino Sans', sans-serif" font-size="22" font-weight="700" fill="#eef7fa">48 AIRMASTER</text>
+
+    <rect x="712" y="34" width="132" height="40" rx="18" fill="#214866" stroke="#84e1ee" stroke-opacity="0.32" />
+    <circle cx="740" cy="54" r="12" fill="#80d7e4" />
+    <text x="764" y="60" font-family="Arial, 'Hiragino Sans', sans-serif" font-size="18" font-weight="700" fill="#eef7fa">120 / 140</text>
+
+    <rect x="868" y="34" width="132" height="40" rx="18" fill="#214866" stroke="#84e1ee" stroke-opacity="0.32" />
+    <polygon points="894,42 904,54 894,66 884,54" fill="#90e6ee" />
+    <text x="920" y="60" font-family="Arial, 'Hiragino Sans', sans-serif" font-size="18" font-weight="700" fill="#eef7fa">4,820</text>
+
+    <rect x="1024" y="34" width="170" height="40" rx="18" fill="#214866" stroke="#84e1ee" stroke-opacity="0.32" />
+    <circle cx="1050" cy="54" r="12" fill="#f4d36f" />
+    <text x="1074" y="60" font-family="Arial, 'Hiragino Sans', sans-serif" font-size="18" font-weight="700" fill="#eef7fa">912,450</text>
+  </g>
+
+  <g>
+    <text x="96" y="158" font-family="'Hiragino Sans', Arial, sans-serif" font-size="16" fill="#92cdd8">艦長情報</text>
+    <text x="96" y="184" font-family="'Hiragino Sans', Arial, sans-serif" font-size="30" font-weight="700" fill="#eef7fa">プロフィール</text>
+    <circle cx="154" cy="234" r="38" fill="#8dd7e3" />
+    <circle cx="154" cy="222" r="14" fill="#f4f9fb" opacity="0.88" />
+    <rect x="132" y="236" width="44" height="26" rx="13" fill="#f4f9fb" opacity="0.88" />
+    <text x="214" y="224" font-family="'Hiragino Sans', Arial, sans-serif" font-size="16" fill="#cde8ef">旗艦</text>
+    <text x="214" y="248" font-family="'Hiragino Sans', Arial, sans-serif" font-size="22" font-weight="700" fill="#eef7fa">エアハーバーIII</text>
+    <text x="96" y="280" font-family="'Hiragino Sans', Arial, sans-serif" font-size="16" fill="#cde8ef">戦力 154,820</text>
+    <rect x="96" y="294" width="214" height="10" rx="5" fill="#244d6d" />
+    <rect x="96" y="294" width="162" height="10" rx="5" fill="url(#teal)" />
+  </g>
+
+  <g>
+    <text x="404" y="160" font-family="'Hiragino Sans', Arial, sans-serif" font-size="16" fill="#92cdd8">開催中イベント</text>
+    <text x="404" y="188" font-family="'Hiragino Sans', Arial, sans-serif" font-size="34" font-weight="700" fill="#eef7fa">蒼空祭ピックアップ</text>
+    <rect x="406" y="206" width="166" height="54" rx="20" fill="#2a5a7d" />
+    <rect x="580" y="206" width="142" height="54" rx="20" fill="#204b6b" />
+    <rect x="730" y="206" width="146" height="54" rx="20" fill="#2a5a7d" />
+    <path d="M422 244 C450 210, 498 208, 530 236" stroke="#f8f4d0" stroke-width="4" fill="none" />
+    <path d="M604 240 L632 218 L668 230 L650 252 Z" fill="#f1d071" />
+    <path d="M752 234 C786 214, 822 214, 852 238" stroke="#8ce0ed" stroke-width="4" fill="none" />
+  </g>
+
+  <g>
+    <text x="950" y="160" font-family="'Hiragino Sans', Arial, sans-serif" font-size="16" fill="#92cdd8">デイリー任務</text>
+    <text x="950" y="188" font-family="'Hiragino Sans', Arial, sans-serif" font-size="28" font-weight="700" fill="#eef7fa">本日の進行</text>
+    <rect x="950" y="208" width="228" height="30" rx="15" fill="#204b6b" />
+    <rect x="950" y="248" width="228" height="30" rx="15" fill="#204b6b" />
+    <rect x="950" y="288" width="228" height="30" rx="15" fill="#204b6b" />
+    <rect x="1112" y="211" width="60" height="24" rx="12" fill="url(#goldSoft)" />
+    <rect x="1098" y="251" width="74" height="24" rx="12" fill="#2f6e52" />
+    <rect x="1112" y="291" width="60" height="24" rx="12" fill="url(#goldSoft)" />
+    <text x="968" y="228" font-family="'Hiragino Sans', Arial, sans-serif" font-size="15" fill="#eef7fa">出航を1回完了</text>
+    <text x="968" y="268" font-family="'Hiragino Sans', Arial, sans-serif" font-size="15" fill="#eef7fa">商会で取引を3回</text>
+    <text x="968" y="308" font-family="'Hiragino Sans', Arial, sans-serif" font-size="15" fill="#eef7fa">艦隊整備を実行</text>
+  </g>
+
+  <g>
+    <circle cx="492" cy="446" r="18" fill="#f7edc2" opacity="0.92" />
+    <path d="M490 432 L508 446 L490 460 Z" fill="#b06f1e" />
+    <text x="642" y="440" text-anchor="middle" font-family="'Hiragino Sans', Arial, sans-serif" font-size="18" fill="#6f4c16">次の航路へ進む</text>
+    <text x="642" y="474" text-anchor="middle" font-family="'Hiragino Sans', Arial, sans-serif" font-size="42" font-weight="700" fill="#fffaf0">出航する</text>
+  </g>
+
+  <g>
+    <circle cx="118" cy="448" r="18" fill="#8dd7e3" />
+    <rect x="142" y="432" width="18" height="28" rx="6" fill="#f7f3dc" opacity="0.92" />
+    <rect x="164" y="438" width="18" height="22" rx="6" fill="#f7f3dc" opacity="0.92" />
+    <text x="232" y="446" text-anchor="middle" font-family="'Hiragino Sans', Arial, sans-serif" font-size="16" fill="#cfe8ef">受け取りあり</text>
+    <text x="232" y="472" text-anchor="middle" font-family="'Hiragino Sans', Arial, sans-serif" font-size="28" font-weight="700" fill="#eef7fa">ギフト</text>
+
+    <polygon points="1012,430 1030,448 1012,466 994,448" fill="#8dd7e3" />
+    <circle cx="1048" cy="448" r="16" fill="#f4d36f" />
+    <text x="1088" y="446" text-anchor="middle" font-family="'Hiragino Sans', Arial, sans-serif" font-size="16" fill="#cfe8ef">限定開催中</text>
+    <text x="1088" y="472" text-anchor="middle" font-family="'Hiragino Sans', Arial, sans-serif" font-size="28" font-weight="700" fill="#eef7fa">ガチャ</text>
+  </g>
+
+  <g>
+    <rect x="102" y="624" width="160" height="52" rx="22" fill="#2a587a" />
+    <rect x="314" y="624" width="160" height="52" rx="22" fill="#1d4260" />
+    <rect x="526" y="624" width="160" height="52" rx="22" fill="#1d4260" />
+    <rect x="738" y="624" width="160" height="52" rx="22" fill="#1d4260" />
+    <rect x="950" y="624" width="160" height="52" rx="22" fill="#1d4260" />
+
+    <circle cx="148" cy="650" r="14" fill="#8de3ef" />
+    <rect x="360" y="636" width="24" height="28" rx="6" fill="#f5dfa4" />
+    <rect x="566" y="634" width="30" height="30" rx="10" fill="#8de3ef" />
+    <path d="M780 634 L810 634 L822 664 L768 664 Z" fill="#f5dfa4" />
+    <rect x="1006" y="636" width="28" height="28" rx="14" fill="#8de3ef" />
+
+    <text x="196" y="656" font-family="'Hiragino Sans', Arial, sans-serif" font-size="22" font-weight="700" fill="#eef7fa">ホーム</text>
+    <text x="408" y="656" font-family="'Hiragino Sans', Arial, sans-serif" font-size="22" fill="#eef7fa">編成</text>
+    <text x="620" y="656" font-family="'Hiragino Sans', Arial, sans-serif" font-size="22" fill="#eef7fa">商会</text>
+    <text x="832" y="656" font-family="'Hiragino Sans', Arial, sans-serif" font-size="22" fill="#eef7fa">船団</text>
+    <text x="1044" y="656" font-family="'Hiragino Sans', Arial, sans-serif" font-size="22" fill="#eef7fa">整備</text>
+  </g>
+</svg>

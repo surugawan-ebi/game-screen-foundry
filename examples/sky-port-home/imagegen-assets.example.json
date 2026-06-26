@@ -1,0 +1,18 @@
+{
+  "assets": [
+    {
+      "assetId": "bg_sky_port_home",
+      "path": "generated-assets/bg_sky_port_home.png",
+      "backend": "built_in_imagegen",
+      "usesImagegen": true,
+      "prompt": "Bright fantasy sky harbor city HOME background, 1280x720, no UI, no text, floating airships, brass towers, circular stone plaza, readable left and right spaces for overlay panels."
+    },
+    {
+      "assetId": "art_event_banner_fill",
+      "path": "generated-assets/art_event_banner_fill.png",
+      "backend": "built_in_imagegen",
+      "usesImagegen": true,
+      "prompt": "Ornate sky trading festival banner art for a mobile RPG HOME carousel, no external frame, Japanese title can be baked if generated accurately."
+    }
+  ]
+}
