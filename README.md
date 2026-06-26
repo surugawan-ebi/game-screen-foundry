@@ -172,6 +172,10 @@ This keeps arbitrary local files from being exposed through the preview server.
 
 The included `examples/` are demo fixtures for validating the workflow. They are not a production game asset pack. Replace them with your own screen folders for real projects.
 
+## Roadmap
+
+See [TODO.md](TODO.md) for the public beta handoff notes, near-term cleanup tasks, and roadmap.
+
 ## Tests
 
 ```sh
@@ -191,4 +195,6 @@ The test suite covers:
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+Code is released under the MIT License. See [LICENSE](LICENSE).
+
+The bundled `examples/` are included as demo fixtures for testing and explaining the workflow. They should be treated as sample project data, not as a reusable game asset pack.
