@@ -47,6 +47,7 @@ const elements = {
   loadDemoButton: document.getElementById("loadDemoButton"),
   loadFolderButton: document.getElementById("loadFolderButton"),
   presetInput: document.getElementById("presetInput"),
+  projectScreenSelect: document.getElementById("projectScreenSelect"),
   buildRegenPromptButton: document.getElementById("buildRegenPromptButton"),
   clearRegenQueueButton: document.getElementById("clearRegenQueueButton"),
   regenPromptOutput: document.getElementById("regenPromptOutput"),
@@ -243,22 +244,56 @@ function renderSourceStatus() {
     const imageCount = state.source.imageFiles ? state.source.imageFiles.length : 0;
     const jsonCount = state.source.jsonFiles ? state.source.jsonFiles.length : 0;
     if (state.source.projectRoot) {
+      const screenCount = Array.isArray(state.source.projectScreens) ? state.source.projectScreens.length : 0;
       const label = state.source.screenId
         ? `${state.source.screenId} / ${state.source.screenName || ""}`.trim()
         : state.source.screenName || "未指定画面";
-      elements.sourceStatus.textContent = `読み込み元: プロジェクト ${state.source.projectRoot} / 画面 ${label} / JSON ${jsonCount} / 画像 ${imageCount}`;
+      elements.sourceStatus.textContent = `読み込み元: プロジェクト ${state.source.projectRoot} / 画面 ${label} / screens ${screenCount} / JSON ${jsonCount} / 画像 ${imageCount}`;
+      renderProjectNavigator();
       return;
     }
     elements.sourceStatus.textContent = `読み込み元: フォルダ ${state.source.folderPath} / JSON ${jsonCount} / 画像 ${imageCount}`;
+    renderProjectNavigator();
     return;
   }
 
   if (state.source.kind === "bundle-file") {
     elements.sourceStatus.textContent = `読み込み元: 取り込み済みバンドル ${state.source.fileName}`;
+    renderProjectNavigator();
     return;
   }
 
   elements.sourceStatus.textContent = "読み込み元: デモバンドル";
+  renderProjectNavigator();
+}
+
+function renderProjectNavigator() {
+  const screens = state.source && Array.isArray(state.source.projectScreens)
+    ? state.source.projectScreens
+    : [];
+  elements.projectScreenSelect.innerHTML = "";
+
+  if (!screens.length || !state.source.projectRoot) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = "画面選択";
+    elements.projectScreenSelect.appendChild(option);
+    elements.projectScreenSelect.disabled = true;
+    elements.projectScreenSelect.title = "game-creative-project.json を含むプロジェクトを読み込むと有効になります。";
+    return;
+  }
+
+  screens.forEach((screen) => {
+    const option = document.createElement("option");
+    option.value = screen.screenId;
+    option.textContent = `${screen.screenId} / ${screen.name || screen.screenId}`;
+    option.title = screen.path || "";
+    elements.projectScreenSelect.appendChild(option);
+  });
+
+  elements.projectScreenSelect.disabled = false;
+  elements.projectScreenSelect.value = state.source.screenId || state.source.defaultScreenId || screens[0].screenId;
+  elements.projectScreenSelect.title = `プロジェクト内の ${screens.length} 画面を切り替えます。`;
 }
 
 function parseFolderPathInput(value) {
@@ -1342,8 +1377,14 @@ async function loadBundleObject(bundle, source) {
   });
 }
 
-async function loadFolder() {
-  const { folderPath, screenId } = parseFolderPathInput(elements.folderPathInput.value);
+async function loadFolder(options = {}) {
+  const parsed = options.folderPath
+    ? {
+        folderPath: options.folderPath,
+        screenId: options.screenId || ""
+      }
+    : parseFolderPathInput(elements.folderPathInput.value);
+  const { folderPath, screenId } = parsed;
   if (!folderPath) {
     window.alert("フォルダパスを入れてください。");
     return;
@@ -1364,6 +1405,9 @@ async function loadFolder() {
     if (!payload.ok) {
       throw new Error(payload.error || "フォルダの読み込みに失敗しました。");
     }
+    if (payload.source && payload.source.projectRoot) {
+      elements.folderPathInput.value = payload.source.projectRoot;
+    }
     await loadBundleObject(payload.bundle, payload.source);
     elements.aiModeLabel.textContent = payload.ai.mode;
   } catch (error) {
@@ -1374,6 +1418,23 @@ async function loadFolder() {
     setWorkspaceBusy(false, "待機中");
     setBusy(elements.loadFolderButton, false);
   }
+}
+
+async function switchProjectScreen() {
+  if (elements.projectScreenSelect.disabled || !elements.projectScreenSelect.value) {
+    return;
+  }
+  const projectRoot = state.source && state.source.projectRoot
+    ? state.source.projectRoot
+    : parseFolderPathInput(elements.folderPathInput.value).folderPath;
+  if (!projectRoot) {
+    window.alert("先にプロジェクトフォルダを読み込んでください。");
+    return;
+  }
+  await loadFolder({
+    folderPath: projectRoot,
+    screenId: elements.projectScreenSelect.value
+  });
 }
 
 async function importBundleFile(file) {
@@ -1389,6 +1450,7 @@ elements.loadDemoButton.addEventListener("click", async () => {
   await loadDemo();
 });
 elements.loadFolderButton.addEventListener("click", loadFolder);
+elements.projectScreenSelect.addEventListener("change", switchProjectScreen);
 elements.bundleFileInput.addEventListener("change", async (event) => {
   const file = event.target.files && event.target.files[0];
   if (!file) {

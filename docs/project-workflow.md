@@ -78,6 +78,7 @@ game-repo/
 - `creative` だけを指定した場合は `defaultScreenId` を読む。
 - `creative#screenId` を指定した場合は、その画面を読む。
 - 画面フォルダを直接指定した場合は manifest を使わず、その画面だけを読む。
+- `creative` を読み込むと、ブラウザの画面セレクトから manifest 内の別画面へ切り替えられる。
 
 ## Screen Folder Contract
 
@@ -129,7 +130,7 @@ game-repo/
 
 1. `creative/game-creative-project.json` に画面を追加する。
 2. `creative/screens/<screenId>/` を作り、3つの正本JSONと `key-visual.png` を置く。
-3. ブラウザで `creative#<screenId>` を読み込む。
+3. ブラウザで `creative` を読み込み、画面セレクトから対象 screen を選ぶ。
 4. 初期表示の生成済み画面と `仮組み確認` を切り替え、仕様の粒度を確認する。
 5. `AI で画面レビュー` と人間のコメントで、修正対象素材を再生成キューに溜める。
 6. `Codex依頼文を作成` で対話用プロンプトを作る。

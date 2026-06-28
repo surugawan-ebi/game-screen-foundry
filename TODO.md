@@ -20,7 +20,6 @@ This file is the handoff note for the public beta. The current repository is usa
 
 ## Product Roadmap
 
-- Project navigator: choose screens from `game-creative-project.json` inside the UI instead of typing `creative#screenId`.
 - Asset inspector: extend the composition panel with source PNG metadata and per-asset provenance.
 - Better regeneration queue: persist queue state to a project-local file and support batch grouping by visual family.
 - Review history: store adopted versions and comments outside browser memory.
@@ -57,6 +56,7 @@ This file is the handoff note for the public beta. The current repository is usa
 - Added browser UI for composition group selection, canvas highlights, content inset overlays, protected overlay outlines, and pass/warn/fail summaries.
 - Added composition group context to imagegen job JSON and prompts so single-asset generation keeps sibling layers and protected runtime slots in mind.
 - Upgraded the Sky Port HOME sample with public-quality composition groups and layer fit rules for the primary CTA, gift CTA, gacha CTA, and daily mission rows.
+- Added a project screen navigator so users can load `game-creative-project.json` once and switch screens without typing `creative#screenId`.
 
 ## Public Beta Boundaries
 

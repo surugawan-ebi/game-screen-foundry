@@ -117,6 +117,8 @@ Load a project folder from the browser input:
   `creative` loads the manifest default screen.
 - `creative#screenId` なら、その screen を読みます。  
   `creative#screenId` loads a specific screen from the manifest.
+- `creative` 読み込み後は、ブラウザの画面セレクトから manifest 内の screen を切り替えられます。  
+  After loading `creative`, use the browser screen selector to switch screens from the manifest.
 - 画面フォルダを直接指定すると、manifest を使わずその画面を読みます。  
   A direct screen folder loads that screen without using a manifest.
 

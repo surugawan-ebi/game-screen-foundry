@@ -881,6 +881,8 @@ async function dispatchApi(method, pathname, body = {}) {
           projectId: loaded.source.projectId,
           projectName: loaded.source.projectName,
           manifestPath: loaded.source.manifestPath,
+          defaultScreenId: loaded.source.defaultScreenId,
+          projectScreens: loaded.source.projectScreens,
           screenId: loaded.source.screenId,
           screenName: loaded.source.screenName,
           screenFolderPath: loaded.source.screenFolderPath,

@@ -692,6 +692,7 @@ test("frontend exposes the image generation flow tracker", () => {
 
   assert.match(html, /画像生成フロー/u);
   assert.match(html, /id="draftButton"/u);
+  assert.match(html, /id="projectScreenSelect"/u);
   assert.match(html, /構成グループ/u);
   assert.match(html, /id="compositionSummary"/u);
   assert.match(html, /id="compositionGroupList"/u);
@@ -707,6 +708,8 @@ test("frontend exposes the image generation flow tracker", () => {
   assert.match(html, /data-flow-step="import"/u);
   assert.match(js, /function setFlowStep/u);
   assert.match(js, /function renderGeneratedWorkspace/u);
+  assert.match(js, /function renderProjectNavigator/u);
+  assert.match(js, /function switchProjectScreen/u);
   assert.match(js, /function renderCompositionGroups/u);
   assert.match(js, /function renderCompositionOverlays/u);
   assert.match(js, /function showDraftWorkspace/u);
@@ -718,6 +721,7 @@ test("frontend exposes the image generation flow tracker", () => {
   assert.match(js, /setFlowStep\("dialogue"\)/u);
   assert.match(css, /\.flow-step\.is-current/u);
   assert.match(css, /\.flow-step\.is-complete/u);
+  assert.match(css, /\.screen-select/u);
   assert.match(css, /\.composition-group-card/u);
   assert.match(css, /\.composition-content-outline/u);
 });
@@ -1031,6 +1035,12 @@ test("load-from-folder resolves multi-screen project manifests", async () => {
     assert.equal(defaultResponse.payload.source.projectRoot, path.join(projectRoot, "creative"));
     assert.equal(defaultResponse.payload.source.screenId, "shop");
     assert.equal(defaultResponse.payload.source.screenFolderPath, shopDir);
+    assert.equal(defaultResponse.payload.source.defaultScreenId, "shop");
+    assert.deepEqual(
+      defaultResponse.payload.source.projectScreens.map((screen) => `${screen.screenId}:${screen.name}`),
+      ["home:HOME", "shop:SHOP"]
+    );
+    assert.equal(defaultResponse.payload.source.projectScreens[0].screenFolderPath, homeDir);
     assert.equal(
       defaultResponse.payload.bundle.worldPreset.imagegenWorkflow.outputDir,
       path.join(shopDir, "generated-assets")
