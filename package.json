@@ -20,7 +20,15 @@
     "codex"
   ],
   "scripts": {
+    "check": "npm run lint && npm run validate && npm test",
     "dev": "node server.js",
+    "lint": "node scripts/check-js-syntax.js",
+    "release:check": "npm run check && node scripts/check-local-paths.js && node scripts/check-tracked-imagegen.js",
+    "skill:install": "node scripts/install-codex-skill.js",
+    "validate": "node scripts/check-json.js && node scripts/check-skills.js && node scripts/validate-project-files.js",
     "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

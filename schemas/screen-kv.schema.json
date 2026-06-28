@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://surugawan-ebi.github.io/game-screen-foundry/schemas/screen-kv.schema.json",
+  "title": "Game Screen Foundry Screen KV",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["screenId", "screenName", "screenRole", "canvasWidth", "canvasHeight"],
+  "properties": {
+    "screenId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "screenName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "screenRole": {
+      "type": "string",
+      "minLength": 1
+    },
+    "canvasWidth": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "canvasHeight": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "baseResolution": {
+      "type": "string"
+    },
+    "worldPresetId": {
+      "type": "string"
+    },
+    "uiDensity": {
+      "type": "string"
+    },
+    "safeAreas": {
+      "$ref": "#/$defs/safeAreas"
+    },
+    "stateVariantKeys": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "$defs": {
+    "safeAreas": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "top": {
+          "type": "number",
+          "minimum": 0
+        },
+        "right": {
+          "type": "number",
+          "minimum": 0
+        },
+        "bottom": {
+          "type": "number",
+          "minimum": 0
+        },
+        "left": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}
+

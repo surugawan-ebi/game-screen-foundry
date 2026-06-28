@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://surugawan-ebi.github.io/game-screen-foundry/schemas/project-manifest.schema.json",
+  "title": "Game Screen Foundry Project Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["projectId", "projectName", "screens"],
+  "properties": {
+    "projectId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable machine-readable project id."
+    },
+    "projectName": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable project name."
+    },
+    "defaultScreenId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Screen id loaded when no explicit screen id is requested."
+    },
+    "screens": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["screenId"],
+        "anyOf": [
+          { "required": ["path"] },
+          { "required": ["folderPath"] },
+          { "required": ["dir"] }
+        ],
+        "properties": {
+          "screenId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Preferred relative path from the manifest folder to the screen folder."
+          },
+          "folderPath": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Compatibility alias for path."
+          },
+          "dir": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Compatibility alias for path."
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
+

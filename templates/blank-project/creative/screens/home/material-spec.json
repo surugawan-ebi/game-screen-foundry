@@ -1,0 +1,160 @@
+{
+  "screenMeta": {
+    "screenId": "home",
+    "canvas": {
+      "width": 1280,
+      "height": 720
+    },
+    "coordinateSpace": "screen_pixels",
+    "safeAreas": {
+      "top": 24,
+      "right": 24,
+      "bottom": 24,
+      "left": 24
+    },
+    "defaultState": "normal",
+    "supportedStates": ["normal"]
+  },
+  "assemblyPolicy": {
+    "targetFidelity": "modular_reconstruction",
+    "kvRelationship": "draft_layout",
+    "dynamicOverlayPolicy": {
+      "generatedAssetsShouldExclude": ["button_text"],
+      "useOverlayBlueprintsFor": ["button_labels"]
+    },
+    "layoutSafetyPolicy": {
+      "mode": "explicit_overlap_only",
+      "siblingOverlapDefault": "forbidden",
+      "minimumMajorSurfaceGap": 8,
+      "parentPaddingDefault": 8,
+      "allowedOverlaps": []
+    }
+  },
+  "compositionGroups": [
+    {
+      "groupId": "start_cta",
+      "kind": "runtime_labeled_button",
+      "rootPlacementId": "start_button",
+      "layerPlacementIds": ["start_button"],
+      "layerFitRules": [
+        {
+          "placementId": "start_button",
+          "fit": "same_canvas",
+          "notes": "The button base is the composition canvas; runtime label remains separate."
+        }
+      ],
+      "protectedOverlayIds": ["ov_start_button_label"],
+      "outputAssetId": "btn_start",
+      "qualityChecks": [
+        "button label slot remains readable",
+        "button PNG does not bake runtime label text"
+      ],
+      "notes": "Template example of grouping a generated button base with its runtime text overlay."
+    }
+  ],
+  "placements": [
+    {
+      "placementId": "home_backdrop",
+      "assetId": "bg_home",
+      "x": 640,
+      "y": 360,
+      "width": 1280,
+      "height": 720,
+      "anchor": "center",
+      "zIndex": 1,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      }
+    },
+    {
+      "placementId": "start_button",
+      "assetId": "btn_start",
+      "x": 640,
+      "y": 540,
+      "width": 280,
+      "height": 96,
+      "anchor": "center",
+      "zIndex": 20,
+      "blendMode": "normal",
+      "opacity": 1,
+      "stateVisibility": {
+        "normal": true
+      }
+    }
+  ],
+  "assets": [
+    {
+      "assetId": "bg_home",
+      "assetType": "background",
+      "role": "ambient_backdrop",
+      "purpose": "Home screen background draft.",
+      "renderGroup": "background",
+      "visualPriority": "high",
+      "styleNotes": ["Readable game home background", "Keep center area open for UI"],
+      "functionNotes": ["Do not bake runtime UI labels"],
+      "exportRequirements": {
+        "sizes": ["1280x720"],
+        "transparent": false,
+        "format": "png"
+      },
+      "generationPlan": {
+        "backendClass": "image_batch",
+        "batchGroup": "home_background",
+        "firstPassMode": "bulk_generate_all_assets"
+      }
+    },
+    {
+      "assetId": "btn_start",
+      "assetType": "button",
+      "role": "primary_cta",
+      "purpose": "Primary start button frame.",
+      "renderGroup": "ui",
+      "visualPriority": "high",
+      "styleNotes": ["Clear silhouette", "Strong contrast against the background"],
+      "functionNotes": ["Runtime text is placed with contentOverlays"],
+      "exportRequirements": {
+        "sizes": ["280x96"],
+        "transparent": true,
+        "format": "png"
+      },
+      "generationPlan": {
+        "backendClass": "template_family_batch",
+        "batchGroup": "primary_buttons",
+        "firstPassMode": "bulk_generate_all_assets"
+      },
+      "textHandling": {
+        "ownership": "runtime_overlay",
+        "runtimeTextSlots": ["start_button_label"]
+      }
+    }
+  ],
+  "contentOverlays": [
+    {
+      "overlayId": "ov_start_button_label",
+      "kind": "text",
+      "targetPlacementId": "start_button",
+      "slot": {
+        "x": 32,
+        "y": 28,
+        "width": 216,
+        "height": 40
+      },
+      "x": 640,
+      "y": 540,
+      "width": 216,
+      "height": 40,
+      "anchor": "center",
+      "zIndex": 30,
+      "sampleText": "START",
+      "fontSize": 28,
+      "fontWeight": 800,
+      "align": "center",
+      "valign": "middle",
+      "color": "#ffffff",
+      "strokeColor": "#101820",
+      "strokeWidth": 2
+    }
+  ]
+}

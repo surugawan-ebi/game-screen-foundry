@@ -1,0 +1,18 @@
+{
+  "screenId": "home",
+  "screenName": "Home",
+  "screenRole": "home",
+  "canvasWidth": 1280,
+  "canvasHeight": 720,
+  "baseResolution": "1280x720",
+  "worldPresetId": "preset_blank_project_01",
+  "uiDensity": "medium",
+  "safeAreas": {
+    "top": 24,
+    "right": 24,
+    "bottom": 24,
+    "left": 24
+  },
+  "stateVariantKeys": ["normal"]
+}
+
