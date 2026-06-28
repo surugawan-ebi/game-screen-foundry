@@ -6,6 +6,7 @@ const state = {
   materialSpecSheet: null,
   worldPreset: null,
   flowStep: "load",
+  implementationReport: "",
   viewMode: "draft",
   regenerationQueue: [],
   regenerationPrompt: "",
@@ -37,10 +38,14 @@ const elements = {
   folderPathInput: document.getElementById("folderPathInput"),
   flowCurrentLabel: document.getElementById("flowCurrentLabel"),
   flowSteps: document.getElementById("flowSteps"),
+  exportReportButton: document.getElementById("exportReportButton"),
   generateButton: document.getElementById("generateButton"),
   imagegenJobButton: document.getElementById("imagegenJobButton"),
   imagegenRefreshButton: document.getElementById("imagegenRefreshButton"),
   imagegenStatus: document.getElementById("imagegenStatus"),
+  implementationReportOutput: document.getElementById("implementationReportOutput"),
+  implementationReportPanel: document.getElementById("implementationReportPanel"),
+  implementationReportStatus: document.getElementById("implementationReportStatus"),
   kvPreviewImage: document.getElementById("kvPreviewImage"),
   kvPreviewWrap: document.getElementById("kvPreviewWrap"),
   kvStatus: document.getElementById("kvStatus"),
@@ -647,6 +652,51 @@ function setRegenerationPrompt(text) {
   }
 }
 
+function setImplementationReport(text) {
+  state.implementationReport = text || "";
+  elements.implementationReportOutput.value = state.implementationReport;
+  elements.implementationReportStatus.textContent = state.implementationReport
+    ? `${state.implementationReport.split("\n").length} 行`
+    : "未作成";
+}
+
+async function buildImplementationReport() {
+  if (!state.renderModel) {
+    window.alert("先に画面を読み込んでください。");
+    return;
+  }
+
+  const busyStartedAt = Date.now();
+  setBusy(elements.exportReportButton, true, "作成中...");
+  setWorkspaceBusy(true, "実装レポートを作成しています...");
+  try {
+    const response = await fetch("/api/implementation-report", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(getPayloadFromEditors())
+    });
+    const payload = await response.json();
+    if (!payload.ok) {
+      throw new Error(payload.error || "実装レポートの作成に失敗しました。");
+    }
+    elements.aiModeLabel.textContent = payload.ai.mode;
+    setImplementationReport(payload.markdown || "");
+    elements.implementationReportPanel.classList.remove("flash-once");
+    void elements.implementationReportPanel.offsetWidth;
+    elements.implementationReportPanel.classList.add("flash-once");
+    setActivityStatus(`実装レポートを作成しました。layers ${payload.report.layers.length} / overlays ${payload.report.runtimeOverlays.length} ${nowLabel()}`);
+  } catch (error) {
+    window.alert(error.message);
+    setActivityStatus(`実装レポート作成失敗: ${error.message}`);
+  } finally {
+    await ensureMinimumBusy(busyStartedAt);
+    setWorkspaceBusy(false, "待機中");
+    setBusy(elements.exportReportButton, false);
+  }
+}
+
 function renderRegenerationQueue() {
   const queue = state.regenerationQueue;
   elements.regenQueueCountLabel.textContent = `${queue.length} 件`;
@@ -1059,6 +1109,7 @@ async function loadDemo() {
     state.commentDrafts = {};
     state.regenerationQueue = [];
     setRegenerationPrompt("");
+    setImplementationReport("");
     state.source = payload.source || { kind: "demo" };
     elements.aiModeLabel.textContent = payload.ai.mode;
     updateEditors();
@@ -1370,6 +1421,7 @@ async function loadBundleObject(bundle, source) {
   state.commentDrafts = {};
   state.regenerationQueue = [];
   setRegenerationPrompt("");
+  setImplementationReport("");
   updateEditors();
   await renderGeneratedWorkspace(`読み込み完了。生成後画面を表示しました ${nowLabel()}`, {
     resetReview: true,
@@ -1468,6 +1520,7 @@ elements.imagegenJobButton.addEventListener("click", prepareImagegenJob);
 elements.imagegenRefreshButton.addEventListener("click", refreshImagegenOutputs);
 elements.draftButton.addEventListener("click", showDraftWorkspace);
 elements.generateButton.addEventListener("click", showGeneratedResults);
+elements.exportReportButton.addEventListener("click", buildImplementationReport);
 elements.buildRegenPromptButton.addEventListener("click", buildRegenerationPrompt);
 elements.clearRegenQueueButton.addEventListener("click", clearRegenerationQueue);
 elements.reviewButton.addEventListener("click", runReview);

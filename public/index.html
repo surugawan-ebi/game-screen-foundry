@@ -34,6 +34,7 @@
         <button id="draftButton">仮組み確認</button>
         <button id="generateButton" class="primary">生成後を表示</button>
         <button id="reviewButton">AI で画面レビュー</button>
+        <button id="exportReportButton">実装レポート作成</button>
         <button id="applyLocksButton">固定候補を反映</button>
       </section>
       <section class="source-bar">
@@ -201,6 +202,20 @@
               class="regen-prompt-output"
               readonly
               placeholder="キューが溜まったら、ここにCodexへ渡す依頼文が生成されます。"
+              spellcheck="false"
+            ></textarea>
+          </article>
+
+          <article id="implementationReportPanel" class="panel implementation-report-panel">
+            <div class="panel-header">
+              <h2>実装レポート</h2>
+              <span id="implementationReportStatus" class="panel-note">未作成</span>
+            </div>
+            <textarea
+              id="implementationReportOutput"
+              class="implementation-report-output"
+              readonly
+              placeholder="画面を読み込んだあと「実装レポート作成」を押すと、layer order / runtime overlay / asset path / composition quality をまとめたMarkdownが生成されます。"
               spellcheck="false"
             ></textarea>
           </article>

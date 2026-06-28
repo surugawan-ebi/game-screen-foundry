@@ -13,6 +13,7 @@ const { getAiMode, normalizeCommentWithAi, reviewScreenWithAi } = require("./lib
 const { resolveBundleFromFolder } = require("./lib/folder-loader");
 const { prepareImagegenWorkflow } = require("./lib/imagegen-workflow");
 const { buildRegenerationRequest } = require("./lib/regeneration-queue");
+const { buildImplementationReport } = require("./lib/implementation-report");
 
 const PORT = Number(process.env.PORT || 4311);
 const HOST = process.env.HOST || "127.0.0.1";
@@ -826,6 +827,19 @@ function handleCompositionQuality(body) {
   };
 }
 
+function handleImplementationReport(body) {
+  const input = prepareInput(Object.keys(body).length ? body : getDemoProject());
+  const { report, markdown } = buildImplementationReport(input);
+  return {
+    ok: true,
+    ai: {
+      mode: getAiMode()
+    },
+    report,
+    markdown
+  };
+}
+
 async function dispatchApi(method, pathname, body = {}) {
   if (method === "GET" && pathname === "/api/source-file") {
     throw new Error("Use HTTP server route for source-file");
@@ -962,6 +976,13 @@ async function dispatchApi(method, pathname, body = {}) {
     return {
       statusCode: 200,
       payload: handleCompositionQuality(body)
+    };
+  }
+
+  if (method === "POST" && pathname === "/api/implementation-report") {
+    return {
+      statusCode: 200,
+      payload: handleImplementationReport(body)
     };
   }
 

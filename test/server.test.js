@@ -255,6 +255,21 @@ test("composition quality endpoint reports grouped asset assembly health", async
   );
 });
 
+test("implementation report endpoint exports layer order and runtime overlays", async () => {
+  const response = await dispatchApi("POST", "/api/implementation-report", getDemoProject());
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.payload.ok, true);
+  assert.equal(response.payload.report.screen.screenId, "home_sky_port_atlas");
+  assert.ok(response.payload.report.layers.length > 0);
+  assert.ok(response.payload.report.runtimeOverlays.some((overlay) => overlay.overlayId === "ov_sortie_cta"));
+  assert.ok(response.payload.report.compositionGroups.some((group) => group.groupId === "primary_sortie_cta"));
+  assert.match(response.payload.markdown, /## Layer Order/u);
+  assert.match(response.payload.markdown, /## Runtime Overlays/u);
+  assert.match(response.payload.markdown, /## Composition Groups/u);
+  assert.match(response.payload.markdown, /compositionQuality: pass \/ score 100/u);
+});
+
 test("runtime text overlays resolve inside their target asset slots", async () => {
   const demoResponse = await dispatchApi("GET", "/api/demo");
   const generateResponse = await dispatchApi("POST", "/api/generate-all", demoResponse.payload.demo);
@@ -693,6 +708,8 @@ test("frontend exposes the image generation flow tracker", () => {
   assert.match(html, /画像生成フロー/u);
   assert.match(html, /id="draftButton"/u);
   assert.match(html, /id="projectScreenSelect"/u);
+  assert.match(html, /id="exportReportButton"/u);
+  assert.match(html, /id="implementationReportOutput"/u);
   assert.match(html, /構成グループ/u);
   assert.match(html, /id="compositionSummary"/u);
   assert.match(html, /id="compositionGroupList"/u);
@@ -710,6 +727,7 @@ test("frontend exposes the image generation flow tracker", () => {
   assert.match(js, /function renderGeneratedWorkspace/u);
   assert.match(js, /function renderProjectNavigator/u);
   assert.match(js, /function switchProjectScreen/u);
+  assert.match(js, /function buildImplementationReport/u);
   assert.match(js, /function renderCompositionGroups/u);
   assert.match(js, /function renderCompositionOverlays/u);
   assert.match(js, /function showDraftWorkspace/u);
@@ -722,6 +740,7 @@ test("frontend exposes the image generation flow tracker", () => {
   assert.match(css, /\.flow-step\.is-current/u);
   assert.match(css, /\.flow-step\.is-complete/u);
   assert.match(css, /\.screen-select/u);
+  assert.match(css, /\.implementation-report-output/u);
   assert.match(css, /\.composition-group-card/u);
   assert.match(css, /\.composition-content-outline/u);
 });

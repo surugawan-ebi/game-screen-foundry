@@ -24,7 +24,6 @@ This file is the handoff note for the public beta. The current repository is usa
 - Better regeneration queue: persist queue state to a project-local file and support batch grouping by visual family.
 - Review history: store adopted versions and comments outside browser memory.
 - Shared assets: support a project-level shared registry for common nav buttons, resource icons, and panel families.
-- Export report: generate an implementation handoff package for game engineers with layer order, coordinates, text overlays, and asset paths.
 - Safer local file permissions: move from process-level allowlist to project session allowlist with explicit UI feedback.
 - Schema validation errors: show actionable messages in the browser instead of raw exceptions.
 - UI polish: make the workbench usable on smaller laptop screens and add clearer loading/progress states.
@@ -57,6 +56,7 @@ This file is the handoff note for the public beta. The current repository is usa
 - Added composition group context to imagegen job JSON and prompts so single-asset generation keeps sibling layers and protected runtime slots in mind.
 - Upgraded the Sky Port HOME sample with public-quality composition groups and layer fit rules for the primary CTA, gift CTA, gacha CTA, and daily mission rows.
 - Added a project screen navigator so users can load `game-creative-project.json` once and switch screens without typing `creative#screenId`.
+- Added an implementation handoff report with layer order, runtime overlays, asset generation sources, and composition quality summary.
 
 ## Public Beta Boundaries
 

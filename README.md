@@ -33,6 +33,8 @@ The project is currently beta-quality. It is useful for validating a production 
   Builds Codex/imagegen-ready prompts for selected assets.
 - 生成済み PNG を画面フォルダから再取り込みします。  
   Re-imports generated PNGs from a project folder.
+- layer order、runtime overlay、採用PNG、composition quality を実装レポートとして出力します。  
+  Exports an implementation handoff report with layer order, runtime overlays, adopted PNGs, and composition quality.
 - `game-creative-project.json` による複数画面プロジェクトを扱えます。  
   Supports multi-screen projects through a `game-creative-project.json` manifest.
 

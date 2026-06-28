@@ -205,6 +205,7 @@ input {
     max-content
     max-content
     max-content
+    max-content
     max-content;
   align-items: center;
   gap: 8px;
@@ -981,6 +982,11 @@ textarea {
 
 .regen-prompt-output {
   min-height: 220px;
+}
+
+.implementation-report-output {
+  min-height: 300px;
+  font-size: 11px;
 }
 
 .asset-grid {

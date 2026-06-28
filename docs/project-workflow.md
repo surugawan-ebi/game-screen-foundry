@@ -136,8 +136,9 @@ game-repo/
 6. `Codex依頼文を作成` で対話用プロンプトを作る。
 7. Codex / imagegen で PNG を生成し、同じ画面フォルダの `generated-assets/` に保存する。
 8. `生成済みPNGを再取り込み` で採用し、ブラウザで画面を再確認する。
-9. 採用したPNGと `imagegen-assets.json` をゲームリポジトリ側でコミットする。
-10. 次の画面に移る。共通素材はコピーではなく、後続で shared asset registry として切り出す。
+9. `実装レポート作成` で layer order、runtime overlay、採用PNG、composition quality をまとめる。
+10. 採用したPNG、`imagegen-assets.json`、実装レポートをゲームリポジトリ側で確認・コミットする。
+11. 次の画面に移る。共通素材はコピーではなく、後続で shared asset registry として切り出す。
 
 ## Responsibility Rules
 
