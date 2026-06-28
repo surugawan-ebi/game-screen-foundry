@@ -39,6 +39,64 @@ function isAllowedSourceFile(filePath) {
   return [...allowedSourceRoots].some((rootPath) => isPathInside(rootPath, resolved));
 }
 
+function sanitizeFileSlug(value, fallback = "screen") {
+  const slug = String(value || "")
+    .trim()
+    .replace(/[^a-z0-9_-]+/giu, "_")
+    .replace(/^_+|_+$/gu, "");
+  return slug || fallback;
+}
+
+function resolveRegenerationQueuePath(source = {}, screenKv = {}) {
+  if (!source || source.kind !== "folder") {
+    return null;
+  }
+
+  const baseDir = source.projectRoot || source.screenFolderPath || source.folderPath || "";
+  if (!baseDir) {
+    return null;
+  }
+
+  const resolvedBase = path.resolve(baseDir);
+  if (!fs.existsSync(resolvedBase) || !fs.statSync(resolvedBase).isDirectory()) {
+    throw new Error(`再生成キューの保存元フォルダが見つかりません: ${resolvedBase}`);
+  }
+  if (!isAllowedSourceFile(resolvedBase)) {
+    throw new Error("再生成キューを保存する前に、対象のプロジェクトフォルダを読み込んでください。");
+  }
+
+  const screenId = sanitizeFileSlug(source.screenId || screenKv.screenId || "screen");
+  const queuePath = path.join(
+    resolvedBase,
+    ".game-creative-generation",
+    "regeneration-queues",
+    `${screenId}.json`
+  );
+  const resolvedQueuePath = path.resolve(queuePath);
+  if (!isPathInside(resolvedBase, resolvedQueuePath)) {
+    throw new Error("再生成キューの保存先がプロジェクトフォルダ外に解決されました。");
+  }
+  return resolvedQueuePath;
+}
+
+function normalizeRegenerationQueue(queue) {
+  if (!Array.isArray(queue)) {
+    return [];
+  }
+  return queue
+    .filter((item) => item && item.assetId)
+    .map((item) => ({
+      queueId: String(item.queueId || `regen_${item.assetId}`),
+      assetId: String(item.assetId),
+      userComment: String(item.userComment || ""),
+      aiReviewComment: String(item.aiReviewComment || ""),
+      source: String(item.source || "asset_card"),
+      status: String(item.status || "queued"),
+      createdAt: String(item.createdAt || ""),
+      updatedAt: String(item.updatedAt || "")
+    }));
+}
+
 function resolveSourceFileRequest(filePath) {
   if (!filePath) {
     return {
@@ -814,6 +872,77 @@ function handleBuildRegenerationRequest(body) {
   };
 }
 
+function handleSaveRegenerationQueue(body) {
+  const queuePath = resolveRegenerationQueuePath(body.source, body.screenKv);
+  if (!queuePath) {
+    return {
+      ok: true,
+      persisted: false,
+      message: "フォルダまたはプロジェクトを読み込むと、再生成キューを保存できます。"
+    };
+  }
+
+  const queue = normalizeRegenerationQueue(body.regenerationQueue);
+  const now = new Date().toISOString();
+  const screenId = body.source && body.source.screenId
+    ? body.source.screenId
+    : body.screenKv && body.screenKv.screenId
+      ? body.screenKv.screenId
+      : "";
+  const payload = {
+    version: 1,
+    savedAt: now,
+    source: {
+      projectRoot: body.source.projectRoot || "",
+      folderPath: body.source.folderPath || "",
+      screenFolderPath: body.source.screenFolderPath || "",
+      screenId,
+      screenName: body.source.screenName || (body.screenKv && body.screenKv.screenName) || ""
+    },
+    queue
+  };
+
+  fs.mkdirSync(path.dirname(queuePath), { recursive: true });
+  fs.writeFileSync(queuePath, `${JSON.stringify(payload, null, 2)}\n`);
+  return {
+    ok: true,
+    persisted: true,
+    queuePath,
+    itemCount: queue.length,
+    savedAt: now
+  };
+}
+
+function handleLoadRegenerationQueue(body) {
+  const queuePath = resolveRegenerationQueuePath(body.source, body.screenKv);
+  if (!queuePath) {
+    return {
+      ok: true,
+      persisted: false,
+      message: "フォルダまたはプロジェクトを読み込むと、保存済み再生成キューを読み込めます。"
+    };
+  }
+  if (!fs.existsSync(queuePath)) {
+    return {
+      ok: true,
+      persisted: false,
+      queuePath,
+      message: "この画面の保存済み再生成キューはまだありません。"
+    };
+  }
+
+  const payload = JSON.parse(fs.readFileSync(queuePath, "utf8"));
+  const queue = normalizeRegenerationQueue(payload.queue);
+  return {
+    ok: true,
+    persisted: true,
+    queuePath,
+    savedAt: payload.savedAt || "",
+    itemCount: queue.length,
+    queue
+  };
+}
+
 function handleCompositionQuality(body) {
   const input = prepareInput(Object.keys(body).length ? body : getDemoProject());
   const renderModel = generateRenderModel(input);
@@ -1028,6 +1157,20 @@ async function dispatchApi(method, pathname, body = {}) {
     return {
       statusCode: 200,
       payload: handleBuildRegenerationRequest(body)
+    };
+  }
+
+  if (method === "POST" && pathname === "/api/save-regeneration-queue") {
+    return {
+      statusCode: 200,
+      payload: handleSaveRegenerationQueue(body)
+    };
+  }
+
+  if (method === "POST" && pathname === "/api/load-regeneration-queue") {
+    return {
+      statusCode: 200,
+      payload: handleLoadRegenerationQueue(body)
     };
   }
 

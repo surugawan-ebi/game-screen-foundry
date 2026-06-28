@@ -10,6 +10,8 @@ const state = {
   validationReport: null,
   viewMode: "draft",
   regenerationQueue: [],
+  regenerationQueueDirty: false,
+  regenerationQueuePath: "",
   regenerationPrompt: "",
   revisionMap: {},
   renderModel: null,
@@ -56,12 +58,14 @@ const elements = {
   projectScreenSelect: document.getElementById("projectScreenSelect"),
   buildRegenPromptButton: document.getElementById("buildRegenPromptButton"),
   clearRegenQueueButton: document.getElementById("clearRegenQueueButton"),
+  loadRegenQueueButton: document.getElementById("loadRegenQueueButton"),
   regenPromptOutput: document.getElementById("regenPromptOutput"),
   regenQueueCountLabel: document.getElementById("regenQueueCountLabel"),
   regenQueueList: document.getElementById("regenQueueList"),
   regenQueuePanel: document.getElementById("regenQueuePanel"),
   reviewButton: document.getElementById("reviewButton"),
   reviewOutput: document.getElementById("reviewOutput"),
+  saveRegenQueueButton: document.getElementById("saveRegenQueueButton"),
   screenCanvas: document.getElementById("screenCanvas"),
   screenCanvasWrap: document.getElementById("screenCanvasWrap"),
   screenKvInput: document.getElementById("screenKvInput"),
@@ -188,7 +192,7 @@ function nowLabel() {
 function setActivityStatus(message, { busy = false } = {}) {
   elements.activityStatus.textContent = message;
   elements.activityStatus.classList.toggle("is-busy", busy);
-  elements.activityStatus.classList.toggle("is-success", !busy && /生成しました|読み込みました|更新しました|再採用しました|完了/.test(message));
+  elements.activityStatus.classList.toggle("is-success", !busy && /生成しました|読み込みました|保存しました|更新しました|再採用しました|完了/.test(message));
 }
 
 function setWorkspaceBusy(busy, label) {
@@ -678,6 +682,102 @@ function getQueuePayload() {
   }));
 }
 
+function markRegenerationQueueDirty() {
+  if (state.regenerationQueuePath) {
+    state.regenerationQueueDirty = true;
+  }
+}
+
+function roundPixel(value) {
+  return Math.round(Number(value || 0));
+}
+
+function getAssetPlacementDetails(assetId) {
+  const placements = state.materialSpecSheet && Array.isArray(state.materialSpecSheet.placements)
+    ? state.materialSpecSheet.placements
+    : [];
+  return placements
+    .filter((placement) => placement.assetId === assetId)
+    .map((placement) => ({
+      placementId: placement.placementId,
+      parentId: placement.parentId || "",
+      left: roundPixel(placement.x - placement.width / 2),
+      top: roundPixel(placement.y - placement.height / 2),
+      width: roundPixel(placement.width),
+      height: roundPixel(placement.height),
+      zIndex: placement.zIndex
+    }));
+}
+
+function getAssetCompositionRefs(assetId) {
+  const refs = [];
+  getCompositionGroups().forEach((group) => {
+    if (group.outputAssetId === assetId) {
+      refs.push(`${group.groupId}: output`);
+    }
+    (group.layers || [])
+      .filter((layer) => layer.assetId === assetId)
+      .forEach((layer) => {
+        const role = layer.placementId === group.rootPlacementId ? "root" : "layer";
+        refs.push(`${group.groupId}: ${role} ${layer.placementId}`);
+      });
+    (group.childContent || [])
+      .filter((layer) => layer.assetId === assetId)
+      .forEach((layer) => {
+        refs.push(`${group.groupId}: content ${layer.placementId}`);
+      });
+  });
+  return refs;
+}
+
+function getRegisteredImagegenAsset(assetId) {
+  const registry = state.worldPreset && state.worldPreset.imagegenAssets
+    ? state.worldPreset.imagegenAssets
+    : null;
+  if (!registry) {
+    return null;
+  }
+  if (Array.isArray(registry)) {
+    return registry.find((item) => item && item.assetId === assetId) || null;
+  }
+  return registry[assetId] || null;
+}
+
+function appendInspectorRow(parent, label, value) {
+  const row = document.createElement("div");
+  row.className = "asset-inspector-row";
+  const key = document.createElement("span");
+  key.textContent = label;
+  const content = document.createElement("strong");
+  content.textContent = value || "-";
+  row.appendChild(key);
+  row.appendChild(content);
+  parent.appendChild(row);
+}
+
+function renderAssetInspector(asset, root) {
+  root.innerHTML = "";
+  const placements = getAssetPlacementDetails(asset.assetId);
+  const placementLabel = placements.length
+    ? placements.slice(0, 3).map((placement) => {
+        const parent = placement.parentId ? ` parent=${placement.parentId}` : "";
+        return `${placement.placementId} @ ${placement.left},${placement.top} ${placement.width}x${placement.height} z${placement.zIndex}${parent}`;
+      }).join(" / ") + (placements.length > 3 ? ` / +${placements.length - 3}` : "")
+    : "未配置";
+  const compositionRefs = getAssetCompositionRefs(asset.assetId);
+  const meta = asset.generationMeta || {};
+  const registered = getRegisteredImagegenAsset(asset.assetId) || {};
+  const sourcePath = meta.imagePath || meta.sourceAssetPath || registered.path || "";
+  const backend = meta.actualBackend || registered.backend || meta.backendClassLabel || meta.backendClass || "未採用";
+  const sourceLabel = sourcePath
+    ? `${backend} / ${sourcePath}`
+    : backend;
+
+  appendInspectorRow(root, "配置詳細", placementLabel);
+  appendInspectorRow(root, "構成グループ", compositionRefs.length ? compositionRefs.join(" / ") : "なし");
+  appendInspectorRow(root, "採用元", sourceLabel);
+}
+
 function setRegenerationPrompt(text) {
   state.regenerationPrompt = text || "";
   elements.regenPromptOutput.value = state.regenerationPrompt;
@@ -827,7 +927,10 @@ async function buildImplementationReport() {
 
 function renderRegenerationQueue() {
   const queue = state.regenerationQueue;
-  elements.regenQueueCountLabel.textContent = `${queue.length} 件`;
+  elements.regenQueueCountLabel.textContent = state.regenerationQueuePath
+    ? `${queue.length} 件 / ${state.regenerationQueueDirty ? "未保存変更" : "保存済"}`
+    : `${queue.length} 件`;
+  elements.regenQueueCountLabel.title = state.regenerationQueuePath || "";
   elements.regenPromptOutput.value = state.regenerationPrompt;
 
   if (!queue.length) {
@@ -871,6 +974,7 @@ function renderRegenerationQueue() {
     removeButton.textContent = "外す";
     removeButton.addEventListener("click", () => {
       state.regenerationQueue = state.regenerationQueue.filter((candidate) => candidate.queueId !== item.queueId);
+      markRegenerationQueueDirty();
       setRegenerationPrompt("");
       renderRegenerationQueue();
       renderAssets();
@@ -914,6 +1018,7 @@ function addAssetToRegenerationQueue(asset, userComment) {
     state.regenerationQueue = [...state.regenerationQueue, nextItem];
   }
 
+  markRegenerationQueueDirty();
   state.commentDrafts[asset.assetId] = normalizedUserComment;
   setRegenerationPrompt("");
   renderRegenerationQueue();
@@ -963,8 +1068,99 @@ async function buildRegenerationPrompt() {
   }
 }
 
+function getQueuePersistencePayload() {
+  const { payload, diagnostics } = getPayloadFromEditorsSafely();
+  if (diagnostics.length) {
+    throw new Error(diagnostics.map((diagnostic) => diagnostic.message).join(" / "));
+  }
+  return {
+    source: state.source,
+    screenKv: payload.screenKv,
+    regenerationQueue: getQueuePayload()
+  };
+}
+
+async function saveRegenerationQueue() {
+  const busyStartedAt = Date.now();
+  setBusy(elements.saveRegenQueueButton, true, "保存中...");
+  setWorkspaceBusy(true, "再生成キューを保存しています...");
+  try {
+    const response = await fetch("/api/save-regeneration-queue", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(getQueuePersistencePayload())
+    });
+    const payload = await response.json();
+    if (!payload.ok) {
+      throw new Error(payload.error || "再生成キューの保存に失敗しました。");
+    }
+    if (!payload.persisted) {
+      state.regenerationQueuePath = "";
+      state.regenerationQueueDirty = false;
+      renderRegenerationQueue();
+      setActivityStatus(payload.message || `この読み込み元ではキューを保存できません ${nowLabel()}`);
+      return;
+    }
+    state.regenerationQueuePath = payload.queuePath || "";
+    state.regenerationQueueDirty = false;
+    renderRegenerationQueue();
+    setActivityStatus(`再生成キューを保存しました。${payload.itemCount} 件 ${nowLabel()}`);
+  } catch (error) {
+    window.alert(error.message);
+    setActivityStatus(`キュー保存失敗: ${error.message}`);
+  } finally {
+    await ensureMinimumBusy(busyStartedAt);
+    setWorkspaceBusy(false, "待機中");
+    setBusy(elements.saveRegenQueueButton, false);
+  }
+}
+
+async function loadSavedRegenerationQueue() {
+  const busyStartedAt = Date.now();
+  setBusy(elements.loadRegenQueueButton, true, "読込中...");
+  setWorkspaceBusy(true, "保存済み再生成キューを読み込んでいます...");
+  try {
+    const response = await fetch("/api/load-regeneration-queue", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(getQueuePersistencePayload())
+    });
+    const payload = await response.json();
+    if (!payload.ok) {
+      throw new Error(payload.error || "保存済みキューの読み込みに失敗しました。");
+    }
+    if (!payload.persisted) {
+      state.regenerationQueuePath = "";
+      state.regenerationQueueDirty = false;
+      renderRegenerationQueue();
+      setActivityStatus(payload.message || `保存済みキューはありません ${nowLabel()}`);
+      return;
+    }
+    state.regenerationQueue = Array.isArray(payload.queue) ? payload.queue : [];
+    state.regenerationQueuePath = payload.queuePath || "";
+    state.regenerationQueueDirty = false;
+    setRegenerationPrompt("");
+    renderRegenerationQueue();
+    renderAssets();
+    setFlowStep("queue");
+    setActivityStatus(`保存済み再生成キューを読み込みました。${state.regenerationQueue.length} 件 ${nowLabel()}`);
+  } catch (error) {
+    window.alert(error.message);
+    setActivityStatus(`キュー読込失敗: ${error.message}`);
+  } finally {
+    await ensureMinimumBusy(busyStartedAt);
+    setWorkspaceBusy(false, "待機中");
+    setBusy(elements.loadRegenQueueButton, false);
+  }
+}
+
 function clearRegenerationQueue() {
   state.regenerationQueue = [];
+  markRegenerationQueueDirty();
   setRegenerationPrompt("");
   renderRegenerationQueue();
   renderAssets();
@@ -1024,6 +1220,7 @@ function renderAssets() {
     const generation = fragment.querySelector(".asset-generation");
     const textHandling = fragment.querySelector(".asset-text-handling");
     const revision = fragment.querySelector(".asset-revision");
+    const inspector = fragment.querySelector(".asset-inspector");
     const log = fragment.querySelector(".asset-comment-log");
     const lock = fragment.querySelector(".asset-lock");
     const comment = fragment.querySelector(".asset-comment");
@@ -1050,6 +1247,7 @@ function renderAssets() {
     log.textContent = asset.latestComment
       ? `最新コメント: ${asset.latestComment}`
       : "最新コメント: まだありません";
+    renderAssetInspector(asset, inspector);
     lock.checked = asset.locked;
     card.classList.toggle("is-locked", asset.locked);
     const queuedItem = findQueueItem(asset.assetId);
@@ -1236,6 +1434,8 @@ async function loadDemo() {
     state.imagegenReport = null;
     state.commentDrafts = {};
     state.regenerationQueue = [];
+    state.regenerationQueueDirty = false;
+    state.regenerationQueuePath = "";
     setRegenerationPrompt("");
     setImplementationReport("");
     renderValidationReport(null);
@@ -1549,6 +1749,8 @@ async function loadBundleObject(bundle, source) {
   state.imagegenReport = null;
   state.commentDrafts = {};
   state.regenerationQueue = [];
+  state.regenerationQueueDirty = false;
+  state.regenerationQueuePath = "";
   setRegenerationPrompt("");
   setImplementationReport("");
   renderValidationReport(null);
@@ -1653,6 +1855,8 @@ elements.generateButton.addEventListener("click", showGeneratedResults);
 elements.validateButton.addEventListener("click", validateWorkspaceSpec);
 elements.exportReportButton.addEventListener("click", buildImplementationReport);
 elements.buildRegenPromptButton.addEventListener("click", buildRegenerationPrompt);
+elements.saveRegenQueueButton.addEventListener("click", saveRegenerationQueue);
+elements.loadRegenQueueButton.addEventListener("click", loadSavedRegenerationQueue);
 elements.clearRegenQueueButton.addEventListener("click", clearRegenerationQueue);
 elements.reviewButton.addEventListener("click", runReview);
 elements.applyLocksButton.addEventListener("click", applyLockSuggestions);

@@ -716,6 +716,54 @@ test("regeneration request endpoint builds codex-ready markdown from queued asse
   assert.match(response.payload.markdown, /不要な丸座/u);
 });
 
+test("regeneration queue endpoints persist queue files per loaded folder screen", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "gcgt-regen-queue-"));
+  const project = getDemoProject();
+  project.worldPreset.imagegenWorkflow = {};
+  fs.writeFileSync(path.join(tempDir, "screen-kv.json"), JSON.stringify(project.screenKv, null, 2));
+  fs.writeFileSync(path.join(tempDir, "material-spec.json"), JSON.stringify(project.materialSpecSheet, null, 2));
+  fs.writeFileSync(path.join(tempDir, "world-preset.json"), JSON.stringify(project.worldPreset, null, 2));
+
+  try {
+    const loadResponse = await dispatchApi("POST", "/api/load-from-folder", {
+      folderPath: tempDir
+    });
+    assert.equal(loadResponse.statusCode, 200);
+    assert.equal(loadResponse.payload.ok, true);
+
+    const saveResponse = await dispatchApi("POST", "/api/save-regeneration-queue", {
+      source: loadResponse.payload.source,
+      screenKv: loadResponse.payload.bundle.screenKv,
+      regenerationQueue: [
+        {
+          queueId: "regen_profile",
+          assetId: "hub_profile_shell",
+          userComment: "中央の文字領域を残して外周装飾だけを強くしたい",
+          aiReviewComment: "runtime text の余白を維持する"
+        }
+      ]
+    });
+    assert.equal(saveResponse.statusCode, 200);
+    assert.equal(saveResponse.payload.ok, true);
+    assert.equal(saveResponse.payload.persisted, true);
+    assert.equal(saveResponse.payload.itemCount, 1);
+    assert.match(saveResponse.payload.queuePath, /\.game-creative-generation\/regeneration-queues\/home_sky_port_atlas\.json$/u);
+    assert.equal(fs.existsSync(saveResponse.payload.queuePath), true);
+
+    const loadSavedResponse = await dispatchApi("POST", "/api/load-regeneration-queue", {
+      source: loadResponse.payload.source,
+      screenKv: loadResponse.payload.bundle.screenKv
+    });
+    assert.equal(loadSavedResponse.statusCode, 200);
+    assert.equal(loadSavedResponse.payload.ok, true);
+    assert.equal(loadSavedResponse.payload.persisted, true);
+    assert.equal(loadSavedResponse.payload.queue[0].assetId, "hub_profile_shell");
+    assert.match(loadSavedResponse.payload.queue[0].userComment, /外周装飾/u);
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
 test("frontend exposes the image generation flow tracker", () => {
   const html = fs.readFileSync(path.join(__dirname, "..", "public", "index.html"), "utf8");
   const js = fs.readFileSync(path.join(__dirname, "..", "public", "app.js"), "utf8");
@@ -728,6 +776,9 @@ test("frontend exposes the image generation flow tracker", () => {
   assert.match(html, /id="implementationReportOutput"/u);
   assert.match(html, /id="validateButton"/u);
   assert.match(html, /id="validationOutput"/u);
+  assert.match(html, /id="saveRegenQueueButton"/u);
+  assert.match(html, /id="loadRegenQueueButton"/u);
+  assert.match(html, /class="asset-inspector"/u);
   assert.match(html, /構成グループ/u);
   assert.match(html, /id="compositionSummary"/u);
   assert.match(html, /id="compositionGroupList"/u);
@@ -747,6 +798,9 @@ test("frontend exposes the image generation flow tracker", () => {
   assert.match(js, /function switchProjectScreen/u);
   assert.match(js, /function buildImplementationReport/u);
   assert.match(js, /function validateWorkspaceSpec/u);
+  assert.match(js, /function renderAssetInspector/u);
+  assert.match(js, /function saveRegenerationQueue/u);
+  assert.match(js, /function loadSavedRegenerationQueue/u);
   assert.match(js, /function renderValidationReport/u);
   assert.match(js, /function renderCompositionGroups/u);
   assert.match(js, /function renderCompositionOverlays/u);
@@ -762,8 +816,10 @@ test("frontend exposes the image generation flow tracker", () => {
   assert.match(css, /\.screen-select/u);
   assert.match(css, /\.implementation-report-output/u);
   assert.match(css, /\.validation-item/u);
+  assert.match(css, /\.asset-inspector-row/u);
   assert.match(css, /\.composition-group-card/u);
   assert.match(css, /\.composition-content-outline/u);
+  assert.match(css, /repeat\(2, minmax\(0, 1fr\)\)/u);
 });
 
 test("ai review returns findings and suggestions", async () => {
