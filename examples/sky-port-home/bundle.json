@@ -123,6 +123,175 @@
         ]
       }
     },
+    "compositionGroups": [
+      {
+        "groupId": "primary_sortie_cta",
+        "kind": "layered_button",
+        "rootPlacementId": "sortie_button_base",
+        "layerPlacementIds": [
+          "sortie_button_base",
+          "sortie_button_anchor"
+        ],
+        "layerFitRules": [
+          {
+            "placementId": "sortie_button_base",
+            "fit": "same_canvas",
+            "notes": "ボタン土台は合成の基準キャンバス。"
+          },
+          {
+            "placementId": "sortie_button_anchor",
+            "fit": "decorative_overlap",
+            "allowedOverflow": {
+              "top": 0,
+              "right": 0,
+              "bottom": 2,
+              "left": 0
+            },
+            "notes": "錨エンブレムは主ラベル下の小さな装飾重なりとして扱う。"
+          }
+        ],
+        "protectedOverlayIds": [
+          "ov_sortie_cta"
+        ],
+        "outputAssetId": "btn_start_sortie",
+        "qualityChecks": [
+          "主CTAラベルの安全域に装飾やエンブレムが入らない",
+          "土台ボタンと錨エンブレムは別PNGとして差し替え可能",
+          "zIndex順に重ねた時に1つの販売素材レベルのボタンとして読める"
+        ],
+        "notes": "HOME中央下の出航ボタンを、土台、アクセント、runtimeラベルの構成として扱う。"
+      },
+      {
+        "groupId": "gift_side_cta",
+        "kind": "layered_card_cta",
+        "rootPlacementId": "gift_cta_shell",
+        "layerPlacementIds": [
+          "gift_cta_shell",
+          "gift_cta_crate",
+          "gift_cta_badge"
+        ],
+        "layerFitRules": [
+          {
+            "placementId": "gift_cta_shell",
+            "fit": "same_canvas",
+            "notes": "カードシェルは文字レーンと装飾の基準キャンバス。"
+          },
+          {
+            "placementId": "gift_cta_crate",
+            "fit": "edge_attached",
+            "allowedOverflow": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 32
+            },
+            "notes": "ギフト箱は左端に掛かる販売素材的な前景装飾。"
+          },
+          {
+            "placementId": "gift_cta_badge",
+            "fit": "decorative_overlap",
+            "allowedOverflow": {
+              "top": 8,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            },
+            "notes": "通知バッジはギフト箱右上に重ねる小装飾。"
+          }
+        ],
+        "protectedOverlayIds": [
+          "ov_gift_title",
+          "ov_gift_copy",
+          "ov_gift_count"
+        ],
+        "outputAssetId": "card_gift_cta_shell",
+        "qualityChecks": [
+          "ギフト箱、通知バッジ、タイトル、コピーを親シェルへ焼き込まない",
+          "右側のタイトル/コピー領域は静かで読みやすい",
+          "通知バッジはアイコン右上の明示された重なりとして成立する"
+        ],
+        "notes": "左下ギフト導線を、シェル、箱アイコン、通知バッジ、runtimeテキストの構成として扱う。"
+      },
+      {
+        "groupId": "gacha_side_cta",
+        "kind": "layered_card_cta",
+        "rootPlacementId": "gacha_cta_shell",
+        "layerPlacementIds": [
+          "gacha_cta_shell",
+          "gacha_cta_orb"
+        ],
+        "layerFitRules": [
+          {
+            "placementId": "gacha_cta_shell",
+            "fit": "same_canvas",
+            "notes": "カードシェルは左側テキストレーンの基準キャンバス。"
+          },
+          {
+            "placementId": "gacha_cta_orb",
+            "fit": "edge_attached",
+            "allowedOverflow": {
+              "top": 0,
+              "right": 28,
+              "bottom": 0,
+              "left": 0
+            },
+            "notes": "ガチャオーブは右端ソケットから少し外へ張り出す主装飾。"
+          }
+        ],
+        "protectedOverlayIds": [
+          "ov_gacha_title",
+          "ov_gacha_copy"
+        ],
+        "outputAssetId": "card_gacha_cta_shell",
+        "qualityChecks": [
+          "ガチャオーブを親シェルへ焼き込まない",
+          "左側のタイトル/コピー領域は静かで読みやすい",
+          "オーブ用ソケットと別PNGのオーブがzIndex順で自然に重なる"
+        ],
+        "notes": "右下ガチャ導線を、シェル、オーブ、runtimeテキストの構成として扱う。"
+      },
+      {
+        "groupId": "daily_mission_rows_area",
+        "kind": "inset_child_content_stack",
+        "rootPlacementId": "daily_mission_outer",
+        "layerPlacementIds": [
+          "daily_mission_outer"
+        ],
+        "layerFitRules": [
+          {
+            "placementId": "daily_mission_outer",
+            "fit": "same_canvas",
+            "notes": "親パネルの外枠を合成の基準キャンバスにする。"
+          }
+        ],
+        "childContentPlacementIds": [
+          "daily_mission_row_login",
+          "daily_mission_row_sortie",
+          "daily_mission_row_shop"
+        ],
+        "contentInset": {
+          "top": 48,
+          "right": 18,
+          "bottom": 76,
+          "left": 18
+        },
+        "protectedOverlayIds": [
+          "ov_mission_login_label",
+          "ov_mission_login_count",
+          "ov_mission_sortie_label",
+          "ov_mission_sortie_count",
+          "ov_mission_shop_label",
+          "ov_mission_shop_count"
+        ],
+        "outputAssetId": "frame_daily_mission_outer",
+        "qualityChecks": [
+          "任務行は親パネルの内側余白からはみ出さない",
+          "任務行は左右の装飾フレームに接触しない",
+          "行テキストのruntime overlayは行素材より前面に出る"
+        ],
+        "notes": "親パネル内に入る子要素の余白チェック例。ヘッダーやフッターボタンは別の装飾/操作領域として扱う。"
+      }
+    ],
     "placements": [
       {
         "placementId": "home_backdrop",
@@ -4227,6 +4396,160 @@
     "detailDensity": "medium",
     "uiTone": "adventure_first",
     "backgroundPolicy": "transparent_with_shadow",
+    "qualityProfile": {
+      "id": "commercial_mobile_ui_v1",
+      "targetLevel": "commercial-grade Japanese mobile game UI asset",
+      "sourcePolicy": "Use licensed or purchased assets only to derive quality criteria; do not imitate a specific asset pack or reproduce distinctive art.",
+      "principles": [
+        "Readable silhouette at target size and reduced preview size",
+        "Clean functional lane for runtime text, values, or child icons",
+        "Strong edge separation against bright sky and dark UI surfaces",
+        "Controlled ornament density that raises value without hiding function",
+        "Clear material reads for brass, parchment, glass, cloth, and deck wood"
+      ],
+      "productionChecks": [
+        "Target-size fit with useful implementation padding",
+        "Clean alpha boundary for transparent assets or precise chroma-key cleanup",
+        "No accidental runtime text baked into reusable PNGs",
+        "Consistent bevel depth, rim highlight, lighting direction, and family logic"
+      ],
+      "layoutAnatomy": {
+        "foundationAssetTypes": [
+          "panel",
+          "card_frame",
+          "button"
+        ],
+        "outerDecoration": "Treat the outer rim, corners, tabs, sockets, and silhouette breaks as the decorative zone for brass trim, bolts, wing accents, and material flourishes.",
+        "contentSurface": "Treat the declared inner surface, runtime text slots, and child-placement rectangles as calm content zones with lower contrast, simpler texture, and no busy ornament.",
+        "boundaryTreatment": "Separate decoration and content with a clear inner bevel, inset shadow, rim highlight, color/material step, or framed parchment-to-metal transition.",
+        "checks": [
+          "The eye should immediately understand where decoration ends and usable content begins",
+          "High-frequency patterning stays outside runtime text and child-placement zones",
+          "Do not fill empty content surfaces with fake labels, rows, icons, or unreadable decorative glyphs"
+        ],
+        "assetTypeRules": {
+          "panel": {
+            "outerDecoration": "Use slim perimeter trim, end caps, or rails for style; avoid heavy decoration across the middle of the panel.",
+            "contentSurface": "Keep the panel interior stable enough for numbers, labels, progress bars, or repeated child UI.",
+            "boundaryTreatment": "Use a thin highlight/shadow pair or inset groove to make the readable interior distinct from the outer shell.",
+            "checks": [
+              "Interior remains calm even when the panel is narrow",
+              "Repeated panels keep the same trim thickness and lighting logic"
+            ]
+          },
+          "card_frame": {
+            "outerDecoration": "Use corners, outer frame, header mounts, and optional icon sockets for ornament; keep them outside functional lanes.",
+            "contentSurface": "Leave a broad readable center area for child rows, art, titles, and runtime copy.",
+            "boundaryTreatment": "Use a layered frame-to-parchment or frame-to-dark-surface transition that reads at target size.",
+            "checks": [
+              "The frame does not pre-bake rows, buttons, labels, or child icons",
+              "Corner ornaments do not invade declared content slots"
+            ]
+          },
+          "button": {
+            "outerDecoration": "Put wings, caps, bevels, gems, and ornamental shine on the perimeter or behind the pressable silhouette.",
+            "contentSurface": "Preserve the center label lane as a clean, high-contrast but low-detail surface.",
+            "boundaryTreatment": "Use pressable bevel depth, inner glow, and rim shadow to separate edge decoration from the label lane.",
+            "checks": [
+              "The label lane remains empty and readable",
+              "The button still reads as tappable after ornaments are added"
+            ]
+          }
+        },
+        "roleRules": {
+          "primary_cta": {
+            "outerDecoration": "Large decorative wings and brass accents may extend near the edges, but they must frame rather than cross the label lane.",
+            "contentSurface": "The center 50-60% width and text slot must stay clear for the runtime CTA label.",
+            "checks": [
+              "No emblem, highlight streak, or ornament crosses behind the main label slot"
+            ]
+          },
+          "mission_panel_shell": {
+            "contentSurface": "Leave the interior open for separate header, mission rows, progress bars, reward chips, and footer button placements.",
+            "checks": [
+              "Do not draw fake mission rows, separators, timers, or receive buttons in the parent frame"
+            ]
+          },
+          "info_panel_shell": {
+            "contentSurface": "Keep the parchment-like interior broad and quiet for rank text, progress, and action tiles.",
+            "checks": [
+              "Header tab, rank emblem, progress bar, and action tiles remain separate child assets"
+            ]
+          },
+          "gift_cta_shell": {
+            "outerDecoration": "Use the perimeter around the left icon dock and card body as decorative structure; the final gift icon and badge remain separate child content.",
+            "contentSurface": "The title, subtitle, gift icon, and notification badge slots must stay empty and readable. Draw only the empty dock/socket affordance, not the slot contents.",
+            "checks": [
+              "Do not bake the gift crate, notification number, title text, or subtitle text into the shell"
+            ]
+          },
+          "gacha_cta_shell": {
+            "outerDecoration": "Use the right orb socket rim and outer card perimeter as decorative structure; the final orb remains a separate child content asset.",
+            "contentSurface": "The title, subtitle, and orb slots must stay empty and readable. Draw only the empty socket affordance, not the orb contents.",
+            "checks": [
+              "Do not bake the gacha orb, title text, or subtitle text into the shell"
+            ]
+          },
+          "nav_bar_shell": {
+            "contentSurface": "Stay behind repeated tab buttons as a base rail; do not draw individual tab frames, icons, or labels."
+          }
+        }
+      },
+      "promptAdditions": [
+        "Use polished bevels, intentional rim highlights, layered edge accents, and production-ready spacing.",
+        "Make the asset look like a purchasable game UI pack part, not a placeholder mock."
+      ],
+      "avoid": [
+        "copied purchased asset pack style",
+        "placeholder vector geometry",
+        "baked runtime text",
+        "dirty transparent edges",
+        "cluttered text lanes",
+        "ambiguous material noise"
+      ],
+      "assetTypeChecks": {
+        "button": [
+          "Preserve a clear center lane for runtime labels",
+          "Make the pressable silhouette obvious",
+          "Use edge highlights and shadow to separate from the screen"
+        ],
+        "panel": [
+          "Keep the content area calm and readable",
+          "Do not bake child rows, labels, or icons into the parent shell"
+        ],
+        "card_frame": [
+          "Preserve inner space for art, text, or child placements",
+          "Keep corner ornaments outside functional lanes"
+        ],
+        "icon": [
+          "Keep the symbol readable at 64px",
+          "Use a simple high-contrast interior silhouette"
+        ],
+        "background": [
+          "Keep primary UI placement zones calm enough for overlays",
+          "Do not bake UI panels or labels into the background"
+        ]
+      },
+      "roleChecks": {
+        "primary_cta": [
+          "Highest call-to-action contrast among buttons",
+          "Readable text lane remains empty",
+          "Feels premium without sacrificing tap clarity"
+        ],
+        "ambient_backdrop": [
+          "Provide depth and worldbuilding without competing with foreground UI"
+        ],
+        "mission_panel_shell": [
+          "Leave stable readable space for mission rows and footer controls"
+        ],
+        "info_panel_shell": [
+          "Separate frame decoration from content area"
+        ],
+        "nav_bar_shell": [
+          "Support repeated tab buttons without baking labels or icons"
+        ]
+      }
+    },
     "kvStyleProfile": {
       "id": "sky_port_home_kv_ornate",
       "rendererHint": "sky_port_home_kv",

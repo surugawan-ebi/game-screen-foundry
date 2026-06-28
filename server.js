@@ -38,6 +38,52 @@ function isAllowedSourceFile(filePath) {
   return [...allowedSourceRoots].some((rootPath) => isPathInside(rootPath, resolved));
 }
 
+function resolveSourceFileRequest(filePath) {
+  if (!filePath) {
+    return {
+      statusCode: 400,
+      body: "Missing path"
+    };
+  }
+
+  const resolved = path.resolve(filePath);
+  if (!fs.existsSync(resolved) || !fs.statSync(resolved).isFile()) {
+    return {
+      statusCode: 404,
+      body: "Not found"
+    };
+  }
+
+  if (!isAllowedSourceFile(resolved)) {
+    return {
+      statusCode: 403,
+      body: "Source path is outside allowed project roots"
+    };
+  }
+
+  if (!/\.(png|jpe?g|webp|svg)$/iu.test(resolved)) {
+    return {
+      statusCode: 415,
+      body: "Unsupported file"
+    };
+  }
+
+  return {
+    statusCode: 200,
+    filePath: resolved
+  };
+}
+
+function sendSourceFile(response, filePath) {
+  const result = resolveSourceFileRequest(filePath);
+  if (result.statusCode !== 200) {
+    response.writeHead(result.statusCode);
+    response.end(result.body);
+    return;
+  }
+  sendFile(response, result.filePath);
+}
+
 function sendJson(response, statusCode, payload) {
   response.writeHead(statusCode, {
     "Content-Type": "application/json; charset=utf-8",
@@ -96,7 +142,8 @@ function buildGenerateResponse(input) {
       mode: getAiMode()
     },
     input,
-    renderModel
+    renderModel,
+    compositionQuality: renderModel.compositionQuality
   };
 }
 
@@ -108,7 +155,8 @@ function buildDraftResponse(input) {
       mode: getAiMode()
     },
     input,
-    renderModel
+    renderModel,
+    compositionQuality: renderModel.compositionQuality
   };
 }
 
@@ -728,14 +776,19 @@ function handleImagegenJob(body, { run = false } = {}) {
     run,
     writeFiles: true
   });
+  const renderModel = generateRenderModel(nextInput);
   return {
     ok: true,
     ai: {
       mode: getAiMode()
     },
     input: nextInput,
-    renderModel: generateRenderModel(nextInput),
-    imagegenReport: report
+    renderModel,
+    compositionQuality: renderModel.compositionQuality,
+    imagegenReport: {
+      ...report,
+      compositionQuality: renderModel.compositionQuality
+    }
   };
 }
 
@@ -757,6 +810,19 @@ function handleBuildRegenerationRequest(body) {
     })),
     itemCount: queue.length,
     markdown
+  };
+}
+
+function handleCompositionQuality(body) {
+  const input = prepareInput(Object.keys(body).length ? body : getDemoProject());
+  const renderModel = generateRenderModel(input);
+  return {
+    ok: true,
+    ai: {
+      mode: getAiMode()
+    },
+    compositionQuality: renderModel.compositionQuality,
+    compositionGroups: renderModel.compositionGroups
   };
 }
 
@@ -833,12 +899,16 @@ async function dispatchApi(method, pathname, body = {}) {
       writeFiles: true
     });
     const { nextInput, report } = executeGenerationJobs(imagegenWorkflow.nextInput);
+    const generated = buildGenerateResponse(nextInput);
     return {
       statusCode: 200,
       payload: {
-        ...buildGenerateResponse(nextInput),
+        ...generated,
         generationReport: report,
-        imagegenReport: imagegenWorkflow.report
+        imagegenReport: {
+          ...imagegenWorkflow.report,
+          compositionQuality: generated.renderModel.compositionQuality
+        }
       }
     };
   }
@@ -847,16 +917,20 @@ async function dispatchApi(method, pathname, body = {}) {
     const payload = Object.keys(body).length ? body : getDemoProject();
     const input = prepareInput(payload);
     const { nextInput, report } = executeGenerationJobs(input);
+    const generated = buildGenerateResponse(nextInput);
     return {
       statusCode: 200,
       payload: {
-        ...buildGenerateResponse(nextInput),
+        ...generated,
         generationReport: {
           ...report,
           mode: "prebuilt_display",
           actionLabel: "生成後を表示"
         },
-        imagegenReport: summarizeRegisteredGeneratedAssets(nextInput)
+        imagegenReport: {
+          ...summarizeRegisteredGeneratedAssets(nextInput),
+          compositionQuality: generated.renderModel.compositionQuality
+        }
       }
     };
   }
@@ -879,6 +953,13 @@ async function dispatchApi(method, pathname, body = {}) {
     return {
       statusCode: 200,
       payload: handleBuildRegenerationRequest(body)
+    };
+  }
+
+  if (method === "POST" && pathname === "/api/composition-quality") {
+    return {
+      statusCode: 200,
+      payload: handleCompositionQuality(body)
     };
   }
 
@@ -940,29 +1021,7 @@ function createServer() {
     const url = new URL(request.url, `http://${request.headers.host}`);
     try {
       if (request.method === "GET" && url.pathname === "/api/source-file") {
-        const filePath = url.searchParams.get("path");
-        if (!filePath) {
-          response.writeHead(400);
-          response.end("Missing path");
-          return;
-        }
-        const resolved = path.resolve(filePath);
-        if (!fs.existsSync(resolved) || !fs.statSync(resolved).isFile()) {
-          response.writeHead(404);
-          response.end("Not found");
-          return;
-        }
-        if (!isAllowedSourceFile(resolved)) {
-          response.writeHead(403);
-          response.end("Source path is outside allowed project roots");
-          return;
-        }
-        if (!/\.(png|jpe?g|webp|svg)$/iu.test(resolved)) {
-          response.writeHead(415);
-          response.end("Unsupported file");
-          return;
-        }
-        sendFile(response, resolved);
+        sendSourceFile(response, url.searchParams.get("path"));
         return;
       }
 
@@ -991,5 +1050,6 @@ if (require.main === module) {
 
 module.exports = {
   createServer,
-  dispatchApi
+  dispatchApi,
+  resolveSourceFileRequest
 };

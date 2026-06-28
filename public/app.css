@@ -621,10 +621,241 @@ textarea {
   image-rendering: auto;
 }
 
+.screen-layer.is-outside-composition {
+  opacity: 0.28;
+  filter: saturate(0.58) brightness(0.72);
+}
+
+.screen-layer.is-selected-composition-layer {
+  filter: saturate(1.08) brightness(1.03);
+}
+
 .safe-area {
   position: absolute;
   border: 1px dashed rgba(121, 191, 208, 0.56);
   pointer-events: none;
+}
+
+.composition-outline {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 8px;
+}
+
+.composition-outline span {
+  position: absolute;
+  left: 0;
+  top: -22px;
+  max-width: 240px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: rgba(7, 11, 17, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: var(--text);
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.composition-bounds-outline {
+  border: 2px solid rgba(241, 199, 116, 0.74);
+  box-shadow: inset 0 0 0 1px rgba(7, 11, 17, 0.5), 0 0 0 2px rgba(241, 199, 116, 0.12);
+}
+
+.composition-root-outline {
+  border: 2px dashed rgba(126, 199, 215, 0.8);
+}
+
+.composition-content-outline {
+  background: rgba(122, 170, 99, 0.08);
+  border: 2px solid rgba(122, 170, 99, 0.78);
+}
+
+.composition-layer-outline {
+  border: 2px solid rgba(190, 144, 224, 0.75);
+}
+
+.composition-child-outline {
+  border: 2px solid rgba(126, 199, 215, 0.62);
+  background: rgba(126, 199, 215, 0.06);
+}
+
+.composition-overlay-outline {
+  border: 2px solid rgba(255, 236, 156, 0.86);
+  background: rgba(255, 236, 156, 0.08);
+}
+
+.composition-panel.has-groups {
+  border-color: rgba(126, 199, 215, 0.28);
+}
+
+.composition-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 10px;
+  border-radius: 14px;
+  background:
+    linear-gradient(90deg, rgba(126, 199, 215, 0.08), transparent 45%),
+    rgba(8, 12, 18, 0.66);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.composition-summary.empty {
+  display: block;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.composition-summary.status-pass {
+  border-color: rgba(122, 170, 99, 0.34);
+}
+
+.composition-summary.status-warn {
+  border-color: rgba(216, 170, 98, 0.42);
+}
+
+.composition-summary.status-fail {
+  border-color: rgba(192, 100, 91, 0.48);
+}
+
+.composition-metric {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  color: var(--muted);
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+}
+
+.composition-metric strong {
+  color: var(--text);
+}
+
+.composition-group-list {
+  display: grid;
+  gap: 10px;
+}
+
+.composition-group-list.empty {
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(8, 12, 18, 0.58);
+  border: 1px dashed rgba(126, 199, 215, 0.22);
+  color: var(--muted);
+}
+
+.composition-group-card {
+  display: grid;
+  gap: 9px;
+  padding: 12px;
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.022), transparent 40px),
+    rgba(8, 12, 18, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.075);
+}
+
+.composition-group-card.is-selected {
+  border-color: rgba(126, 199, 215, 0.54);
+  box-shadow: inset 0 0 0 1px rgba(126, 199, 215, 0.16);
+}
+
+.composition-group-card.status-pass {
+  border-left: 3px solid rgba(122, 170, 99, 0.8);
+}
+
+.composition-group-card.status-warn {
+  border-left: 3px solid rgba(216, 170, 98, 0.86);
+}
+
+.composition-group-card.status-fail {
+  border-left: 3px solid rgba(192, 100, 91, 0.9);
+}
+
+.composition-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 10px;
+}
+
+.composition-group-title {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.composition-group-title strong {
+  overflow-wrap: anywhere;
+}
+
+.composition-group-title span,
+.composition-notes,
+.composition-check {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.composition-select-button {
+  flex: 0 0 auto;
+  padding: 7px 11px;
+  font-size: 12px;
+}
+
+.composition-anatomy {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.composition-anatomy span {
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: rgba(126, 199, 215, 0.08);
+  border: 1px solid rgba(126, 199, 215, 0.16);
+  color: #b9cad7;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+}
+
+.composition-notes {
+  margin: 0;
+}
+
+.composition-check-list {
+  display: grid;
+  gap: 6px;
+}
+
+.composition-check {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.composition-check.status-pass {
+  color: #cfe6c2;
+  border-color: rgba(122, 170, 99, 0.24);
+}
+
+.composition-check.status-warn {
+  color: #ead5a8;
+  border-color: rgba(216, 170, 98, 0.26);
+}
+
+.composition-check.status-fail {
+  color: #efb6b0;
+  border-color: rgba(192, 100, 91, 0.32);
 }
 
 .review-output.empty {

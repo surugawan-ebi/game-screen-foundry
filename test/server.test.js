@@ -8,10 +8,11 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 
-const { dispatchApi } = require("../server");
+const { dispatchApi, resolveSourceFileRequest } = require("../server");
 const { getDemoProject } = require("../lib/sample-data");
 const { prepareInput } = require("../lib/spec");
 const { generateRenderModel } = require("../lib/generator");
+const { buildImagegenJob } = require("../lib/imagegen-workflow");
 
 function estimateTextWidth(value, fontSize) {
   return [...String(value || "")].reduce((total, char) => {
@@ -46,6 +47,141 @@ function overlapArea(left, right) {
   return Math.max(0, Math.min(left.right, right.right) - Math.max(left.left, right.left))
     * Math.max(0, Math.min(left.bottom, right.bottom) - Math.max(left.top, right.top));
 }
+
+test("source-file only serves repository or explicitly loaded project images", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "gcgt-source-file-"));
+  const externalImage = path.join(tempDir, "external.png");
+  const projectImage = path.join(tempDir, "local-ref.png");
+  const project = getDemoProject();
+
+  fs.writeFileSync(externalImage, "fake external image");
+  fs.writeFileSync(projectImage, "fake project image");
+  fs.writeFileSync(path.join(tempDir, "screen-kv.json"), JSON.stringify(project.screenKv, null, 2));
+  fs.writeFileSync(path.join(tempDir, "material-spec.json"), JSON.stringify(project.materialSpecSheet, null, 2));
+  fs.writeFileSync(path.join(tempDir, "world-preset.json"), JSON.stringify(project.worldPreset, null, 2));
+
+  try {
+    const repoImage = path.join(__dirname, "..", "examples", "sky-port-home", "key-visual.png");
+    const repoResponse = resolveSourceFileRequest(repoImage);
+    assert.equal(repoResponse.statusCode, 200);
+    assert.equal(repoResponse.filePath, repoImage);
+
+    const deniedResponse = resolveSourceFileRequest(externalImage);
+    assert.equal(deniedResponse.statusCode, 403);
+    assert.match(deniedResponse.body, /outside allowed project roots/u);
+
+    const loadResponse = await dispatchApi("POST", "/api/load-from-folder", {
+      folderPath: tempDir
+    });
+    assert.equal(loadResponse.statusCode, 200);
+    assert.equal(loadResponse.payload.ok, true);
+
+    const projectResponse = resolveSourceFileRequest(projectImage);
+    assert.equal(projectResponse.statusCode, 200);
+    assert.equal(projectResponse.filePath, projectImage);
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+test("blank project template loads through the project manifest", async () => {
+  const templateRoot = path.join(__dirname, "..", "templates", "blank-project", "creative");
+  const loadResponse = await dispatchApi("POST", "/api/load-from-folder", {
+    folderPath: templateRoot
+  });
+
+  assert.equal(loadResponse.statusCode, 200);
+  assert.equal(loadResponse.payload.ok, true);
+  assert.equal(loadResponse.payload.source.projectId, "blank_project");
+  assert.equal(loadResponse.payload.source.screenId, "home");
+  assert.equal(loadResponse.payload.bundle.screenKv.screenId, "home");
+  assert.equal(
+    loadResponse.payload.bundle.worldPreset.imagegenWorkflow.outputDir,
+    path.join(templateRoot, "screens", "home", "generated-assets")
+  );
+
+  const draftResponse = await dispatchApi("POST", "/api/render-draft", loadResponse.payload.bundle);
+  assert.equal(draftResponse.statusCode, 200);
+  assert.equal(draftResponse.payload.ok, true);
+  assert.equal(draftResponse.payload.renderModel.screen.layers.length, 3);
+  assert.equal(draftResponse.payload.renderModel.assets.length, 2);
+});
+
+test("inline relative imagegenAssets paths resolve from each loaded screen folder", async () => {
+  const writeScreen = (screenDir) => {
+    const project = getDemoProject();
+    project.worldPreset.imagegenAssets = {
+      bg_sky_port_home: {
+        assetId: "bg_sky_port_home",
+        path: "generated-assets/bg_sky_port_home.png",
+        backend: "portable_test",
+        usesImagegen: true,
+        prompt: "portable path test"
+      }
+    };
+    project.worldPreset.imagegenWorkflow = {};
+
+    fs.mkdirSync(path.join(screenDir, "generated-assets"), { recursive: true });
+    fs.writeFileSync(path.join(screenDir, "screen-kv.json"), JSON.stringify(project.screenKv, null, 2));
+    fs.writeFileSync(path.join(screenDir, "material-spec.json"), JSON.stringify(project.materialSpecSheet, null, 2));
+    fs.writeFileSync(path.join(screenDir, "world-preset.json"), JSON.stringify(project.worldPreset, null, 2));
+    fs.writeFileSync(path.join(screenDir, "generated-assets", "bg_sky_port_home.png"), "fake generated image");
+  };
+
+  const firstDir = fs.mkdtempSync(path.join(os.tmpdir(), "gcgt-portable-a-"));
+  const secondDir = fs.mkdtempSync(path.join(os.tmpdir(), "gcgt-portable-b-"));
+  writeScreen(firstDir);
+  writeScreen(secondDir);
+
+  try {
+    const firstResponse = await dispatchApi("POST", "/api/load-from-folder", {
+      folderPath: firstDir
+    });
+    const secondResponse = await dispatchApi("POST", "/api/load-from-folder", {
+      folderPath: secondDir
+    });
+
+    assert.equal(firstResponse.statusCode, 200);
+    assert.equal(secondResponse.statusCode, 200);
+    assert.equal(
+      firstResponse.payload.bundle.worldPreset.imagegenAssets.bg_sky_port_home.path,
+      path.join(firstDir, "generated-assets", "bg_sky_port_home.png")
+    );
+    assert.equal(
+      secondResponse.payload.bundle.worldPreset.imagegenAssets.bg_sky_port_home.path,
+      path.join(secondDir, "generated-assets", "bg_sky_port_home.png")
+    );
+    assert.notEqual(
+      firstResponse.payload.bundle.worldPreset.imagegenAssets.bg_sky_port_home.path,
+      secondResponse.payload.bundle.worldPreset.imagegenAssets.bg_sky_port_home.path
+    );
+
+    const showResponse = await dispatchApi("POST", "/api/show-generated", secondResponse.payload.bundle);
+    const layer = showResponse.payload.renderModel.screen.layers.find((item) => item.assetId === "bg_sky_port_home");
+    assert.match(decodeURIComponent(layer.src), new RegExp(secondDir.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "u"));
+  } finally {
+    fs.rmSync(firstDir, { recursive: true, force: true });
+    fs.rmSync(secondDir, { recursive: true, force: true });
+  }
+});
+
+test("imagegen output fallback is generic and not demo-specific", () => {
+  const project = getDemoProject();
+  project.worldPreset.imagegenAssets = {};
+  project.worldPreset.imagegenWorkflow = {
+    targetAssetIds: ["bg_sky_port_home"]
+  };
+
+  const job = buildImagegenJob(prepareInput(project), {
+    jobId: "imagegen_test_fallback"
+  });
+  const expectedOutputDir = path.join(__dirname, "..", "imagegen-jobs", "generated-assets");
+
+  assert.equal(job.outputDir, expectedOutputDir);
+  assert.equal(job.assets.length, 1);
+  assert.equal(job.assets[0].outputPath, path.join(expectedOutputDir, "bg_sky_port_home.png"));
+  assert.doesNotMatch(job.outputDir, /examples\/sky-port-home/u);
+});
 
 test("demo and generate endpoints return a renderable payload", async () => {
   const demoResponse = await dispatchApi("GET", "/api/demo");
@@ -97,10 +233,26 @@ test("show-generated displays prebuilt assets without creating imagegen jobs", a
   assert.equal(response.payload.imagegenReport.runner.mode, "prebuilt");
   assert.equal(response.payload.imagegenReport.runner.ran, false);
   assert.ok(response.payload.imagegenReport.adoptedAssetIds.includes("bg_sky_port_home"));
+  assert.equal(response.payload.imagegenReport.compositionQuality.status, "pass");
   assert.deepEqual(fs.readdirSync(tempDir), []);
 
   const backgroundLayer = response.payload.renderModel.screen.layers.find((layer) => layer.assetId === "bg_sky_port_home");
   assert.match(decodeURIComponent(backgroundLayer.src), /generated-assets\/bg_sky_port_home\.png/);
+});
+
+test("composition quality endpoint reports grouped asset assembly health", async () => {
+  const response = await dispatchApi("POST", "/api/composition-quality", getDemoProject());
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.payload.ok, true);
+  assert.equal(response.payload.compositionQuality.status, "pass");
+  assert.equal(response.payload.compositionQuality.groupCount, 4);
+  assert.ok(response.payload.compositionGroups.some((group) => group.groupId === "daily_mission_rows_area"));
+  assert.ok(
+    response.payload.compositionGroups
+      .find((group) => group.groupId === "daily_mission_rows_area")
+      .checks.some((check) => check.code === "child_content_inset")
+  );
 });
 
 test("runtime text overlays resolve inside their target asset slots", async () => {
@@ -540,6 +692,9 @@ test("frontend exposes the image generation flow tracker", () => {
 
   assert.match(html, /画像生成フロー/u);
   assert.match(html, /id="draftButton"/u);
+  assert.match(html, /構成グループ/u);
+  assert.match(html, /id="compositionSummary"/u);
+  assert.match(html, /id="compositionGroupList"/u);
   assert.match(html, /仮組み確認/u);
   assert.match(html, /id="flowCurrentLabel"/u);
   assert.match(html, /data-flow-step="load"/u);
@@ -552,6 +707,8 @@ test("frontend exposes the image generation flow tracker", () => {
   assert.match(html, /data-flow-step="import"/u);
   assert.match(js, /function setFlowStep/u);
   assert.match(js, /function renderGeneratedWorkspace/u);
+  assert.match(js, /function renderCompositionGroups/u);
+  assert.match(js, /function renderCompositionOverlays/u);
   assert.match(js, /function showDraftWorkspace/u);
   assert.match(js, /function getDraftPayloadFromEditors/u);
   assert.match(js, /revisionMap: \{\}/u);
@@ -561,6 +718,8 @@ test("frontend exposes the image generation flow tracker", () => {
   assert.match(js, /setFlowStep\("dialogue"\)/u);
   assert.match(css, /\.flow-step\.is-current/u);
   assert.match(css, /\.flow-step\.is-complete/u);
+  assert.match(css, /\.composition-group-card/u);
+  assert.match(css, /\.composition-content-outline/u);
 });
 
 test("ai review returns findings and suggestions", async () => {
@@ -569,6 +728,7 @@ test("ai review returns findings and suggestions", async () => {
   assert.equal(reviewResponse.payload.ok, true);
   assert.ok(reviewResponse.payload.review.topFindings.length > 0);
   assert.ok(reviewResponse.payload.review.suggestedActions.length > 0);
+  assert.ok(reviewResponse.payload.review.guardrails.some((item) => /販売素材レベル/u.test(item)));
 });
 
 test("ai review does not over-score svg-only generated screens", async () => {
@@ -616,20 +776,52 @@ test("imagegen job endpoint creates codex-ready asset prompts", async () => {
   project.worldPreset.imagegenWorkflow = {
     jobDir: path.join(tempDir, "jobs"),
     outputDir: path.join(tempDir, "generated"),
-    targetAssetIds: ["bg_sky_port_home", "btn_start_sortie"]
+    targetAssetIds: ["bg_sky_port_home", "card_gift_cta_shell", "btn_start_sortie"]
   };
   project.worldPreset.imagegenAssets = {};
 
   try {
     const response = await dispatchApi("POST", "/api/imagegen-job", project);
     const report = response.payload.imagegenReport;
+    const backgroundJob = report.job.assets.find((asset) => asset.assetId === "bg_sky_port_home");
+    const giftShellJob = report.job.assets.find((asset) => asset.assetId === "card_gift_cta_shell");
+    const sortieButtonJob = report.job.assets.find((asset) => asset.assetId === "btn_start_sortie");
 
     assert.equal(response.statusCode, 200);
     assert.equal(response.payload.ok, true);
-    assert.equal(report.job.assets.length, 2);
+    assert.equal(report.job.assets.length, 3);
     assert.ok(fs.existsSync(report.job.jobPath));
     assert.ok(fs.existsSync(report.job.promptPath));
-    assert.match(report.job.assets[0].prompt, /Use case: stylized-concept/u);
+    assert.ok(backgroundJob);
+    assert.ok(giftShellJob);
+    assert.ok(sortieButtonJob);
+    assert.match(backgroundJob.prompt, /Use case: stylized-concept/u);
+    assert.match(backgroundJob.prompt, /Quality target: commercial-grade Japanese mobile game UI asset/u);
+    assert.match(backgroundJob.prompt, /Reference policy: Use licensed or purchased assets only to derive quality criteria/u);
+    assert.match(backgroundJob.prompt, /Production-readiness checks:/u);
+    assert.equal(backgroundJob.qualityPlan, null);
+    assert.equal(giftShellJob.qualityPlan.foundationAsset, true);
+    assert.ok(giftShellJob.qualityPlan.protectedSlots.some((slot) => slot.overlayId === "ov_gift_title"));
+    assert.ok(giftShellJob.qualityPlan.contentRegions.some((region) => region.placementId === "gift_cta_shell"));
+    assert.ok(giftShellJob.compositionContexts.some((context) => context.groupId === "gift_side_cta"));
+    assert.ok(sortieButtonJob.compositionContexts.some((context) => context.groupId === "primary_sortie_cta"));
+    assert.match(giftShellJob.prompt, /UI anatomy: foundation\/shell asset/u);
+    assert.match(giftShellJob.prompt, /Decoration\/content separation:/u);
+    assert.match(giftShellJob.prompt, /Content model: frame_only; reserved empty slots: title, subtitle, gift_icon, notification_badge/u);
+    assert.match(giftShellJob.prompt, /Draw only the holder, frame, dock, socket, or base surface; do not bake the slot contents/u);
+    assert.match(giftShellJob.prompt, /Protected runtime slots: ov_gift_title on gift_cta_shell slot 90,18,118x30/u);
+    assert.match(giftShellJob.prompt, /Inferred inner content surface: gift_cta_shell content surface 90,18,120x60/u);
+    assert.match(giftShellJob.prompt, /Composition group context: gift_side_cta/u);
+    assert.match(giftShellJob.prompt, /Composition layer stack: gift_cta_shell\/card_gift_cta_shell/u);
+    assert.match(giftShellJob.prompt, /Composition protected overlays: ov_gift_title on gift_cta_shell/u);
+    assert.match(giftShellJob.prompt, /Do not bake the gift crate, notification number, title text, or subtitle text into the shell/u);
+    assert.match(giftShellJob.prompt, /Do not bake child elements: gacha_orb_socket, notification_count, title_text, subtitle_text/u);
+    assert.match(sortieButtonJob.prompt, /Preserve a clear center lane for runtime labels/u);
+    assert.match(sortieButtonJob.prompt, /Protected runtime slots: ov_sortie_cta on sortie_button_base slot 86,34,220x46/u);
+    assert.match(sortieButtonJob.prompt, /Inferred inner content surface: sortie_button_base content surface 86,34,220x81/u);
+    assert.match(sortieButtonJob.prompt, /Composition group context: primary_sortie_cta/u);
+    assert.match(sortieButtonJob.prompt, /No emblem, highlight streak, or ornament crosses behind the main label slot/u);
+    assert.match(sortieButtonJob.prompt, /copied purchased asset pack style/u);
     assert.match(report.job.commandHint, /codex .* exec/u);
     assert.deepEqual(report.adoptedAssetIds, []);
   } finally {

@@ -13,6 +13,7 @@ const state = {
   renderModel: null,
   review: null,
   reviewSuggestionsByAsset: {},
+  selectedCompositionGroupId: "",
   source: {
     kind: "demo"
   }
@@ -28,6 +29,10 @@ const elements = {
   applyLocksButton: document.getElementById("applyLocksButton"),
   assetGrid: document.getElementById("assetGrid"),
   bundleFileInput: document.getElementById("bundleFileInput"),
+  compositionCountLabel: document.getElementById("compositionCountLabel"),
+  compositionGroupList: document.getElementById("compositionGroupList"),
+  compositionPanel: document.getElementById("compositionPanel"),
+  compositionSummary: document.getElementById("compositionSummary"),
   draftButton: document.getElementById("draftButton"),
   folderPathInput: document.getElementById("folderPathInput"),
   flowCurrentLabel: document.getElementById("flowCurrentLabel"),
@@ -281,19 +286,25 @@ function renderImagegenStatus() {
   const report = state.imagegenReport;
   const job = report.job || {};
   const runner = report.runner || {};
-  const total = Array.isArray(job.assets) ? job.assets.length : 0;
   const adopted = Array.isArray(report.adoptedAssetIds) ? report.adoptedAssetIds.length : 0;
   const missing = Array.isArray(report.missingAssetIds) ? report.missingAssetIds.length : 0;
+  const total = Array.isArray(job.assets) ? job.assets.length : adopted + missing;
   const mode = runner.mode || "off";
+  const compositionQuality = report.compositionQuality
+    || (state.renderModel ? state.renderModel.compositionQuality : null);
+  const compositionLabel = compositionQuality
+    ? ` / 合成 ${getCompositionStatusLabel(compositionQuality.status)} ${compositionQuality.score}`
+    : "";
   const stateLabel = runner.ran
     ? (runner.ok ? "実行済" : "失敗")
     : "ジョブ作成";
 
-  elements.imagegenStatus.textContent = `imagegen: ${stateLabel} / mode ${mode} / 採用 ${adopted}/${total} / 未生成 ${missing}`;
+  elements.imagegenStatus.textContent = `imagegen: ${stateLabel} / mode ${mode} / 採用 ${adopted}/${total} / 未生成 ${missing}${compositionLabel}`;
   elements.imagegenStatus.title = [
     job.jobPath ? `job: ${job.jobPath}` : "",
     job.promptPath ? `prompt: ${job.promptPath}` : "",
     job.commandHint ? `command: ${job.commandHint}` : "",
+    compositionQuality ? `composition: ${compositionQuality.status} score ${compositionQuality.score} fail ${compositionQuality.failCount} warn ${compositionQuality.warnCount}` : "",
     runner.message || ""
   ].filter(Boolean).join("\n");
 }
@@ -314,8 +325,205 @@ function renderMeta() {
   });
 }
 
+function getCompositionGroups() {
+  return state.renderModel && Array.isArray(state.renderModel.compositionGroups)
+    ? state.renderModel.compositionGroups
+    : [];
+}
+
+function ensureCompositionSelection() {
+  const groups = getCompositionGroups();
+  if (!groups.length) {
+    state.selectedCompositionGroupId = "";
+    return null;
+  }
+  const selected = groups.find((group) => group.groupId === state.selectedCompositionGroupId);
+  if (selected) {
+    return selected;
+  }
+  state.selectedCompositionGroupId = groups[0].groupId;
+  return groups[0];
+}
+
+function getSelectedCompositionGroup() {
+  return ensureCompositionSelection();
+}
+
+function getCompositionStatusLabel(status) {
+  if (status === "pass") {
+    return "合格";
+  }
+  if (status === "fail") {
+    return "要修正";
+  }
+  return "要確認";
+}
+
+function appendCompositionMetric(parent, label, value) {
+  const item = document.createElement("span");
+  item.className = "composition-metric";
+  const key = document.createElement("span");
+  key.textContent = label;
+  const strong = document.createElement("strong");
+  strong.textContent = String(value);
+  item.appendChild(key);
+  item.appendChild(strong);
+  parent.appendChild(item);
+}
+
+function renderCompositionGroups() {
+  const groups = getCompositionGroups();
+  const quality = state.renderModel ? state.renderModel.compositionQuality : null;
+  elements.compositionCountLabel.textContent = groups.length
+    ? `${groups.length} 件 / score ${quality ? quality.score : "-"}`
+    : "0 件";
+
+  if (!groups.length) {
+    elements.compositionPanel.classList.remove("has-groups");
+    elements.compositionSummary.className = "composition-summary empty";
+    elements.compositionSummary.textContent = "`compositionGroups` がある素材仕様書を読み込むと、重ね合わせ単位の品質チェックを表示します。";
+    elements.compositionGroupList.className = "composition-group-list empty";
+    elements.compositionGroupList.textContent = "構成グループはまだありません。";
+    return;
+  }
+
+  const selected = ensureCompositionSelection();
+  elements.compositionPanel.classList.add("has-groups");
+  elements.compositionSummary.className = `composition-summary status-${quality.status}`;
+  elements.compositionSummary.innerHTML = "";
+  appendCompositionMetric(elements.compositionSummary, "状態", getCompositionStatusLabel(quality.status));
+  appendCompositionMetric(elements.compositionSummary, "スコア", quality.score);
+  appendCompositionMetric(elements.compositionSummary, "fail", quality.failCount);
+  appendCompositionMetric(elements.compositionSummary, "warn", quality.warnCount);
+  appendCompositionMetric(elements.compositionSummary, "選択中", selected ? selected.groupId : "-");
+
+  elements.compositionGroupList.className = "composition-group-list";
+  elements.compositionGroupList.innerHTML = "";
+
+  groups.forEach((group) => {
+    const article = document.createElement("article");
+    article.className = `composition-group-card status-${group.status}`;
+    article.classList.toggle("is-selected", group.groupId === state.selectedCompositionGroupId);
+
+    const header = document.createElement("div");
+    header.className = "composition-group-header";
+    const title = document.createElement("div");
+    title.className = "composition-group-title";
+    const strong = document.createElement("strong");
+    strong.textContent = group.groupId;
+    const meta = document.createElement("span");
+    meta.textContent = `${group.kind} / ${getCompositionStatusLabel(group.status)} / score ${group.score}`;
+    title.appendChild(strong);
+    title.appendChild(meta);
+
+    const selectButton = document.createElement("button");
+    selectButton.className = "composition-select-button";
+    selectButton.textContent = group.groupId === state.selectedCompositionGroupId ? "表示中" : "表示";
+    selectButton.addEventListener("click", () => {
+      state.selectedCompositionGroupId = group.groupId;
+      renderScreen();
+      renderCompositionGroups();
+      setActivityStatus(`${group.groupId} の構成枠を表示しました ${nowLabel()}`);
+    });
+
+    header.appendChild(title);
+    header.appendChild(selectButton);
+    article.appendChild(header);
+
+    const anatomy = document.createElement("div");
+    anatomy.className = "composition-anatomy";
+    [
+      `root: ${group.rootPlacementId}`,
+      `layers: ${group.layerPlacementIds.length}`,
+      `children: ${group.childContentPlacementIds.length}`,
+      `overlays: ${group.protectedOverlayIds.length}`,
+      group.contentBox ? `content: ${group.contentBox.width}x${group.contentBox.height}` : "content: -"
+    ].forEach((text) => {
+      const chip = document.createElement("span");
+      chip.textContent = text;
+      anatomy.appendChild(chip);
+    });
+    article.appendChild(anatomy);
+
+    if (group.notes) {
+      const notes = document.createElement("p");
+      notes.className = "composition-notes";
+      notes.textContent = group.notes;
+      article.appendChild(notes);
+    }
+
+    const issueChecks = group.checks.filter((check) => check.status !== "pass");
+    const checkList = document.createElement("div");
+    checkList.className = issueChecks.length ? "composition-check-list" : "composition-check-list is-clean";
+    if (!issueChecks.length) {
+      const clean = document.createElement("div");
+      clean.className = "composition-check status-pass";
+      clean.textContent = "合成チェックは通過しています。";
+      checkList.appendChild(clean);
+    } else {
+      issueChecks.forEach((check) => {
+        const item = document.createElement("div");
+        item.className = `composition-check status-${check.status}`;
+        item.textContent = `${check.status}: ${check.message}`;
+        checkList.appendChild(item);
+      });
+    }
+    article.appendChild(checkList);
+    elements.compositionGroupList.appendChild(article);
+  });
+}
+
+function appendCompositionBox(box, className, label) {
+  if (!box) {
+    return;
+  }
+  const outline = document.createElement("div");
+  outline.className = className;
+  outline.style.left = `${box.left}px`;
+  outline.style.top = `${box.top}px`;
+  outline.style.width = `${box.width}px`;
+  outline.style.height = `${box.height}px`;
+  outline.style.zIndex = "10000";
+  if (label) {
+    const labelElement = document.createElement("span");
+    labelElement.textContent = label;
+    outline.appendChild(labelElement);
+  }
+  elements.screenCanvas.appendChild(outline);
+}
+
+function renderCompositionOverlays(group) {
+  if (!group) {
+    return;
+  }
+  appendCompositionBox(group.bounds, "composition-outline composition-bounds-outline", group.groupId);
+  appendCompositionBox(group.rootBox, "composition-outline composition-root-outline", "root");
+  if (group.contentBox) {
+    appendCompositionBox(group.contentBox, "composition-outline composition-content-outline", "content");
+  }
+  group.layers.forEach((layer) => {
+    if (layer.placementId !== group.rootPlacementId) {
+      appendCompositionBox(layer.box, "composition-outline composition-layer-outline", layer.placementId);
+    }
+  });
+  group.childContent.forEach((layer) => {
+    appendCompositionBox(layer.box, "composition-outline composition-child-outline", layer.placementId);
+  });
+  group.protectedOverlays.forEach((overlay) => {
+    appendCompositionBox(overlay.box, "composition-outline composition-overlay-outline", overlay.overlayId);
+  });
+}
+
 function renderScreen() {
   const screen = state.renderModel.screen;
+  const selectedGroup = getSelectedCompositionGroup();
+  const selectedPlacementIds = selectedGroup
+    ? new Set([
+        ...selectedGroup.layerPlacementIds,
+        ...selectedGroup.childContentPlacementIds,
+        ...selectedGroup.protectedOverlayIds
+      ])
+    : null;
   elements.screenCanvas.innerHTML = "";
   elements.screenCanvas.style.width = `${screen.width}px`;
   elements.screenCanvas.style.height = `${screen.height}px`;
@@ -323,6 +531,10 @@ function renderScreen() {
   screen.layers.forEach((layer) => {
     const image = document.createElement("img");
     image.className = "screen-layer";
+    if (selectedPlacementIds) {
+      image.classList.toggle("is-outside-composition", !selectedPlacementIds.has(layer.placementId));
+      image.classList.toggle("is-selected-composition-layer", selectedPlacementIds.has(layer.placementId));
+    }
     image.src = layer.src;
     image.alt = layer.assetId;
     image.title = `${layer.assetId} (${layer.role})`;
@@ -342,6 +554,7 @@ function renderScreen() {
   safeRect.style.width = `${screen.width - (safe.left || 0) - (safe.right || 0)}px`;
   safeRect.style.height = `${screen.height - (safe.top || 0) - (safe.bottom || 0)}px`;
   elements.screenCanvas.appendChild(safeRect);
+  renderCompositionOverlays(selectedGroup);
 }
 
 function renderReview() {
@@ -571,6 +784,7 @@ async function restoreAssetVersion(asset, version) {
     updateEditors();
     renderMeta();
     renderScreen();
+    renderCompositionGroups();
     renderAssets();
     setFlowStep("show");
     setViewMode("generated");
@@ -710,6 +924,7 @@ function renderAssets() {
         updateEditors();
         renderMeta();
         renderScreen();
+        renderCompositionGroups();
         renderReview();
         renderAssets();
         setFlowStep("import");
@@ -857,6 +1072,7 @@ async function renderGeneratedWorkspace(message, {
   renderImagegenStatus();
   renderMeta();
   renderScreen();
+  renderCompositionGroups();
   renderReview();
   renderRegenerationQueue();
   renderAssets();
@@ -929,6 +1145,7 @@ async function prepareImagegenJob() {
     renderImagegenStatus();
     renderMeta();
     renderScreen();
+    renderCompositionGroups();
     renderReview();
     renderRegenerationQueue();
     renderAssets();
@@ -979,6 +1196,7 @@ async function refreshImagegenOutputs() {
     renderImagegenStatus();
     renderMeta();
     renderScreen();
+    renderCompositionGroups();
     renderReview();
     renderRegenerationQueue();
     renderAssets();
@@ -1074,6 +1292,7 @@ async function renderDraftWorkspace(message) {
   elements.aiModeLabel.textContent = payload.ai.mode;
   renderMeta();
   renderScreen();
+  renderCompositionGroups();
   renderReview();
   renderRegenerationQueue();
   renderAssets();

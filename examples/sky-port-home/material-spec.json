@@ -79,6 +79,175 @@
       ]
     }
   },
+  "compositionGroups": [
+    {
+      "groupId": "primary_sortie_cta",
+      "kind": "layered_button",
+      "rootPlacementId": "sortie_button_base",
+      "layerPlacementIds": [
+        "sortie_button_base",
+        "sortie_button_anchor"
+      ],
+      "layerFitRules": [
+        {
+          "placementId": "sortie_button_base",
+          "fit": "same_canvas",
+          "notes": "ボタン土台は合成の基準キャンバス。"
+        },
+        {
+          "placementId": "sortie_button_anchor",
+          "fit": "decorative_overlap",
+          "allowedOverflow": {
+            "top": 0,
+            "right": 0,
+            "bottom": 2,
+            "left": 0
+          },
+          "notes": "錨エンブレムは主ラベル下の小さな装飾重なりとして扱う。"
+        }
+      ],
+      "protectedOverlayIds": [
+        "ov_sortie_cta"
+      ],
+      "outputAssetId": "btn_start_sortie",
+      "qualityChecks": [
+        "主CTAラベルの安全域に装飾やエンブレムが入らない",
+        "土台ボタンと錨エンブレムは別PNGとして差し替え可能",
+        "zIndex順に重ねた時に1つの販売素材レベルのボタンとして読める"
+      ],
+      "notes": "HOME中央下の出航ボタンを、土台、アクセント、runtimeラベルの構成として扱う。"
+    },
+    {
+      "groupId": "gift_side_cta",
+      "kind": "layered_card_cta",
+      "rootPlacementId": "gift_cta_shell",
+      "layerPlacementIds": [
+        "gift_cta_shell",
+        "gift_cta_crate",
+        "gift_cta_badge"
+      ],
+      "layerFitRules": [
+        {
+          "placementId": "gift_cta_shell",
+          "fit": "same_canvas",
+          "notes": "カードシェルは文字レーンと装飾の基準キャンバス。"
+        },
+        {
+          "placementId": "gift_cta_crate",
+          "fit": "edge_attached",
+          "allowedOverflow": {
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "left": 32
+          },
+          "notes": "ギフト箱は左端に掛かる販売素材的な前景装飾。"
+        },
+        {
+          "placementId": "gift_cta_badge",
+          "fit": "decorative_overlap",
+          "allowedOverflow": {
+            "top": 8,
+            "right": 0,
+            "bottom": 0,
+            "left": 0
+          },
+          "notes": "通知バッジはギフト箱右上に重ねる小装飾。"
+        }
+      ],
+      "protectedOverlayIds": [
+        "ov_gift_title",
+        "ov_gift_copy",
+        "ov_gift_count"
+      ],
+      "outputAssetId": "card_gift_cta_shell",
+      "qualityChecks": [
+        "ギフト箱、通知バッジ、タイトル、コピーを親シェルへ焼き込まない",
+        "右側のタイトル/コピー領域は静かで読みやすい",
+        "通知バッジはアイコン右上の明示された重なりとして成立する"
+      ],
+      "notes": "左下ギフト導線を、シェル、箱アイコン、通知バッジ、runtimeテキストの構成として扱う。"
+    },
+    {
+      "groupId": "gacha_side_cta",
+      "kind": "layered_card_cta",
+      "rootPlacementId": "gacha_cta_shell",
+      "layerPlacementIds": [
+        "gacha_cta_shell",
+        "gacha_cta_orb"
+      ],
+      "layerFitRules": [
+        {
+          "placementId": "gacha_cta_shell",
+          "fit": "same_canvas",
+          "notes": "カードシェルは左側テキストレーンの基準キャンバス。"
+        },
+        {
+          "placementId": "gacha_cta_orb",
+          "fit": "edge_attached",
+          "allowedOverflow": {
+            "top": 0,
+            "right": 28,
+            "bottom": 0,
+            "left": 0
+          },
+          "notes": "ガチャオーブは右端ソケットから少し外へ張り出す主装飾。"
+        }
+      ],
+      "protectedOverlayIds": [
+        "ov_gacha_title",
+        "ov_gacha_copy"
+      ],
+      "outputAssetId": "card_gacha_cta_shell",
+      "qualityChecks": [
+        "ガチャオーブを親シェルへ焼き込まない",
+        "左側のタイトル/コピー領域は静かで読みやすい",
+        "オーブ用ソケットと別PNGのオーブがzIndex順で自然に重なる"
+      ],
+      "notes": "右下ガチャ導線を、シェル、オーブ、runtimeテキストの構成として扱う。"
+    },
+    {
+      "groupId": "daily_mission_rows_area",
+      "kind": "inset_child_content_stack",
+      "rootPlacementId": "daily_mission_outer",
+      "layerPlacementIds": [
+        "daily_mission_outer"
+      ],
+      "layerFitRules": [
+        {
+          "placementId": "daily_mission_outer",
+          "fit": "same_canvas",
+          "notes": "親パネルの外枠を合成の基準キャンバスにする。"
+        }
+      ],
+      "childContentPlacementIds": [
+        "daily_mission_row_login",
+        "daily_mission_row_sortie",
+        "daily_mission_row_shop"
+      ],
+      "contentInset": {
+        "top": 48,
+        "right": 18,
+        "bottom": 76,
+        "left": 18
+      },
+      "protectedOverlayIds": [
+        "ov_mission_login_label",
+        "ov_mission_login_count",
+        "ov_mission_sortie_label",
+        "ov_mission_sortie_count",
+        "ov_mission_shop_label",
+        "ov_mission_shop_count"
+      ],
+      "outputAssetId": "frame_daily_mission_outer",
+      "qualityChecks": [
+        "任務行は親パネルの内側余白からはみ出さない",
+        "任務行は左右の装飾フレームに接触しない",
+        "行テキストのruntime overlayは行素材より前面に出る"
+      ],
+      "notes": "親パネル内に入る子要素の余白チェック例。ヘッダーやフッターボタンは別の装飾/操作領域として扱う。"
+    }
+  ],
   "placements": [
     {
       "placementId": "home_backdrop",
