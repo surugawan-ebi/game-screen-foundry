@@ -1,0 +1,4 @@
+interface:
+  display_name: "Game Screen Foundry"
+  short_description: "Build and review Game Screen Foundry projects"
+  default_prompt: "Use $game-screen-foundry to create or review a Game Screen Foundry screen project."
