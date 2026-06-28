@@ -26,6 +26,14 @@ To install the bundled Codex skill locally:
 npm run skill:install
 ```
 
+To create or validate an external creative project:
+
+```sh
+npm run init-project -- /path/to/game/creative
+npm run add-screen -- /path/to/game/creative shop --screen-name SHOP
+npm run validate:project -- /path/to/game/creative shop
+```
+
 ## Pull Request Checklist
 
 - Run `npm run release:check`.

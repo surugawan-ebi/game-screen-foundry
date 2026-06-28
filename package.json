@@ -21,11 +21,14 @@
   ],
   "scripts": {
     "check": "npm run lint && npm run validate && npm test",
+    "add-screen": "node scripts/add-screen.js",
     "dev": "node server.js",
+    "init-project": "node scripts/init-project.js",
     "lint": "node scripts/check-js-syntax.js",
     "release:check": "npm run check && node scripts/check-local-paths.js && node scripts/check-tracked-imagegen.js",
     "skill:install": "node scripts/install-codex-skill.js",
     "validate": "node scripts/check-json.js && node scripts/check-skills.js && node scripts/validate-project-files.js",
+    "validate:project": "node scripts/validate-project.js",
     "test": "node --test"
   },
   "engines": {

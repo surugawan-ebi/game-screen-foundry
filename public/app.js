@@ -17,7 +17,9 @@ const state = {
   renderModel: null,
   review: null,
   reviewSuggestionsByAsset: {},
+  selectedCompositionEditorGroupId: "",
   selectedCompositionGroupId: "",
+  selectedPlacementId: "",
   source: {
     kind: "demo"
   }
@@ -33,10 +35,17 @@ const elements = {
   applyLocksButton: document.getElementById("applyLocksButton"),
   assetGrid: document.getElementById("assetGrid"),
   bundleFileInput: document.getElementById("bundleFileInput"),
+  applyCompositionInsetButton: document.getElementById("applyCompositionInsetButton"),
+  applyPlacementEditButton: document.getElementById("applyPlacementEditButton"),
   compositionCountLabel: document.getElementById("compositionCountLabel"),
+  compositionEditorSelect: document.getElementById("compositionEditorSelect"),
   compositionGroupList: document.getElementById("compositionGroupList"),
   compositionPanel: document.getElementById("compositionPanel"),
   compositionSummary: document.getElementById("compositionSummary"),
+  contentInsetBottomInput: document.getElementById("contentInsetBottomInput"),
+  contentInsetLeftInput: document.getElementById("contentInsetLeftInput"),
+  contentInsetRightInput: document.getElementById("contentInsetRightInput"),
+  contentInsetTopInput: document.getElementById("contentInsetTopInput"),
   draftButton: document.getElementById("draftButton"),
   folderPathInput: document.getElementById("folderPathInput"),
   flowCurrentLabel: document.getElementById("flowCurrentLabel"),
@@ -55,6 +64,13 @@ const elements = {
   loadDemoButton: document.getElementById("loadDemoButton"),
   loadFolderButton: document.getElementById("loadFolderButton"),
   presetInput: document.getElementById("presetInput"),
+  placementEditorSelect: document.getElementById("placementEditorSelect"),
+  placementHeightInput: document.getElementById("placementHeightInput"),
+  placementParentInput: document.getElementById("placementParentInput"),
+  placementWidthInput: document.getElementById("placementWidthInput"),
+  placementXInput: document.getElementById("placementXInput"),
+  placementYInput: document.getElementById("placementYInput"),
+  placementZInput: document.getElementById("placementZInput"),
   projectScreenSelect: document.getElementById("projectScreenSelect"),
   buildRegenPromptButton: document.getElementById("buildRegenPromptButton"),
   clearRegenQueueButton: document.getElementById("clearRegenQueueButton"),
@@ -75,6 +91,8 @@ const elements = {
   assetCountLabel: document.getElementById("assetCountLabel"),
   assetPanel: document.getElementById("assetPanel"),
   sourceStatus: document.getElementById("sourceStatus"),
+  specEditorPanel: document.getElementById("specEditorPanel"),
+  specEditorStatus: document.getElementById("specEditorStatus"),
   validateButton: document.getElementById("validateButton"),
   validationOutput: document.getElementById("validationOutput"),
   validationPanel: document.getElementById("validationPanel"),
@@ -273,6 +291,7 @@ function updateEditors() {
   elements.specInput.value = JSON.stringify(state.materialSpecSheet, null, 2);
   elements.presetInput.value = JSON.stringify(state.worldPreset, null, 2);
   renderKvPreview();
+  renderStructuredSpecEditor();
 }
 
 function syncStateFromPayload(payload) {
@@ -352,6 +371,203 @@ function parseFolderPathInput(value) {
     folderPath: trimmed.slice(0, hashIndex).trim(),
     screenId: trimmed.slice(hashIndex + 1).trim()
   };
+}
+
+function getPlacements() {
+  return state.materialSpecSheet && Array.isArray(state.materialSpecSheet.placements)
+    ? state.materialSpecSheet.placements
+    : [];
+}
+
+function getMaterialCompositionGroups() {
+  return state.materialSpecSheet && Array.isArray(state.materialSpecSheet.compositionGroups)
+    ? state.materialSpecSheet.compositionGroups
+    : [];
+}
+
+function setOptions(select, rows, getValue, getLabel, emptyLabel) {
+  select.innerHTML = "";
+  if (!rows.length) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = emptyLabel;
+    select.appendChild(option);
+    return;
+  }
+  rows.forEach((row) => {
+    const option = document.createElement("option");
+    option.value = getValue(row);
+    option.textContent = getLabel(row);
+    select.appendChild(option);
+  });
+}
+
+function setSpecEditorDisabled(disabled) {
+  [
+    elements.placementEditorSelect,
+    elements.placementXInput,
+    elements.placementYInput,
+    elements.placementWidthInput,
+    elements.placementHeightInput,
+    elements.placementZInput,
+    elements.placementParentInput,
+    elements.applyPlacementEditButton,
+    elements.compositionEditorSelect,
+    elements.contentInsetTopInput,
+    elements.contentInsetRightInput,
+    elements.contentInsetBottomInput,
+    elements.contentInsetLeftInput,
+    elements.applyCompositionInsetButton
+  ].forEach((element) => {
+    element.disabled = disabled;
+  });
+}
+
+function normalizeInsetForEditor(value) {
+  if (typeof value === "number") {
+    return {
+      top: value,
+      right: value,
+      bottom: value,
+      left: value
+    };
+  }
+  const inset = value && typeof value === "object" ? value : {};
+  return {
+    top: Number(inset.top || 0),
+    right: Number(inset.right || 0),
+    bottom: Number(inset.bottom || 0),
+    left: Number(inset.left || 0)
+  };
+}
+
+function renderStructuredSpecEditor() {
+  const placements = getPlacements();
+  const groups = getMaterialCompositionGroups();
+  setSpecEditorDisabled(!placements.length);
+  elements.specEditorStatus.textContent = placements.length
+    ? `${placements.length} placements / ${groups.length} groups`
+    : "未読み込み";
+
+  setOptions(
+    elements.placementEditorSelect,
+    placements,
+    (placement) => placement.placementId,
+    (placement) => `${placement.placementId} / ${placement.assetId}`,
+    "placementなし"
+  );
+  if (placements.length && !placements.some((placement) => placement.placementId === state.selectedPlacementId)) {
+    state.selectedPlacementId = placements[0].placementId;
+  }
+  elements.placementEditorSelect.value = state.selectedPlacementId || "";
+  const placement = placements.find((item) => item.placementId === state.selectedPlacementId) || null;
+  elements.placementXInput.value = placement ? placement.x : "";
+  elements.placementYInput.value = placement ? placement.y : "";
+  elements.placementWidthInput.value = placement ? placement.width : "";
+  elements.placementHeightInput.value = placement ? placement.height : "";
+  elements.placementZInput.value = placement ? placement.zIndex : "";
+  elements.placementParentInput.value = placement ? placement.parentId || "" : "";
+
+  setOptions(
+    elements.compositionEditorSelect,
+    groups,
+    (group) => group.groupId,
+    (group) => `${group.groupId} / ${group.kind || "group"}`,
+    "groupなし"
+  );
+  if (groups.length && !groups.some((group) => group.groupId === state.selectedCompositionEditorGroupId)) {
+    state.selectedCompositionEditorGroupId = state.selectedCompositionGroupId || groups[0].groupId;
+  }
+  elements.compositionEditorSelect.disabled = !groups.length;
+  elements.applyCompositionInsetButton.disabled = !groups.length;
+  elements.compositionEditorSelect.value = state.selectedCompositionEditorGroupId || "";
+  const group = groups.find((item) => item.groupId === state.selectedCompositionEditorGroupId) || null;
+  const inset = normalizeInsetForEditor(group ? group.contentInset || group.minChildInset : null);
+  elements.contentInsetTopInput.disabled = !group;
+  elements.contentInsetRightInput.disabled = !group;
+  elements.contentInsetBottomInput.disabled = !group;
+  elements.contentInsetLeftInput.disabled = !group;
+  elements.contentInsetTopInput.value = group ? inset.top : "";
+  elements.contentInsetRightInput.value = group ? inset.right : "";
+  elements.contentInsetBottomInput.value = group ? inset.bottom : "";
+  elements.contentInsetLeftInput.value = group ? inset.left : "";
+}
+
+function readNumberField(input, label, { min = -Infinity } = {}) {
+  const value = Number(input.value);
+  if (!Number.isFinite(value)) {
+    throw new Error(`${label} は数値で入力してください。`);
+  }
+  if (value < min) {
+    throw new Error(`${label} は ${min} 以上にしてください。`);
+  }
+  return Math.round(value);
+}
+
+async function refreshAfterStructuredSpecEdit(message, button) {
+  const busyStartedAt = Date.now();
+  setBusy(button, true, "反映中...");
+  setWorkspaceBusy(true, "構造化編集を反映しています...");
+  try {
+    elements.specInput.value = JSON.stringify(state.materialSpecSheet, null, 2);
+    state.review = null;
+    state.reviewSuggestionsByAsset = {};
+    renderValidationReport(null);
+    await renderDraftWorkspace(message);
+    setViewMode("draft");
+  } catch (error) {
+    window.alert(error.message);
+    setActivityStatus(`構造化編集失敗: ${error.message}`);
+  } finally {
+    await ensureMinimumBusy(busyStartedAt);
+    setWorkspaceBusy(false, "待機中");
+    setBusy(button, false);
+    renderStructuredSpecEditor();
+  }
+}
+
+async function applyPlacementEditor() {
+  try {
+    const placement = getPlacements().find((item) => item.placementId === state.selectedPlacementId);
+    if (!placement) {
+      return;
+    }
+    placement.x = readNumberField(elements.placementXInput, "x");
+    placement.y = readNumberField(elements.placementYInput, "y");
+    placement.width = readNumberField(elements.placementWidthInput, "w", { min: 1 });
+    placement.height = readNumberField(elements.placementHeightInput, "h", { min: 1 });
+    placement.zIndex = readNumberField(elements.placementZInput, "z");
+    const parentId = elements.placementParentInput.value.trim();
+    if (parentId) {
+      placement.parentId = parentId;
+    } else {
+      delete placement.parentId;
+    }
+    await refreshAfterStructuredSpecEdit(`${placement.placementId} の配置を反映しました ${nowLabel()}`, elements.applyPlacementEditButton);
+  } catch (error) {
+    window.alert(error.message);
+    setActivityStatus(`配置反映失敗: ${error.message}`);
+  }
+}
+
+async function applyCompositionInsetEditor() {
+  try {
+    const group = getMaterialCompositionGroups().find((item) => item.groupId === state.selectedCompositionEditorGroupId);
+    if (!group) {
+      return;
+    }
+    group.contentInset = {
+      top: readNumberField(elements.contentInsetTopInput, "top", { min: 0 }),
+      right: readNumberField(elements.contentInsetRightInput, "right", { min: 0 }),
+      bottom: readNumberField(elements.contentInsetBottomInput, "bottom", { min: 0 }),
+      left: readNumberField(elements.contentInsetLeftInput, "left", { min: 0 })
+    };
+    state.selectedCompositionGroupId = group.groupId;
+    await refreshAfterStructuredSpecEdit(`${group.groupId} の contentInset を反映しました ${nowLabel()}`, elements.applyCompositionInsetButton);
+  } catch (error) {
+    window.alert(error.message);
+    setActivityStatus(`Inset反映失敗: ${error.message}`);
+  }
 }
 
 function renderImagegenStatus() {
@@ -613,14 +829,22 @@ function renderScreen() {
       image.classList.toggle("is-outside-composition", !selectedPlacementIds.has(layer.placementId));
       image.classList.toggle("is-selected-composition-layer", selectedPlacementIds.has(layer.placementId));
     }
+    image.classList.toggle("is-selected-placement", layer.placementId === state.selectedPlacementId);
     image.src = layer.src;
     image.alt = layer.assetId;
     image.title = `${layer.assetId} (${layer.role})`;
+    image.dataset.placementId = layer.placementId;
     image.style.left = `${layer.left}px`;
     image.style.top = `${layer.top}px`;
     image.style.width = `${layer.width}px`;
     image.style.height = `${layer.height}px`;
     image.style.zIndex = String(layer.zIndex);
+    image.addEventListener("click", (event) => {
+      event.stopPropagation();
+      state.selectedPlacementId = layer.placementId;
+      renderStructuredSpecEditor();
+      renderScreen();
+    });
     elements.screenCanvas.appendChild(image);
   });
 
@@ -1436,6 +1660,9 @@ async function loadDemo() {
     state.regenerationQueue = [];
     state.regenerationQueueDirty = false;
     state.regenerationQueuePath = "";
+    state.selectedCompositionEditorGroupId = "";
+    state.selectedCompositionGroupId = "";
+    state.selectedPlacementId = "";
     setRegenerationPrompt("");
     setImplementationReport("");
     renderValidationReport(null);
@@ -1488,6 +1715,7 @@ async function renderGeneratedWorkspace(message, {
   renderMeta();
   renderScreen();
   renderCompositionGroups();
+  renderStructuredSpecEditor();
   renderReview();
   renderRegenerationQueue();
   renderAssets();
@@ -1708,6 +1936,7 @@ async function renderDraftWorkspace(message) {
   renderMeta();
   renderScreen();
   renderCompositionGroups();
+  renderStructuredSpecEditor();
   renderReview();
   renderRegenerationQueue();
   renderAssets();
@@ -1751,6 +1980,9 @@ async function loadBundleObject(bundle, source) {
   state.regenerationQueue = [];
   state.regenerationQueueDirty = false;
   state.regenerationQueuePath = "";
+  state.selectedCompositionEditorGroupId = "";
+  state.selectedCompositionGroupId = "";
+  state.selectedPlacementId = "";
   setRegenerationPrompt("");
   setImplementationReport("");
   renderValidationReport(null);
@@ -1835,6 +2067,22 @@ elements.loadDemoButton.addEventListener("click", async () => {
 });
 elements.loadFolderButton.addEventListener("click", loadFolder);
 elements.projectScreenSelect.addEventListener("change", switchProjectScreen);
+elements.placementEditorSelect.addEventListener("change", () => {
+  state.selectedPlacementId = elements.placementEditorSelect.value;
+  renderStructuredSpecEditor();
+  if (state.renderModel) {
+    renderScreen();
+  }
+});
+elements.compositionEditorSelect.addEventListener("change", () => {
+  state.selectedCompositionEditorGroupId = elements.compositionEditorSelect.value;
+  state.selectedCompositionGroupId = elements.compositionEditorSelect.value;
+  if (state.renderModel) {
+    renderScreen();
+    renderCompositionGroups();
+  }
+  renderStructuredSpecEditor();
+});
 elements.bundleFileInput.addEventListener("change", async (event) => {
   const file = event.target.files && event.target.files[0];
   if (!file) {
@@ -1854,6 +2102,8 @@ elements.draftButton.addEventListener("click", showDraftWorkspace);
 elements.generateButton.addEventListener("click", showGeneratedResults);
 elements.validateButton.addEventListener("click", validateWorkspaceSpec);
 elements.exportReportButton.addEventListener("click", buildImplementationReport);
+elements.applyPlacementEditButton.addEventListener("click", applyPlacementEditor);
+elements.applyCompositionInsetButton.addEventListener("click", applyCompositionInsetEditor);
 elements.buildRegenPromptButton.addEventListener("click", buildRegenerationPrompt);
 elements.saveRegenQueueButton.addEventListener("click", saveRegenerationQueue);
 elements.loadRegenQueueButton.addEventListener("click", loadSavedRegenerationQueue);

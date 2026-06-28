@@ -24,12 +24,16 @@ game-repo/
 
 ## Fastest Safe Path
 
-1. Copy `templates/blank-project/creative` into the target game repository.
-2. Rename `projectId`, `projectName`, and screen ids.
-3. Add or edit screens under `creative/screens/<screenId>/`.
+1. Run `npm run init-project -- /path/to/game/creative --project-id <id> --project-name "<Name>"`.
+2. Add screens with `npm run add-screen -- /path/to/game/creative <screenId> --screen-name <NAME>`.
+3. Validate external project folders with `npm run validate:project -- /path/to/game/creative <screenId>`.
 4. Keep generated PNGs under each screen folder's `generated-assets/`.
 5. Keep job files under `creative/.game-creative-generation/imagegen-jobs/`.
 6. Load either `creative`, `creative#screenId`, or a direct screen folder in the browser UI.
+
+Manual copying from `templates/blank-project/creative` is still valid, but prefer
+the CLI when helping another agent or user create a new project because it keeps
+manifest and screen ids synchronized.
 
 ## Manifest Rules
 
@@ -66,4 +70,3 @@ After creating or editing a project template in this repository, run:
 ```sh
 npm run release:check
 ```
-

@@ -4,6 +4,7 @@ process.env.BETA_AI_MODE = "mock";
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const { execFileSync } = require("node:child_process");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
@@ -105,6 +106,69 @@ test("blank project template loads through the project manifest", async () => {
   assert.equal(draftResponse.payload.ok, true);
   assert.equal(draftResponse.payload.renderModel.screen.layers.length, 3);
   assert.equal(draftResponse.payload.renderModel.assets.length, 2);
+});
+
+test("project onboarding cli creates projects, adds screens, and validates them", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "gcgt-cli-"));
+  const creativeDir = path.join(tempRoot, "creative");
+
+  try {
+    const initOutput = execFileSync(process.execPath, [
+      path.join(__dirname, "..", "scripts", "init-project.js"),
+      creativeDir,
+      "--project-id",
+      "sky_demo",
+      "--project-name",
+      "Sky Demo",
+      "--screen-id",
+      "title",
+      "--screen-name",
+      "TITLE"
+    ], {
+      encoding: "utf8"
+    });
+    assert.match(initOutput, /Created Game Screen Foundry project/u);
+
+    const addOutput = execFileSync(process.execPath, [
+      path.join(__dirname, "..", "scripts", "add-screen.js"),
+      creativeDir,
+      "shop",
+      "--screen-name",
+      "SHOP"
+    ], {
+      encoding: "utf8"
+    });
+    assert.match(addOutput, /Added screen: shop/u);
+
+    const manifest = JSON.parse(fs.readFileSync(path.join(creativeDir, "game-creative-project.json"), "utf8"));
+    assert.equal(manifest.projectId, "sky_demo");
+    assert.equal(manifest.defaultScreenId, "title");
+    assert.deepEqual(
+      manifest.screens.map((screen) => `${screen.screenId}:${screen.name}`),
+      ["title:TITLE", "shop:SHOP"]
+    );
+
+    const shopResponse = await dispatchApi("POST", "/api/load-from-folder", {
+      folderPath: creativeDir,
+      screenId: "shop"
+    });
+    assert.equal(shopResponse.statusCode, 200);
+    assert.equal(shopResponse.payload.ok, true);
+    assert.equal(shopResponse.payload.bundle.screenKv.screenId, "shop");
+    assert.equal(shopResponse.payload.bundle.materialSpecSheet.assets[0].assetId, "bg_shop");
+
+    const validateOutput = execFileSync(process.execPath, [
+      path.join(__dirname, "..", "scripts", "validate-project.js"),
+      creativeDir,
+      "shop"
+    ], {
+      encoding: "utf8"
+    });
+    assert.match(validateOutput, /Project validation ok/u);
+    assert.match(validateOutput, /screen: shop \/ SHOP/u);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
 });
 
 test("inline relative imagegenAssets paths resolve from each loaded screen folder", async () => {
@@ -779,6 +843,10 @@ test("frontend exposes the image generation flow tracker", () => {
   assert.match(html, /id="saveRegenQueueButton"/u);
   assert.match(html, /id="loadRegenQueueButton"/u);
   assert.match(html, /class="asset-inspector"/u);
+  assert.match(html, /id="specEditorPanel"/u);
+  assert.match(html, /id="placementEditorSelect"/u);
+  assert.match(html, /id="compositionEditorSelect"/u);
+  assert.match(html, /id="applyPlacementEditButton"/u);
   assert.match(html, /構成グループ/u);
   assert.match(html, /id="compositionSummary"/u);
   assert.match(html, /id="compositionGroupList"/u);
@@ -801,6 +869,9 @@ test("frontend exposes the image generation flow tracker", () => {
   assert.match(js, /function renderAssetInspector/u);
   assert.match(js, /function saveRegenerationQueue/u);
   assert.match(js, /function loadSavedRegenerationQueue/u);
+  assert.match(js, /function renderStructuredSpecEditor/u);
+  assert.match(js, /function applyPlacementEditor/u);
+  assert.match(js, /function applyCompositionInsetEditor/u);
   assert.match(js, /function renderValidationReport/u);
   assert.match(js, /function renderCompositionGroups/u);
   assert.match(js, /function renderCompositionOverlays/u);
@@ -817,6 +888,8 @@ test("frontend exposes the image generation flow tracker", () => {
   assert.match(css, /\.implementation-report-output/u);
   assert.match(css, /\.validation-item/u);
   assert.match(css, /\.asset-inspector-row/u);
+  assert.match(css, /\.spec-editor-grid/u);
+  assert.match(css, /\.screen-layer\.is-selected-placement/u);
   assert.match(css, /\.composition-group-card/u);
   assert.match(css, /\.composition-content-outline/u);
   assert.match(css, /repeat\(2, minmax\(0, 1fr\)\)/u);

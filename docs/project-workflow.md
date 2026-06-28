@@ -42,6 +42,25 @@ game-repo/
         imagegen-assets.json
 ```
 
+## Project CLI
+
+新規導入では、テンプレートを手でコピーする代わりに CLI を使える。
+
+```sh
+npm run init-project -- /path/to/game-repo/creative \
+  --project-id sky_port_atlas \
+  --project-name "星港アトラス" \
+  --screen-id home \
+  --screen-name HOME
+
+npm run add-screen -- /path/to/game-repo/creative shop --screen-name SHOP
+npm run validate:project -- /path/to/game-repo/creative shop
+```
+
+`init-project` は `creative/` 一式を作り、`add-screen` は manifest と
+`screens/<screenId>/` を追加する。`validate:project` は外部プロジェクトでも
+読み込み、レンダリング、composition quality を確認する。
+
 ## Project Manifest
 
 `creative/game-creative-project.json` は、複数画面の索引として使う。

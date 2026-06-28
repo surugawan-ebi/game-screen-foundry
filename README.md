@@ -29,6 +29,8 @@ The project is currently beta-quality. It is useful for validating a production 
   Shows the generated PNG version, with a structural wireframe-style preview for layout checks.
 - エディタ内JSON、レンダリング可能性、composition quality をブラウザ内でチェックできます。  
   Checks editor JSON, renderability, and composition quality in the browser.
+- placement と composition inset をフォームで編集し、JSON と仮組みプレビューへ反映できます。
+  Edits placements and composition insets through structured controls, then syncs JSON and draft preview.
 - 素材ごとのコメント、固定、履歴、再生成キューを扱います。  
   Tracks per-asset comments, locks, history, and regeneration queues.
 - 選択した素材の Codex/imagegen 向け依頼文を作ります。  
@@ -72,6 +74,30 @@ http://127.0.0.1:4311
 
 起動すると同梱デモが自動で読み込まれます。  
 The bundled demo loads automatically.
+
+## プロジェクト作成CLI / Project CLI
+
+外部ゲームリポジトリへ導入する場合は、blank template を手でコピーする代わりに CLI を使えます。
+For external game repositories, use the CLI instead of copying the blank template manually.
+
+```sh
+npm run init-project -- /path/to/game-repo/creative \
+  --project-id sky_port_atlas \
+  --project-name "Sky Port Atlas" \
+  --screen-id home \
+  --screen-name HOME
+
+npm run add-screen -- /path/to/game-repo/creative shop --screen-name SHOP
+
+npm run validate:project -- /path/to/game-repo/creative shop
+```
+
+- `init-project` は読み込み可能な `creative/` 一式を作ります。
+  `init-project` creates a loadable `creative/` project.
+- `add-screen` は既存 project manifest に画面を追加します。
+  `add-screen` adds a screen to an existing project manifest.
+- `validate:project` は任意の project / screen folder を読み込み、renderability と composition quality を確認します。
+  `validate:project` checks renderability and composition quality for any project or screen folder.
 
 ## 外部プロジェクト構成 / External Project Layout
 

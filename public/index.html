@@ -163,6 +163,74 @@
             </div>
           </article>
 
+          <article id="specEditorPanel" class="panel spec-editor-panel">
+            <div class="panel-header">
+              <h2>構造化編集</h2>
+              <span id="specEditorStatus" class="panel-note">未読み込み</span>
+            </div>
+            <div class="spec-editor-grid">
+              <section class="spec-editor-section">
+                <div class="spec-editor-section-header">
+                  <h3>Placement</h3>
+                  <select id="placementEditorSelect" class="compact-select" aria-label="編集する placement"></select>
+                </div>
+                <div class="field-grid field-grid-placement">
+                  <label>
+                    <span>x</span>
+                    <input id="placementXInput" type="number" step="1" />
+                  </label>
+                  <label>
+                    <span>y</span>
+                    <input id="placementYInput" type="number" step="1" />
+                  </label>
+                  <label>
+                    <span>w</span>
+                    <input id="placementWidthInput" type="number" step="1" min="1" />
+                  </label>
+                  <label>
+                    <span>h</span>
+                    <input id="placementHeightInput" type="number" step="1" min="1" />
+                  </label>
+                  <label>
+                    <span>z</span>
+                    <input id="placementZInput" type="number" step="1" />
+                  </label>
+                  <label>
+                    <span>parent</span>
+                    <input id="placementParentInput" type="text" />
+                  </label>
+                </div>
+                <button id="applyPlacementEditButton">配置を反映</button>
+              </section>
+
+              <section class="spec-editor-section">
+                <div class="spec-editor-section-header">
+                  <h3>Composition Inset</h3>
+                  <select id="compositionEditorSelect" class="compact-select" aria-label="編集する composition group"></select>
+                </div>
+                <div class="field-grid field-grid-inset">
+                  <label>
+                    <span>top</span>
+                    <input id="contentInsetTopInput" type="number" step="1" min="0" />
+                  </label>
+                  <label>
+                    <span>right</span>
+                    <input id="contentInsetRightInput" type="number" step="1" min="0" />
+                  </label>
+                  <label>
+                    <span>bottom</span>
+                    <input id="contentInsetBottomInput" type="number" step="1" min="0" />
+                  </label>
+                  <label>
+                    <span>left</span>
+                    <input id="contentInsetLeftInput" type="number" step="1" min="0" />
+                  </label>
+                </div>
+                <button id="applyCompositionInsetButton">Insetを反映</button>
+              </section>
+            </div>
+          </article>
+
           <article id="compositionPanel" class="panel composition-panel">
             <div class="panel-header">
               <h2>構成グループ</h2>
