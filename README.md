@@ -27,6 +27,8 @@ The project is currently beta-quality. It is useful for validating a production 
   Assembles the screen from separate layers such as panels, buttons, icons, backgrounds, badges, runtime text, and overlays.
 - 生成済み PNG 版を表示し、構造確認用の wireframe preview も確認できます。  
   Shows the generated PNG version, with a structural wireframe-style preview for layout checks.
+- エディタ内JSON、レンダリング可能性、composition quality をブラウザ内でチェックできます。  
+  Checks editor JSON, renderability, and composition quality in the browser.
 - 素材ごとのコメント、固定、履歴、再生成キューを扱います。  
   Tracks per-asset comments, locks, history, and regeneration queues.
 - 選択した素材の Codex/imagegen 向け依頼文を作ります。  

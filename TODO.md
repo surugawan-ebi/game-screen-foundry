@@ -25,7 +25,6 @@ This file is the handoff note for the public beta. The current repository is usa
 - Review history: store adopted versions and comments outside browser memory.
 - Shared assets: support a project-level shared registry for common nav buttons, resource icons, and panel families.
 - Safer local file permissions: move from process-level allowlist to project session allowlist with explicit UI feedback.
-- Schema validation errors: show actionable messages in the browser instead of raw exceptions.
 - UI polish: make the workbench usable on smaller laptop screens and add clearer loading/progress states.
 
 ## Technical TODO
@@ -57,6 +56,7 @@ This file is the handoff note for the public beta. The current repository is usa
 - Upgraded the Sky Port HOME sample with public-quality composition groups and layer fit rules for the primary CTA, gift CTA, gacha CTA, and daily mission rows.
 - Added a project screen navigator so users can load `game-creative-project.json` once and switch screens without typing `creative#screenId`.
 - Added an implementation handoff report with layer order, runtime overlays, asset generation sources, and composition quality summary.
+- Added an in-browser spec check panel for editor JSON parse errors, renderability, and composition quality diagnostics.
 
 ## Public Beta Boundaries
 

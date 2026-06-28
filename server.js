@@ -840,6 +840,65 @@ function handleImplementationReport(body) {
   };
 }
 
+function handleValidateWorkspace(body) {
+  try {
+    const input = prepareInput(Object.keys(body).length ? body : getDemoProject());
+    const renderModel = generateRenderModel(input);
+    const diagnostics = [];
+    const composition = renderModel.compositionQuality;
+    if (composition && composition.failCount > 0) {
+      diagnostics.push({
+        severity: "error",
+        code: "composition_quality",
+        message: `${composition.failCount} composition group(s) are failing.`
+      });
+    }
+    if (composition && composition.warnCount > 0) {
+      diagnostics.push({
+        severity: "warning",
+        code: "composition_quality",
+        message: `${composition.warnCount} composition group(s) need review.`
+      });
+    }
+    if (!renderModel.screen.layers.length) {
+      diagnostics.push({
+        severity: "error",
+        code: "empty_layers",
+        message: "Screen renders no layers."
+      });
+    }
+
+    return {
+      ok: true,
+      valid: diagnostics.every((item) => item.severity !== "error"),
+      summary: {
+        screenId: renderModel.screen.screenId,
+        screenName: renderModel.screen.screenName,
+        size: `${renderModel.screen.width}x${renderModel.screen.height}`,
+        assetCount: renderModel.assets.length,
+        layerCount: renderModel.screen.layers.length,
+        compositionStatus: composition ? composition.status : "pass",
+        compositionScore: composition ? composition.score : 100,
+        compositionGroupCount: composition ? composition.groupCount : 0
+      },
+      diagnostics
+    };
+  } catch (error) {
+    return {
+      ok: true,
+      valid: false,
+      summary: null,
+      diagnostics: [
+        {
+          severity: "error",
+          code: "workspace_parse",
+          message: error.message
+        }
+      ]
+    };
+  }
+}
+
 async function dispatchApi(method, pathname, body = {}) {
   if (method === "GET" && pathname === "/api/source-file") {
     throw new Error("Use HTTP server route for source-file");
@@ -983,6 +1042,13 @@ async function dispatchApi(method, pathname, body = {}) {
     return {
       statusCode: 200,
       payload: handleImplementationReport(body)
+    };
+  }
+
+  if (method === "POST" && pathname === "/api/validate-workspace") {
+    return {
+      statusCode: 200,
+      payload: handleValidateWorkspace(body)
     };
   }
 

@@ -7,6 +7,7 @@ const state = {
   worldPreset: null,
   flowStep: "load",
   implementationReport: "",
+  validationReport: null,
   viewMode: "draft",
   regenerationQueue: [],
   regenerationPrompt: "",
@@ -69,7 +70,11 @@ const elements = {
   assetCardTemplate: document.getElementById("assetCardTemplate"),
   assetCountLabel: document.getElementById("assetCountLabel"),
   assetPanel: document.getElementById("assetPanel"),
-  sourceStatus: document.getElementById("sourceStatus")
+  sourceStatus: document.getElementById("sourceStatus"),
+  validateButton: document.getElementById("validateButton"),
+  validationOutput: document.getElementById("validationOutput"),
+  validationPanel: document.getElementById("validationPanel"),
+  validationStatus: document.getElementById("validationStatus")
 };
 
 const FLOW_STEPS = [
@@ -219,6 +224,35 @@ function getPayloadFromEditors() {
     materialSpecSheet: JSON.parse(elements.specInput.value),
     worldPreset: JSON.parse(elements.presetInput.value),
     revisionMap: state.revisionMap
+  };
+}
+
+function getPayloadFromEditorsSafely() {
+  const fields = [
+    ["screenKv", elements.screenKvInput, "画面 KV"],
+    ["materialSpecSheet", elements.specInput, "素材仕様書"],
+    ["worldPreset", elements.presetInput, "世界観プリセット"]
+  ];
+  const payload = {
+    revisionMap: state.revisionMap
+  };
+  const diagnostics = [];
+
+  fields.forEach(([key, element, label]) => {
+    try {
+      payload[key] = JSON.parse(element.value);
+    } catch (error) {
+      diagnostics.push({
+        severity: "error",
+        code: "json_parse",
+        message: `${label}: ${error.message}`
+      });
+    }
+  });
+
+  return {
+    payload,
+    diagnostics
   };
 }
 
@@ -658,6 +692,100 @@ function setImplementationReport(text) {
   elements.implementationReportStatus.textContent = state.implementationReport
     ? `${state.implementationReport.split("\n").length} 行`
     : "未作成";
+}
+
+function renderValidationReport(report) {
+  state.validationReport = report;
+  elements.validationOutput.className = report ? "validation-output" : "validation-output empty";
+  elements.validationOutput.innerHTML = "";
+
+  if (!report) {
+    elements.validationStatus.textContent = "未実行";
+    elements.validationOutput.textContent = "エディタ内の3つのJSON、レンダリング可能性、composition quality を確認します。";
+    return;
+  }
+
+  elements.validationStatus.textContent = report.valid ? "OK" : "要修正";
+  if (report.summary) {
+    const summary = document.createElement("div");
+    summary.className = "validation-summary";
+    [
+      `screen: ${report.summary.screenId}`,
+      `size: ${report.summary.size}`,
+      `assets: ${report.summary.assetCount}`,
+      `layers: ${report.summary.layerCount}`,
+      `composition: ${report.summary.compositionStatus} ${report.summary.compositionScore}`
+    ].forEach((text) => {
+      const chip = document.createElement("span");
+      chip.textContent = text;
+      summary.appendChild(chip);
+    });
+    elements.validationOutput.appendChild(summary);
+  }
+
+  const diagnostics = report.diagnostics && report.diagnostics.length
+    ? report.diagnostics
+    : [{
+        severity: "info",
+        code: "valid",
+        message: "仕様チェックは通過しています。"
+      }];
+
+  diagnostics.forEach((diagnostic) => {
+    const item = document.createElement("div");
+    item.className = `validation-item severity-${diagnostic.severity}`;
+    item.textContent = `${diagnostic.severity}: ${diagnostic.message}`;
+    elements.validationOutput.appendChild(item);
+  });
+}
+
+async function validateWorkspaceSpec() {
+  const { payload, diagnostics } = getPayloadFromEditorsSafely();
+  if (diagnostics.length) {
+    renderValidationReport({
+      valid: false,
+      summary: null,
+      diagnostics
+    });
+    setActivityStatus(`仕様チェック失敗: JSON parse error ${nowLabel()}`);
+    return;
+  }
+
+  const busyStartedAt = Date.now();
+  setBusy(elements.validateButton, true, "確認中...");
+  setWorkspaceBusy(true, "仕様をチェックしています...");
+  try {
+    const response = await fetch("/api/validate-workspace", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+    const result = await response.json();
+    if (!result.ok) {
+      throw new Error(result.error || "仕様チェックに失敗しました。");
+    }
+    renderValidationReport(result);
+    setActivityStatus(result.valid
+      ? `仕様チェックOK ${nowLabel()}`
+      : `仕様チェックで要修正 ${nowLabel()}`);
+  } catch (error) {
+    renderValidationReport({
+      valid: false,
+      summary: null,
+      diagnostics: [{
+        severity: "error",
+        code: "validate_request",
+        message: error.message
+      }]
+    });
+    setActivityStatus(`仕様チェック失敗: ${error.message}`);
+  } finally {
+    await ensureMinimumBusy(busyStartedAt);
+    setWorkspaceBusy(false, "待機中");
+    setBusy(elements.validateButton, false);
+  }
 }
 
 async function buildImplementationReport() {
@@ -1110,6 +1238,7 @@ async function loadDemo() {
     state.regenerationQueue = [];
     setRegenerationPrompt("");
     setImplementationReport("");
+    renderValidationReport(null);
     state.source = payload.source || { kind: "demo" };
     elements.aiModeLabel.textContent = payload.ai.mode;
     updateEditors();
@@ -1422,6 +1551,7 @@ async function loadBundleObject(bundle, source) {
   state.regenerationQueue = [];
   setRegenerationPrompt("");
   setImplementationReport("");
+  renderValidationReport(null);
   updateEditors();
   await renderGeneratedWorkspace(`読み込み完了。生成後画面を表示しました ${nowLabel()}`, {
     resetReview: true,
@@ -1520,6 +1650,7 @@ elements.imagegenJobButton.addEventListener("click", prepareImagegenJob);
 elements.imagegenRefreshButton.addEventListener("click", refreshImagegenOutputs);
 elements.draftButton.addEventListener("click", showDraftWorkspace);
 elements.generateButton.addEventListener("click", showGeneratedResults);
+elements.validateButton.addEventListener("click", validateWorkspaceSpec);
 elements.exportReportButton.addEventListener("click", buildImplementationReport);
 elements.buildRegenPromptButton.addEventListener("click", buildRegenerationPrompt);
 elements.clearRegenQueueButton.addEventListener("click", clearRegenerationQueue);

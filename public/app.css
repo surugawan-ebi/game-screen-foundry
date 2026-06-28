@@ -206,6 +206,7 @@ input {
     max-content
     max-content
     max-content
+    max-content
     max-content;
   align-items: center;
   gap: 8px;
@@ -987,6 +988,60 @@ textarea {
 .implementation-report-output {
   min-height: 300px;
   font-size: 11px;
+}
+
+.validation-output {
+  display: grid;
+  gap: 8px;
+}
+
+.validation-output.empty {
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(8, 12, 18, 0.58);
+  border: 1px dashed rgba(126, 199, 215, 0.22);
+  color: var(--muted);
+}
+
+.validation-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.validation-summary span {
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: rgba(126, 199, 215, 0.08);
+  border: 1px solid rgba(126, 199, 215, 0.18);
+  color: #b9cad7;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+}
+
+.validation-item {
+  padding: 9px 11px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.validation-item.severity-error {
+  color: #efb6b0;
+  border-color: rgba(192, 100, 91, 0.34);
+}
+
+.validation-item.severity-warning {
+  color: #ead5a8;
+  border-color: rgba(216, 170, 98, 0.28);
+}
+
+.validation-item.severity-info {
+  color: #cfe6c2;
+  border-color: rgba(122, 170, 99, 0.24);
 }
 
 .asset-grid {

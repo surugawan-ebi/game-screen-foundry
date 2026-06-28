@@ -270,6 +270,22 @@ test("implementation report endpoint exports layer order and runtime overlays", 
   assert.match(response.payload.markdown, /compositionQuality: pass \/ score 100/u);
 });
 
+test("validate-workspace endpoint returns actionable diagnostics", async () => {
+  const validResponse = await dispatchApi("POST", "/api/validate-workspace", getDemoProject());
+  assert.equal(validResponse.statusCode, 200);
+  assert.equal(validResponse.payload.ok, true);
+  assert.equal(validResponse.payload.valid, true);
+  assert.equal(validResponse.payload.summary.compositionStatus, "pass");
+
+  const invalidProject = getDemoProject();
+  delete invalidProject.screenKv.screenId;
+  const invalidResponse = await dispatchApi("POST", "/api/validate-workspace", invalidProject);
+  assert.equal(invalidResponse.statusCode, 200);
+  assert.equal(invalidResponse.payload.ok, true);
+  assert.equal(invalidResponse.payload.valid, false);
+  assert.ok(invalidResponse.payload.diagnostics.some((diagnostic) => diagnostic.severity === "error"));
+});
+
 test("runtime text overlays resolve inside their target asset slots", async () => {
   const demoResponse = await dispatchApi("GET", "/api/demo");
   const generateResponse = await dispatchApi("POST", "/api/generate-all", demoResponse.payload.demo);
@@ -710,6 +726,8 @@ test("frontend exposes the image generation flow tracker", () => {
   assert.match(html, /id="projectScreenSelect"/u);
   assert.match(html, /id="exportReportButton"/u);
   assert.match(html, /id="implementationReportOutput"/u);
+  assert.match(html, /id="validateButton"/u);
+  assert.match(html, /id="validationOutput"/u);
   assert.match(html, /構成グループ/u);
   assert.match(html, /id="compositionSummary"/u);
   assert.match(html, /id="compositionGroupList"/u);
@@ -728,6 +746,8 @@ test("frontend exposes the image generation flow tracker", () => {
   assert.match(js, /function renderProjectNavigator/u);
   assert.match(js, /function switchProjectScreen/u);
   assert.match(js, /function buildImplementationReport/u);
+  assert.match(js, /function validateWorkspaceSpec/u);
+  assert.match(js, /function renderValidationReport/u);
   assert.match(js, /function renderCompositionGroups/u);
   assert.match(js, /function renderCompositionOverlays/u);
   assert.match(js, /function showDraftWorkspace/u);
@@ -741,6 +761,7 @@ test("frontend exposes the image generation flow tracker", () => {
   assert.match(css, /\.flow-step\.is-complete/u);
   assert.match(css, /\.screen-select/u);
   assert.match(css, /\.implementation-report-output/u);
+  assert.match(css, /\.validation-item/u);
   assert.match(css, /\.composition-group-card/u);
   assert.match(css, /\.composition-content-outline/u);
 });
