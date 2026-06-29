@@ -12,8 +12,9 @@ Use this skill for Game Screen Foundry project work: creating screen folders, ed
 1. Locate the repository root and read `README.md`, `docs/schema.md`, and `docs/release-checklist.md` only as needed.
 2. Preserve the three-file screen contract: `screen-kv.json`, `material-spec.json`, `world-preset.json`.
 3. Keep generated job output out of Git: never stage generated files under `imagegen-jobs/`, except `imagegen-jobs/.gitkeep`.
-4. Run `npm run release:check` before handing off repo changes.
-5. Prefer project-relative paths and screen-folder-relative image paths; avoid machine-local absolute paths in committed JSON.
+4. For purchased/reference assets, derive only a quality profile; never copy proprietary source assets into this repository.
+5. Run `npm run release:check` before handing off repo changes.
+6. Prefer project-relative paths and screen-folder-relative image paths; avoid machine-local absolute paths in committed JSON.
 
 ## Task Routing
 
@@ -21,6 +22,7 @@ Use this skill for Game Screen Foundry project work: creating screen folders, ed
 - Editing schema files or assembly specs: read `references/file-contract.md`.
 - Reviewing generated assets or building regeneration requests: read `references/review-and-regeneration.md`.
 - Preparing public release or repo handoff: read `references/release-quality.md`.
+- Deriving quality criteria from reference UI assets: read `docs/quality-rubric.md` in the repository, then use `npm run profile:reference -- <reference-root>`.
 
 ## Non-Negotiable Rules
 
@@ -30,6 +32,7 @@ Use this skill for Game Screen Foundry project work: creating screen folders, ed
 - Do not collapse parent frames and child UI into one image when the material spec separates them.
 - Do not move layout coordinates while responding to visual feedback unless the task explicitly asks for layout changes.
 - Do not commit proprietary external game assets into this tool repository.
+- Do not commit full reference profiles that contain machine-local source paths; commit only compact `qualityProfile.referenceDerived` data when needed.
 
 ## Validation
 
@@ -46,4 +49,3 @@ npm run dev
 ```
 
 Then open `http://127.0.0.1:4311`.
-

@@ -244,6 +244,23 @@
             </div>
           </article>
 
+          <article id="referenceQualityPanel" class="panel reference-quality-panel">
+            <div class="panel-header">
+              <h2>参照品質プロファイル</h2>
+              <span id="referenceQualityStatus" class="panel-note">未作成</span>
+            </div>
+            <div class="reference-quality-controls">
+              <input id="referenceRootInput" class="path-input" type="text" placeholder="/path/to/assets/purchased/organized" />
+              <input id="referenceMaxFilesInput" class="reference-max-input" type="number" min="12" max="2000" step="1" value="260" aria-label="参照サンプル上限" />
+              <button id="buildReferenceProfileButton">プロファイル作成</button>
+              <button id="applyReferenceProfileButton">プリセットへ反映</button>
+              <button id="auditReferenceQualityButton">生成PNG監査</button>
+            </div>
+            <div id="referenceQualityOutput" class="reference-quality-output empty">
+              購入済み/参照用UI素材のフォルダから、透明余白、エッジ、外周/中央ディテールの傾向を測ります。
+            </div>
+          </article>
+
           <article class="panel review-panel">
             <div class="panel-header">
               <h2>AI レビュー</h2>
@@ -275,6 +292,19 @@
               placeholder="キューが溜まったら、ここにCodexへ渡す依頼文が生成されます。"
               spellcheck="false"
             ></textarea>
+          </article>
+
+          <article id="handoffPanel" class="panel handoff-panel">
+            <div class="panel-header">
+              <h2>Codex Handoff</h2>
+              <span id="handoffSummary" class="panel-note">未作成</span>
+            </div>
+            <div id="handoffDetailList" class="handoff-detail-list empty">
+              imagegenジョブ作成後に、job / prompt / status / output の場所を表示します。
+            </div>
+            <div id="handoffBlockerList" class="handoff-blocker-list empty">
+              blocker sidecar はまだありません。
+            </div>
           </article>
 
           <article id="implementationReportPanel" class="panel implementation-report-panel">

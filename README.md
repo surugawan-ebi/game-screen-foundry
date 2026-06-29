@@ -244,6 +244,33 @@ The recommended beta workflow is intentionally conversational:
 8. `生成済みPNGを再取り込み` を押す。  
    Click `生成済みPNGを再取り込み`.
 
+ジョブ作成時には、Codex / imagegen 向けの JSON と prompt に加えて status sidecar も書きます。
+When a job is created, the tool writes a Codex/imagegen JSON job, a prompt file, and a status sidecar:
+
+```text
+creative/
+  .game-creative-generation/
+    imagegen-jobs/
+      <jobId>.json
+      <jobId>.prompt.md
+    imagegen-status/
+      <jobId>.json
+  screens/<screenId>/generated-assets/
+    <assetId>.png
+```
+
+生成できない場合は、偽画像やプレースホルダーを置かず、対象 asset の blocker sidecar を返します。
+If generation is blocked or unavailable, do not write fake images or placeholders. Return an asset blocker sidecar instead:
+
+```json
+{
+  "status": "blocked",
+  "reasonKind": "imagegen_unavailable",
+  "userMessage": "Image generation is not available in this Codex environment.",
+  "suggestion": "Run the job again in a Codex session with imagegen enabled."
+}
+```
+
 環境変数:  
 Environment variables:
 
@@ -257,6 +284,31 @@ Environment variables:
 
 デフォルトでは imagegen 実行は off です。アプリは job file と prompt text を作り、画像生成自体は外部で行う想定です。  
 By default, imagegen execution is off. The app creates job files and prompt text, then expects you to generate PNGs externally.
+
+## 参照品質プロファイル / Reference Quality Profile
+
+購入済み/参照用の UI 素材フォルダをローカルで読み、画像そのものではなく品質傾向だけを抽出できます。
+You can point the local app at purchased or reference UI assets and extract only quality tendencies, not the assets themselves.
+
+ブラウザの `参照品質プロファイル` パネルでは次を実行できます。
+The `参照品質プロファイル` panel can:
+
+- 参照PNGから透明余白、エッジ、中央/外周のディテール密度を測る。
+  Measure transparent margins, edge cleanliness, and center/perimeter detail density from reference PNGs.
+- 圧縮版を `worldPreset.qualityProfile.referenceDerived` に反映し、imagegen prompt に追加する。
+  Apply a compact profile into `worldPreset.qualityProfile.referenceDerived` so imagegen prompts include it.
+- 現在の生成済みPNGを参照プロファイルで監査する。
+  Audit current generated PNGs against the reference profile.
+
+CLI でも作成できます。
+You can also build it from the CLI:
+
+```sh
+npm run profile:reference -- /path/to/assets/purchased/organized --out /path/to/reference-quality-profile.json --max-files 500
+```
+
+公開 repo には購入素材や機械固有の参照パスをコミットしないでください。必要なら compact profile だけを `world-preset.json` に残します。
+Do not commit purchased assets or machine-local reference paths. Commit only the compact profile in `world-preset.json` when needed.
 
 ## ローカルファイル安全性 / Local File Safety
 

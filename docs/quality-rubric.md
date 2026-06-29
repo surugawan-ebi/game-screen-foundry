@@ -149,6 +149,40 @@ The same group context is injected into imagegen job prompts, so a single asset
 can be generated with awareness of its sibling layers and protected runtime
 slots.
 
+## Reference-Derived Quality Profile
+
+The reference-derived profile is not model training. It is a measured quality
+profile built from local reference PNGs. It lets the tool turn "this purchased
+asset pack feels commercially made" into checks and prompt constraints without
+copying the asset.
+
+Measured signals:
+
+- **Transparent margin**: how much breathing room exists between the visible
+  object and the PNG canvas edge.
+- **Non-transparent bounds**: the effective visible rectangle inside the export.
+- **Edge alpha dirt**: semi-transparent pixels near the canvas edge that can
+  composite poorly.
+- **Center detail density**: local luminance change inside the likely content
+  surface.
+- **Perimeter detail density**: local luminance change in the decorative ring.
+- **Perimeter/center detail ratio**: a proxy for whether a foundation asset puts
+  ornament outside and keeps the content lane calmer.
+
+Use the profile as a guardrail:
+
+- A generated child or icon should usually be inset from its canvas instead of
+  filling the entire parent width.
+- A foundation asset should not have equal detail density everywhere. Perimeter
+  and corners should carry more ornament than the runtime content area.
+- A clean alpha export matters more than a visually impressive standalone PNG
+  when the asset must layer over a live game screen.
+- Aspect ratio should stay close to the target placement so scaling does not
+  squeeze bevels, text lanes, or child content margins.
+
+Do not use the profile as a style-copy license. The profile describes spacing,
+edge treatment, and structure, not the exact look of the reference pack.
+
 ## `qualityProfile`
 
 `world-preset.json` can include a `qualityProfile` object. It provides reusable
@@ -198,6 +232,29 @@ Recommended shape:
     "promptAdditions": [
       "Use polished bevels, intentional rim highlights, and production-ready padding."
     ],
+    "referenceDerived": {
+      "schema": "game-screen-foundry.reference-quality-profile.compact.v1",
+      "sourceSummary": {
+        "analyzed": 500,
+        "categories": ["ui-button", "ui-panel", "ui-icon"]
+      },
+      "thresholds": {
+        "transparentMarginMinRatio": { "warnBelow": 0.01 },
+        "edgeAlphaDirtyRatio": { "warnAbove": 0.04 },
+        "perimeterToCenterDetailRatio": { "warnBelowFoundation": 1.1 }
+      },
+      "promptGuidance": {
+        "global": [
+          "Keep alpha edges clean and leave measured breathing room around isolated UI assets.",
+          "For shell/base assets, separate decorated perimeter from a calmer content surface."
+        ],
+        "byCategory": {
+          "ui-button": [
+            "Preserve a readable center lane and push stronger detail toward the rim."
+          ]
+        }
+      }
+    },
     "avoid": [
       "copied purchased asset pack style",
       "placeholder vector geometry",

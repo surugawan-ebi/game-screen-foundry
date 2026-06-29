@@ -14,6 +14,12 @@ const { resolveBundleFromFolder } = require("./lib/folder-loader");
 const { prepareImagegenWorkflow } = require("./lib/imagegen-workflow");
 const { buildRegenerationRequest } = require("./lib/regeneration-queue");
 const { buildImplementationReport } = require("./lib/implementation-report");
+const {
+  UI_CATEGORIES,
+  auditGeneratedAssetsWithProfile,
+  buildReferenceQualityProfile,
+  compactReferenceQualityProfile
+} = require("./lib/reference-quality-profile");
 
 const PORT = Number(process.env.PORT || 4311);
 const HOST = process.env.HOST || "127.0.0.1";
@@ -1028,6 +1034,54 @@ function handleValidateWorkspace(body) {
   }
 }
 
+function normalizeProfileCategories(value) {
+  if (Array.isArray(value)) {
+    return value.filter((item) => UI_CATEGORIES.includes(item));
+  }
+  if (typeof value === "string" && value.trim()) {
+    return value
+      .split(",")
+      .map((item) => item.trim())
+      .filter((item) => UI_CATEGORIES.includes(item));
+  }
+  return UI_CATEGORIES;
+}
+
+function normalizePositiveInteger(value, fallback, { min = 1, max = 2000 } = {}) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) {
+    return fallback;
+  }
+  return Math.max(min, Math.min(max, Math.round(number)));
+}
+
+function handleReferenceQualityProfile(body) {
+  if (typeof body.rootPath !== "string" || !body.rootPath.trim()) {
+    throw new Error("rootPath is required");
+  }
+  const profile = buildReferenceQualityProfile(body.rootPath.trim(), {
+    categories: normalizeProfileCategories(body.categories),
+    maxFiles: normalizePositiveInteger(body.maxFiles, 260, { min: 12, max: 2000 }),
+    maxFilesPerAsset: normalizePositiveInteger(body.maxFilesPerAsset, 2, { min: 1, max: 8 })
+  });
+  return {
+    ok: true,
+    profile,
+    compactProfile: compactReferenceQualityProfile(profile)
+  };
+}
+
+function handleReferenceAssetAudit(body) {
+  const inputPayload = body.input && typeof body.input === "object" ? body.input : body;
+  const input = prepareInput(inputPayload);
+  const profile = body.referenceQualityProfile || body.profile;
+  const audit = auditGeneratedAssetsWithProfile(input, profile);
+  return {
+    ok: true,
+    audit
+  };
+}
+
 async function dispatchApi(method, pathname, body = {}) {
   if (method === "GET" && pathname === "/api/source-file") {
     throw new Error("Use HTTP server route for source-file");
@@ -1192,6 +1246,20 @@ async function dispatchApi(method, pathname, body = {}) {
     return {
       statusCode: 200,
       payload: handleValidateWorkspace(body)
+    };
+  }
+
+  if (method === "POST" && pathname === "/api/reference-quality-profile") {
+    return {
+      statusCode: 200,
+      payload: handleReferenceQualityProfile(body)
+    };
+  }
+
+  if (method === "POST" && pathname === "/api/reference-asset-audit") {
+    return {
+      statusCode: 200,
+      payload: handleReferenceAssetAudit(body)
     };
   }
 

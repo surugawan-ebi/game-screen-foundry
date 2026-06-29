@@ -959,6 +959,127 @@ textarea {
   border-color: rgba(192, 100, 91, 0.32);
 }
 
+.reference-quality-panel.has-profile {
+  border-color: rgba(126, 199, 215, 0.32);
+}
+
+.reference-quality-panel.has-audit {
+  box-shadow: 0 18px 42px var(--shadow), 0 0 0 1px rgba(126, 199, 215, 0.09);
+}
+
+.reference-quality-controls {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) 92px repeat(3, minmax(130px, auto));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.reference-quality-controls .path-input {
+  width: 100%;
+  min-width: 0;
+}
+
+.reference-max-input {
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  border-radius: 999px;
+  border: 1px solid rgba(126, 199, 215, 0.22);
+  background: rgba(7, 9, 12, 0.56);
+  color: var(--text);
+  padding: 0 10px;
+}
+
+.reference-quality-output {
+  display: grid;
+  gap: 10px;
+}
+
+.reference-quality-output.empty {
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(8, 12, 18, 0.58);
+  border: 1px dashed rgba(126, 199, 215, 0.22);
+  color: var(--muted);
+}
+
+.reference-quality-summary,
+.reference-category-list,
+.reference-diagnostic-list {
+  display: grid;
+  gap: 8px;
+}
+
+.reference-quality-summary {
+  grid-template-columns: repeat(auto-fit, minmax(146px, 1fr));
+}
+
+.reference-quality-chip,
+.reference-category-item,
+.reference-diagnostic {
+  min-width: 0;
+  padding: 9px 11px;
+  border-radius: 12px;
+  background: rgba(7, 11, 17, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.reference-quality-chip {
+  display: grid;
+  gap: 3px;
+}
+
+.reference-quality-chip span,
+.reference-category-item span,
+.reference-diagnostic span,
+.reference-diagnostic em,
+.reference-quality-note,
+.reference-diagnostic-more {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.reference-quality-chip strong,
+.reference-category-item strong,
+.reference-diagnostic strong {
+  min-width: 0;
+  color: var(--text);
+  font-family: "Courier New", monospace;
+  overflow-wrap: anywhere;
+}
+
+.reference-category-list {
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+}
+
+.reference-category-item,
+.reference-diagnostic {
+  display: grid;
+  gap: 4px;
+}
+
+.reference-diagnostic.severity-warning {
+  border-color: rgba(216, 170, 98, 0.3);
+}
+
+.reference-diagnostic.severity-error {
+  border-color: rgba(192, 100, 91, 0.36);
+}
+
+.reference-diagnostic.severity-info {
+  border-color: rgba(122, 170, 99, 0.24);
+}
+
+.reference-diagnostic em {
+  font-style: normal;
+  color: #b9cad7;
+}
+
+.reference-quality-note {
+  margin: 0;
+}
+
 .review-output.empty {
   color: var(--muted);
 }
@@ -1068,6 +1189,84 @@ textarea {
 
 .regen-prompt-output {
   min-height: 220px;
+}
+
+.handoff-panel.has-handoff {
+  border-color: rgba(126, 199, 215, 0.3);
+}
+
+.handoff-panel.has-blockers {
+  border-color: rgba(192, 100, 91, 0.44);
+}
+
+.handoff-detail-list,
+.handoff-blocker-list {
+  display: grid;
+  gap: 8px;
+}
+
+.handoff-detail-list {
+  margin-bottom: 12px;
+}
+
+.handoff-detail-list.empty,
+.handoff-blocker-list.empty {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(8, 12, 18, 0.58);
+  border: 1px dashed rgba(126, 199, 215, 0.22);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.handoff-detail-row {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(7, 11, 17, 0.58);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.handoff-detail-row span {
+  color: #91adbc;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+}
+
+.handoff-detail-row code,
+.handoff-blocker-item code {
+  min-width: 0;
+  color: #dce7e1;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.handoff-blocker-item {
+  display: grid;
+  gap: 6px;
+  padding: 11px 12px;
+  border-radius: 14px;
+  background:
+    linear-gradient(90deg, rgba(192, 100, 91, 0.12), transparent 42%),
+    rgba(8, 12, 18, 0.68);
+  border: 1px solid rgba(192, 100, 91, 0.28);
+}
+
+.handoff-blocker-item strong {
+  color: #efc0ba;
+  overflow-wrap: anywhere;
+}
+
+.handoff-blocker-item p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 .implementation-report-output {
@@ -1543,7 +1742,8 @@ textarea {
   }
 
   .spec-editor-grid,
-  .field-grid-placement {
+  .field-grid-placement,
+  .reference-quality-controls {
     grid-template-columns: 1fr;
   }
 
@@ -1580,6 +1780,8 @@ textarea {
 
   .asset-inspector-row,
   .field-grid-inset,
+  .reference-quality-summary,
+  .reference-category-list,
   .regen-queue-item {
     grid-template-columns: 1fr;
   }

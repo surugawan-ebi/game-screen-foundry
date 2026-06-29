@@ -4,21 +4,28 @@ const { spawnSync } = require("child_process");
 const path = require("path");
 
 const root = path.resolve(__dirname, "..");
-const result = spawnSync("git", ["ls-files", "imagegen-jobs"], {
-  cwd: root,
-  encoding: "utf8"
-});
+const runtimeDirs = ["imagegen-jobs", "imagegen-status"];
+const tracked = [];
 
-if (result.status !== 0) {
-  process.stderr.write(result.stderr || "git ls-files imagegen-jobs failed\n");
-  process.exit(result.status || 1);
+for (const runtimeDir of runtimeDirs) {
+  const result = spawnSync("git", ["ls-files", runtimeDir], {
+    cwd: root,
+    encoding: "utf8"
+  });
+
+  if (result.status !== 0) {
+    process.stderr.write(result.stderr || `git ls-files ${runtimeDir} failed\n`);
+    process.exit(result.status || 1);
+  }
+
+  tracked.push(...result.stdout
+    .split(/\r?\n/u)
+    .map((line) => line.trim())
+    .filter(Boolean));
 }
 
-const tracked = result.stdout
-  .split(/\r?\n/u)
-  .map((line) => line.trim())
-  .filter(Boolean);
-const unexpected = tracked.filter((filePath) => filePath !== "imagegen-jobs/.gitkeep");
+const allowedTracked = new Set(["imagegen-jobs/.gitkeep"]);
+const unexpected = tracked.filter((filePath) => !allowedTracked.has(filePath));
 
 if (unexpected.length) {
   process.stderr.write(`Unexpected tracked imagegen output:\n${unexpected.join("\n")}\n`);
@@ -26,4 +33,3 @@ if (unexpected.length) {
 }
 
 process.stdout.write("Tracked imagegen outputs ok\n");
-

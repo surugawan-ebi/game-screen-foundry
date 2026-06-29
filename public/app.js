@@ -8,6 +8,9 @@ const state = {
   flowStep: "load",
   implementationReport: "",
   validationReport: null,
+  referenceQualityProfile: null,
+  referenceQualityCompactProfile: null,
+  assetQualityAudit: null,
   viewMode: "draft",
   regenerationQueue: [],
   regenerationQueueDirty: false,
@@ -52,6 +55,10 @@ const elements = {
   flowSteps: document.getElementById("flowSteps"),
   exportReportButton: document.getElementById("exportReportButton"),
   generateButton: document.getElementById("generateButton"),
+  handoffBlockerList: document.getElementById("handoffBlockerList"),
+  handoffDetailList: document.getElementById("handoffDetailList"),
+  handoffPanel: document.getElementById("handoffPanel"),
+  handoffSummary: document.getElementById("handoffSummary"),
   imagegenJobButton: document.getElementById("imagegenJobButton"),
   imagegenRefreshButton: document.getElementById("imagegenRefreshButton"),
   imagegenStatus: document.getElementById("imagegenStatus"),
@@ -72,9 +79,17 @@ const elements = {
   placementYInput: document.getElementById("placementYInput"),
   placementZInput: document.getElementById("placementZInput"),
   projectScreenSelect: document.getElementById("projectScreenSelect"),
+  applyReferenceProfileButton: document.getElementById("applyReferenceProfileButton"),
   buildRegenPromptButton: document.getElementById("buildRegenPromptButton"),
+  buildReferenceProfileButton: document.getElementById("buildReferenceProfileButton"),
   clearRegenQueueButton: document.getElementById("clearRegenQueueButton"),
+  auditReferenceQualityButton: document.getElementById("auditReferenceQualityButton"),
   loadRegenQueueButton: document.getElementById("loadRegenQueueButton"),
+  referenceMaxFilesInput: document.getElementById("referenceMaxFilesInput"),
+  referenceQualityOutput: document.getElementById("referenceQualityOutput"),
+  referenceQualityPanel: document.getElementById("referenceQualityPanel"),
+  referenceQualityStatus: document.getElementById("referenceQualityStatus"),
+  referenceRootInput: document.getElementById("referenceRootInput"),
   regenPromptOutput: document.getElementById("regenPromptOutput"),
   regenQueueCountLabel: document.getElementById("regenQueueCountLabel"),
   regenQueueList: document.getElementById("regenQueueList"),
@@ -299,6 +314,15 @@ function syncStateFromPayload(payload) {
   state.materialSpecSheet = payload.materialSpecSheet;
   state.worldPreset = payload.worldPreset;
   state.revisionMap = payload.revisionMap || {};
+  const referenceDerived = state.worldPreset
+    && state.worldPreset.qualityProfile
+    && state.worldPreset.qualityProfile.referenceDerived;
+  if (referenceDerived && referenceDerived.summary) {
+    state.referenceQualityCompactProfile = referenceDerived;
+    if (!state.referenceQualityProfile || state.referenceQualityProfile.schema !== "game-screen-foundry.reference-quality-profile.v1") {
+      state.referenceQualityProfile = referenceDerived;
+    }
+  }
 }
 
 function renderSourceStatus() {
@@ -574,14 +598,17 @@ function renderImagegenStatus() {
   if (!state.imagegenReport) {
     elements.imagegenStatus.textContent = "imagegen: 未実行";
     elements.imagegenStatus.title = "";
+    renderHandoffPanel();
     return;
   }
 
   const report = state.imagegenReport;
   const job = report.job || {};
   const runner = report.runner || {};
+  const handoff = report.handoff || {};
   const adopted = Array.isArray(report.adoptedAssetIds) ? report.adoptedAssetIds.length : 0;
   const missing = Array.isArray(report.missingAssetIds) ? report.missingAssetIds.length : 0;
+  const blockers = Array.isArray(report.blockerReports) ? report.blockerReports.length : 0;
   const total = Array.isArray(job.assets) ? job.assets.length : adopted + missing;
   const mode = runner.mode || "off";
   const compositionQuality = report.compositionQuality
@@ -593,14 +620,108 @@ function renderImagegenStatus() {
     ? (runner.ok ? "実行済" : "失敗")
     : "ジョブ作成";
 
-  elements.imagegenStatus.textContent = `imagegen: ${stateLabel} / mode ${mode} / 採用 ${adopted}/${total} / 未生成 ${missing}${compositionLabel}`;
+  const handoffLabel = handoff.state ? ` / handoff ${handoff.state}` : "";
+  const blockerLabel = blockers ? ` / blocker ${blockers}` : "";
+  elements.imagegenStatus.textContent = `imagegen: ${stateLabel} / mode ${mode} / 採用 ${adopted}/${total} / 未生成 ${missing}${blockerLabel}${handoffLabel}${compositionLabel}`;
   elements.imagegenStatus.title = [
     job.jobPath ? `job: ${job.jobPath}` : "",
     job.promptPath ? `prompt: ${job.promptPath}` : "",
+    job.statusPath ? `status: ${job.statusPath}` : "",
     job.commandHint ? `command: ${job.commandHint}` : "",
     compositionQuality ? `composition: ${compositionQuality.status} score ${compositionQuality.score} fail ${compositionQuality.failCount} warn ${compositionQuality.warnCount}` : "",
+    handoff.message || "",
     runner.message || ""
   ].filter(Boolean).join("\n");
+  renderHandoffPanel();
+}
+
+function handoffStateLabel(stateName) {
+  const labels = {
+    no_targets: "対象なし",
+    ready: "完了",
+    blocked: "ブロック",
+    partial_blocked: "一部ブロック",
+    partial: "一部採用",
+    runner_failed: "runner失敗",
+    missing_outputs: "出力待ち",
+    waiting: "待機中",
+    created: "作成済み"
+  };
+  return labels[stateName] || stateName || "未作成";
+}
+
+function appendHandoffDetail(label, value) {
+  const row = document.createElement("div");
+  row.className = "handoff-detail-row";
+  const key = document.createElement("span");
+  key.textContent = label;
+  const code = document.createElement("code");
+  code.textContent = value || "-";
+  row.appendChild(key);
+  row.appendChild(code);
+  elements.handoffDetailList.appendChild(row);
+}
+
+function renderHandoffPanel() {
+  const report = state.imagegenReport;
+  elements.handoffDetailList.innerHTML = "";
+  elements.handoffBlockerList.innerHTML = "";
+
+  if (!report || !report.job) {
+    elements.handoffPanel.classList.remove("has-handoff", "has-blockers");
+    elements.handoffSummary.textContent = "未作成";
+    elements.handoffDetailList.className = "handoff-detail-list empty";
+    elements.handoffDetailList.textContent = "imagegenジョブ作成後に、job / prompt / status / output の場所を表示します。";
+    elements.handoffBlockerList.className = "handoff-blocker-list empty";
+    elements.handoffBlockerList.textContent = "blocker sidecar はまだありません。";
+    return;
+  }
+
+  const job = report.job;
+  const handoff = report.handoff || {};
+  const counts = handoff.counts || {};
+  const blockers = Array.isArray(report.blockerReports) ? report.blockerReports : [];
+  const total = counts.total ?? (Array.isArray(job.assets) ? job.assets.length : 0);
+  const adopted = counts.adopted ?? (Array.isArray(report.adoptedAssetIds) ? report.adoptedAssetIds.length : 0);
+  const missing = counts.missing ?? (Array.isArray(report.missingAssetIds) ? report.missingAssetIds.length : 0);
+  const stateName = handoff.state || "created";
+
+  elements.handoffPanel.classList.add("has-handoff");
+  elements.handoffPanel.classList.toggle("has-blockers", blockers.length > 0);
+  elements.handoffSummary.textContent = `${handoffStateLabel(stateName)} / 採用 ${adopted}/${total} / 未生成 ${missing}`;
+  elements.handoffDetailList.className = "handoff-detail-list";
+  appendHandoffDetail("job", job.jobPath);
+  appendHandoffDetail("prompt", job.promptPath);
+  appendHandoffDetail("status", job.statusPath || (handoff.paths && handoff.paths.statusPath));
+  appendHandoffDetail("output", job.outputDir);
+  appendHandoffDetail("command", job.commandHint);
+
+  if (!blockers.length) {
+    elements.handoffBlockerList.className = "handoff-blocker-list empty";
+    elements.handoffBlockerList.textContent = "blocker sidecar はまだありません。";
+    return;
+  }
+
+  elements.handoffBlockerList.className = "handoff-blocker-list";
+  blockers.forEach((blocker) => {
+    const item = document.createElement("article");
+    item.className = "handoff-blocker-item";
+    const title = document.createElement("strong");
+    title.textContent = `${blocker.assetId || "job"}: ${blocker.reasonKind || "unknown"}`;
+    const message = document.createElement("p");
+    message.textContent = blocker.userMessage || "Image generation did not return a usable asset.";
+    const pathLine = document.createElement("code");
+    pathLine.textContent = blocker.path || "";
+    item.appendChild(title);
+    item.appendChild(message);
+    if (blocker.suggestion) {
+      const suggestion = document.createElement("p");
+      suggestion.textContent = blocker.suggestion;
+      item.appendChild(suggestion);
+    }
+    item.appendChild(pathLine);
+    elements.handoffBlockerList.appendChild(item);
+  });
 }
 
 function renderMeta() {
@@ -1063,6 +1184,228 @@ function renderValidationReport(report) {
   });
 }
 
+function formatMetric(value) {
+  if (!Number.isFinite(Number(value))) {
+    return "-";
+  }
+  const number = Number(value);
+  if (Math.abs(number) >= 100) {
+    return String(Math.round(number));
+  }
+  return String(Math.round(number * 1000) / 1000);
+}
+
+function appendReferenceChip(parent, label, value) {
+  const chip = document.createElement("span");
+  chip.className = "reference-quality-chip";
+  const key = document.createElement("span");
+  key.textContent = label;
+  const strong = document.createElement("strong");
+  strong.textContent = String(value);
+  chip.appendChild(key);
+  chip.appendChild(strong);
+  parent.appendChild(chip);
+}
+
+function renderReferenceQualityPanel() {
+  const profile = state.referenceQualityProfile;
+  const audit = state.assetQualityAudit;
+  elements.referenceQualityOutput.innerHTML = "";
+  elements.referenceQualityPanel.classList.toggle("has-profile", Boolean(profile));
+  elements.referenceQualityPanel.classList.toggle("has-audit", Boolean(audit));
+  elements.applyReferenceProfileButton.disabled = !state.referenceQualityCompactProfile;
+  elements.auditReferenceQualityButton.disabled = !profile || !state.renderModel;
+
+  if (!profile) {
+    elements.referenceQualityStatus.textContent = "未作成";
+    elements.referenceQualityOutput.className = "reference-quality-output empty";
+    elements.referenceQualityOutput.textContent = "購入済み/参照用UI素材のフォルダから、透明余白、エッジ、外周/中央ディテールの傾向を測ります。";
+    return;
+  }
+
+  const source = profile.source || {};
+  const all = profile.summary && profile.summary.all ? profile.summary.all : { count: 0, metrics: {} };
+  const metrics = all.metrics || {};
+  elements.referenceQualityStatus.textContent = audit
+    ? `${source.analyzed || all.count} samples / audit ${audit.status} ${audit.score}`
+    : `${source.analyzed || all.count} samples`;
+  elements.referenceQualityOutput.className = "reference-quality-output";
+
+  const summary = document.createElement("div");
+  summary.className = "reference-quality-summary";
+  appendReferenceChip(summary, "sample", `${source.analyzed || all.count}/${source.candidates || all.count}`);
+  appendReferenceChip(summary, "margin p50", formatMetric(metrics.transparentMarginMinRatio && metrics.transparentMarginMinRatio.p50));
+  appendReferenceChip(summary, "edge dirt p90", formatMetric(metrics.edgeAlphaDirtyRatio && metrics.edgeAlphaDirtyRatio.p90));
+  appendReferenceChip(summary, "outer/center p50", formatMetric(metrics.perimeterToCenterDetailRatio && metrics.perimeterToCenterDetailRatio.p50));
+  if (audit) {
+    appendReferenceChip(summary, "audit", `${audit.status} ${audit.score}`);
+    appendReferenceChip(summary, "warn", audit.summary.warningCount);
+  }
+  elements.referenceQualityOutput.appendChild(summary);
+
+  const categoryList = document.createElement("div");
+  categoryList.className = "reference-category-list";
+  Object.entries(profile.summary.categories || {}).forEach(([category, categorySummary]) => {
+    const item = document.createElement("div");
+    item.className = "reference-category-item";
+    const title = document.createElement("strong");
+    title.textContent = `${category} / ${categorySummary.count}`;
+    const detail = document.createElement("span");
+    detail.textContent = `size ${formatMetric(categorySummary.metrics.width.p50)}x${formatMetric(categorySummary.metrics.height.p50)} / margin ${formatMetric(categorySummary.metrics.transparentMarginMinRatio.p25)} / outer-center ${formatMetric(categorySummary.metrics.perimeterToCenterDetailRatio.p50)}`;
+    item.appendChild(title);
+    item.appendChild(detail);
+    categoryList.appendChild(item);
+  });
+  elements.referenceQualityOutput.appendChild(categoryList);
+
+  if (!audit) {
+    const note = document.createElement("p");
+    note.className = "reference-quality-note";
+    note.textContent = "生成済みPNGを監査すると、現在の素材が参照プロファイルから見て不足している余白や分離を表示します。";
+    elements.referenceQualityOutput.appendChild(note);
+    return;
+  }
+
+  const diagnostics = audit.diagnostics && audit.diagnostics.length
+    ? audit.diagnostics
+    : [{
+        severity: "info",
+        assetId: "all",
+        message: "参照品質監査は通過しています。",
+        hint: "このプロファイルを維持したまま、composition と実機表示で最終確認してください。"
+      }];
+  const diagnosticList = document.createElement("div");
+  diagnosticList.className = "reference-diagnostic-list";
+  diagnostics.slice(0, 12).forEach((diagnostic) => {
+    const item = document.createElement("div");
+    item.className = `reference-diagnostic severity-${diagnostic.severity}`;
+    const title = document.createElement("strong");
+    title.textContent = `${diagnostic.assetId || "asset"}: ${diagnostic.code || diagnostic.severity}`;
+    const message = document.createElement("span");
+    message.textContent = diagnostic.message || "";
+    const hint = document.createElement("em");
+    hint.textContent = diagnostic.hint || "";
+    item.appendChild(title);
+    item.appendChild(message);
+    if (diagnostic.hint) {
+      item.appendChild(hint);
+    }
+    diagnosticList.appendChild(item);
+  });
+  if (diagnostics.length > 12) {
+    const more = document.createElement("div");
+    more.className = "reference-diagnostic-more";
+    more.textContent = `+${diagnostics.length - 12} 件`;
+    diagnosticList.appendChild(more);
+  }
+  elements.referenceQualityOutput.appendChild(diagnosticList);
+}
+
+async function buildReferenceQualityProfileFromPath() {
+  const rootPath = elements.referenceRootInput.value.trim();
+  if (!rootPath) {
+    window.alert("参照素材フォルダのパスを入れてください。");
+    return;
+  }
+
+  const busyStartedAt = Date.now();
+  setBusy(elements.buildReferenceProfileButton, true, "解析中...");
+  setWorkspaceBusy(true, "参照品質プロファイルを作成しています...");
+  try {
+    const response = await fetch("/api/reference-quality-profile", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        rootPath,
+        maxFiles: Number(elements.referenceMaxFilesInput.value || 260),
+        maxFilesPerAsset: 2
+      })
+    });
+    const payload = await response.json();
+    if (!payload.ok) {
+      throw new Error(payload.error || "参照品質プロファイルの作成に失敗しました。");
+    }
+    state.referenceQualityProfile = payload.profile;
+    state.referenceQualityCompactProfile = payload.compactProfile;
+    state.assetQualityAudit = null;
+    renderReferenceQualityPanel();
+    setActivityStatus(`参照品質プロファイルを作成しました。${payload.profile.source.analyzed} samples ${nowLabel()}`);
+  } catch (error) {
+    window.alert(error.message);
+    setActivityStatus(`参照品質プロファイル作成失敗: ${error.message}`);
+  } finally {
+    await ensureMinimumBusy(busyStartedAt);
+    setWorkspaceBusy(false, "待機中");
+    setBusy(elements.buildReferenceProfileButton, false);
+  }
+}
+
+function applyReferenceQualityProfileToPreset() {
+  if (!state.referenceQualityCompactProfile) {
+    window.alert("先に参照品質プロファイルを作成してください。");
+    return;
+  }
+  const { payload, diagnostics } = getPayloadFromEditorsSafely();
+  if (diagnostics.length) {
+    window.alert(diagnostics.map((diagnostic) => diagnostic.message).join("\n"));
+    return;
+  }
+
+  state.worldPreset = {
+    ...payload.worldPreset,
+    qualityProfile: {
+      ...(payload.worldPreset.qualityProfile || {}),
+      referenceDerived: state.referenceQualityCompactProfile
+    }
+  };
+  updateEditors();
+  renderReferenceQualityPanel();
+  setActivityStatus(`参照品質プロファイルを世界観プリセットへ反映しました ${nowLabel()}`);
+}
+
+async function auditGeneratedAssetsWithReferenceProfile() {
+  if (!state.referenceQualityProfile) {
+    window.alert("先に参照品質プロファイルを作成してください。");
+    return;
+  }
+  if (!state.renderModel) {
+    window.alert("先に画面を読み込んでください。");
+    return;
+  }
+
+  const busyStartedAt = Date.now();
+  setBusy(elements.auditReferenceQualityButton, true, "監査中...");
+  setWorkspaceBusy(true, "生成PNGを参照品質プロファイルで監査しています...");
+  try {
+    const response = await fetch("/api/reference-asset-audit", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        input: getPayloadFromEditors(),
+        referenceQualityProfile: state.referenceQualityProfile
+      })
+    });
+    const payload = await response.json();
+    if (!payload.ok) {
+      throw new Error(payload.error || "生成PNG監査に失敗しました。");
+    }
+    state.assetQualityAudit = payload.audit;
+    renderReferenceQualityPanel();
+    setActivityStatus(`生成PNG監査 ${payload.audit.status} / score ${payload.audit.score} / warn ${payload.audit.summary.warningCount} ${nowLabel()}`);
+  } catch (error) {
+    window.alert(error.message);
+    setActivityStatus(`生成PNG監査失敗: ${error.message}`);
+  } finally {
+    await ensureMinimumBusy(busyStartedAt);
+    setWorkspaceBusy(false, "待機中");
+    setBusy(elements.auditReferenceQualityButton, false);
+  }
+}
+
 async function validateWorkspaceSpec() {
   const { payload, diagnostics } = getPayloadFromEditorsSafely();
   if (diagnostics.length) {
@@ -1414,11 +1757,13 @@ async function restoreAssetVersion(asset, version) {
     elements.aiModeLabel.textContent = payload.ai.mode;
     syncStateFromPayload(payload.input);
     state.renderModel = payload.renderModel;
+    state.assetQualityAudit = null;
     updateEditors();
     renderMeta();
     renderScreen();
     renderCompositionGroups();
     renderAssets();
+    renderReferenceQualityPanel();
     setFlowStep("show");
     setViewMode("generated");
     setActivityStatus(`${asset.assetId} で ${version.label} を再採用しました ${nowLabel()}`);
@@ -1554,6 +1899,7 @@ function renderAssets() {
         elements.aiModeLabel.textContent = payload.ai.mode;
         syncStateFromPayload(payload.input);
         state.renderModel = payload.renderModel;
+        state.assetQualityAudit = null;
         state.review = null;
         state.reviewSuggestionsByAsset = {};
         updateEditors();
@@ -1562,6 +1908,7 @@ function renderAssets() {
         renderCompositionGroups();
         renderReview();
         renderAssets();
+        renderReferenceQualityPanel();
         setFlowStep("import");
         setViewMode("generated");
         setActivityStatus(`${asset.assetId} にPNGを採用しました ${nowLabel()}`);
@@ -1656,6 +2003,7 @@ async function loadDemo() {
     state.reviewSuggestionsByAsset = {};
     state.generationReport = null;
     state.imagegenReport = null;
+    state.assetQualityAudit = null;
     state.commentDrafts = {};
     state.regenerationQueue = [];
     state.regenerationQueueDirty = false;
@@ -1666,6 +2014,7 @@ async function loadDemo() {
     setRegenerationPrompt("");
     setImplementationReport("");
     renderValidationReport(null);
+    renderReferenceQualityPanel();
     state.source = payload.source || { kind: "demo" };
     elements.aiModeLabel.textContent = payload.ai.mode;
     updateEditors();
@@ -1701,6 +2050,7 @@ async function renderGeneratedWorkspace(message, {
   state.renderModel = payload.renderModel;
   state.generationReport = payload.generationReport || null;
   state.imagegenReport = payload.imagegenReport || null;
+  state.assetQualityAudit = null;
   if (resetReview) {
     state.review = null;
     state.reviewSuggestionsByAsset = {};
@@ -1719,6 +2069,7 @@ async function renderGeneratedWorkspace(message, {
   renderReview();
   renderRegenerationQueue();
   renderAssets();
+  renderReferenceQualityPanel();
   setFlowStep("review");
   setViewMode("generated");
 
@@ -1781,6 +2132,7 @@ async function prepareImagegenJob() {
     syncStateFromPayload(payload.input);
     state.renderModel = payload.renderModel;
     state.imagegenReport = payload.imagegenReport || null;
+    state.assetQualityAudit = null;
     state.review = null;
     state.reviewSuggestionsByAsset = {};
     updateEditors();
@@ -1792,6 +2144,7 @@ async function prepareImagegenJob() {
     renderReview();
     renderRegenerationQueue();
     renderAssets();
+    renderReferenceQualityPanel();
 
     const report = state.imagegenReport || {};
     const runner = report.runner || {};
@@ -1832,6 +2185,7 @@ async function refreshImagegenOutputs() {
     syncStateFromPayload(payload.input);
     state.renderModel = payload.renderModel;
     state.imagegenReport = payload.imagegenReport || null;
+    state.assetQualityAudit = null;
     state.review = null;
     state.reviewSuggestionsByAsset = {};
     updateEditors();
@@ -1843,6 +2197,7 @@ async function refreshImagegenOutputs() {
     renderReview();
     renderRegenerationQueue();
     renderAssets();
+    renderReferenceQualityPanel();
 
     const report = state.imagegenReport || {};
     const adopted = Array.isArray(report.adoptedAssetIds) ? report.adoptedAssetIds.length : 0;
@@ -1932,6 +2287,7 @@ async function renderDraftWorkspace(message) {
     throw new Error(payload.error || "仮組み画面の生成に失敗しました。");
   }
   state.renderModel = payload.renderModel;
+  state.assetQualityAudit = null;
   elements.aiModeLabel.textContent = payload.ai.mode;
   renderMeta();
   renderScreen();
@@ -1942,6 +2298,7 @@ async function renderDraftWorkspace(message) {
   renderAssets();
   renderSourceStatus();
   renderImagegenStatus();
+  renderReferenceQualityPanel();
   setFlowStep("draft");
   setViewMode("draft");
   setActivityStatus(message);
@@ -1976,6 +2333,7 @@ async function loadBundleObject(bundle, source) {
   state.reviewSuggestionsByAsset = {};
   state.generationReport = null;
   state.imagegenReport = null;
+  state.assetQualityAudit = null;
   state.commentDrafts = {};
   state.regenerationQueue = [];
   state.regenerationQueueDirty = false;
@@ -1986,6 +2344,7 @@ async function loadBundleObject(bundle, source) {
   setRegenerationPrompt("");
   setImplementationReport("");
   renderValidationReport(null);
+  renderReferenceQualityPanel();
   updateEditors();
   await renderGeneratedWorkspace(`読み込み完了。生成後画面を表示しました ${nowLabel()}`, {
     resetReview: true,
@@ -2105,6 +2464,9 @@ elements.exportReportButton.addEventListener("click", buildImplementationReport)
 elements.applyPlacementEditButton.addEventListener("click", applyPlacementEditor);
 elements.applyCompositionInsetButton.addEventListener("click", applyCompositionInsetEditor);
 elements.buildRegenPromptButton.addEventListener("click", buildRegenerationPrompt);
+elements.buildReferenceProfileButton.addEventListener("click", buildReferenceQualityProfileFromPath);
+elements.applyReferenceProfileButton.addEventListener("click", applyReferenceQualityProfileToPreset);
+elements.auditReferenceQualityButton.addEventListener("click", auditGeneratedAssetsWithReferenceProfile);
 elements.saveRegenQueueButton.addEventListener("click", saveRegenerationQueue);
 elements.loadRegenQueueButton.addEventListener("click", loadSavedRegenerationQueue);
 elements.clearRegenQueueButton.addEventListener("click", clearRegenerationQueue);
@@ -2112,6 +2474,7 @@ elements.reviewButton.addEventListener("click", runReview);
 elements.applyLocksButton.addEventListener("click", applyLockSuggestions);
 
 setFlowStep("load");
+renderReferenceQualityPanel();
 loadDemo().catch((error) => {
   window.alert(error.message);
 });

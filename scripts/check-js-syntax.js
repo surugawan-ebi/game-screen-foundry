@@ -8,6 +8,7 @@ const root = path.resolve(__dirname, "..");
 const ignoredDirs = new Set([
   ".git",
   ".github",
+  ".reference-quality-profiles",
   "coverage",
   "imagegen-jobs",
   "node_modules",
@@ -53,4 +54,3 @@ if (failures.length) {
 }
 
 process.stdout.write(`JS syntax ok (${files.length} files)\n`);
-

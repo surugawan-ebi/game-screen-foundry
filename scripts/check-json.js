@@ -6,8 +6,10 @@ const path = require("path");
 const root = path.resolve(__dirname, "..");
 const ignoredDirs = new Set([
   ".git",
+  ".reference-quality-profiles",
   "coverage",
   "imagegen-jobs",
+  "imagegen-status",
   "node_modules",
   "tmp"
 ]);
@@ -44,4 +46,3 @@ if (failures.length) {
 }
 
 process.stdout.write(`JSON ok (${files.length} files)\n`);
-

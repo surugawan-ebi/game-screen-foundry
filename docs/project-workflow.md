@@ -22,6 +22,7 @@ game-repo/
     game-creative-project.json
     .game-creative-generation/
       imagegen-jobs/
+      imagegen-status/
     screens/
       home/
         screen-kv.json
@@ -142,8 +143,29 @@ npm run validate:project -- /path/to/game-repo/creative shop
 
 - `worldPreset.imagegenWorkflow.outputDir`: 読み込んだ画面フォルダの `generated-assets/`
 - `worldPreset.imagegenWorkflow.jobDir`: プロジェクトルートの `.game-creative-generation/imagegen-jobs/`
+- imagegen status sidecar: `worldPreset.imagegenWorkflow.jobDir` の sibling にある `.game-creative-generation/imagegen-status/`
 
 これにより、生成ジョブやPNGがツール本体の `examples/` に混ざらない。
+
+## Reference-Derived Quality Profile
+
+購入済み素材や参照用UI素材から学習済みモデルを作るのではなく、まずは定量的な `reference-derived quality profile` を作る。
+
+- 参照フォルダはローカルで読むだけ。購入素材そのものはこの repo や外部プロジェクトへコピーしない。
+- `asset.md` の `category` がある場合は `ui-button`, `ui-panel`, `ui-icon` などでカテゴリ別に集計する。
+- `asset.md` がないフォルダでは、ファイル名から UI カテゴリを推定して集計する。
+- 測る対象は PNG の透明余白、非透明 bounds、alpha edge、中央/外周の detail density。
+- ブラウザの `参照品質プロファイル` で compact profile を `worldPreset.qualityProfile.referenceDerived` に反映できる。
+- imagegen job prompt は `referenceDerived` からカテゴリ別の余白、エッジ、外周/中央分離のガイダンスを受け取る。
+- 生成済みPNG監査は、不足している透明余白、汚いalpha edge、中心が忙しすぎる foundation asset、配置比率ズレを warning として出す。
+
+CLI:
+
+```sh
+npm run profile:reference -- /path/to/assets/purchased/organized --out /path/to/reference-quality-profile.json --max-files 500
+```
+
+公開用にコミットしてよいのは compact profile などの品質基準だけ。参照元の絶対パス、購入素材、抽出画像はコミットしない。
 
 ## Multi-Screen Production Flow
 
@@ -154,10 +176,12 @@ npm run validate:project -- /path/to/game-repo/creative shop
 5. `AI で画面レビュー` と人間のコメントで、修正対象素材を再生成キューに溜める。
 6. `Codex依頼文を作成` で対話用プロンプトを作る。
 7. Codex / imagegen で PNG を生成し、同じ画面フォルダの `generated-assets/` に保存する。
-8. `生成済みPNGを再取り込み` で採用し、ブラウザで画面を再確認する。
-9. `実装レポート作成` で layer order、runtime overlay、採用PNG、composition quality をまとめる。
-10. 採用したPNG、`imagegen-assets.json`、実装レポートをゲームリポジトリ側で確認・コミットする。
-11. 次の画面に移る。共通素材はコピーではなく、後続で shared asset registry として切り出す。
+8. 生成できない素材は、偽PNGではなく `<assetId>.blocked.json` などの blocker sidecar に理由を書く。
+9. `生成済みPNGを再取り込み` で採用し、ブラウザで画面を再確認する。
+10. 参照品質プロファイルがある場合は `生成PNG監査` を実行し、余白、エッジ、外周/中央分離の warning を確認する。
+11. `実装レポート作成` で layer order、runtime overlay、採用PNG、composition quality をまとめる。
+12. 採用したPNG、`imagegen-assets.json`、実装レポートをゲームリポジトリ側で確認・コミットする。
+13. 次の画面に移る。共通素材はコピーではなく、後続で shared asset registry として切り出す。
 
 ## Responsibility Rules
 
@@ -166,3 +190,4 @@ npm run validate:project -- /path/to/game-repo/creative shop
 - 画面間の共通化は、最初から抽象化しすぎない。2画面以上で同じ素材が必要になってから shared 化する。
 - `material-spec.json` は素材の責務を曖昧にしない。親枠、ヘッダー、行、アイコン、runtime text は別レイヤーとして明示する。
 - `generated-assets/` は最終候補だけを置く。没案や履歴は必要になってから `history/` に分ける。
+- imagegen が失敗したときは placeholder PNG を採用しない。`status=blocked` の JSON sidecar で理由を残す。

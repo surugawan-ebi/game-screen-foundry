@@ -319,6 +319,56 @@ test("composition quality endpoint reports grouped asset assembly health", async
   );
 });
 
+test("reference quality profile builds from PNG references and audits generated assets", async () => {
+  const referenceRoot = path.join(__dirname, "..", "examples", "sky-port-home", "generated-assets");
+  const profileResponse = await dispatchApi("POST", "/api/reference-quality-profile", {
+    rootPath: referenceRoot,
+    maxFiles: 36
+  });
+
+  assert.equal(profileResponse.statusCode, 200);
+  assert.equal(profileResponse.payload.ok, true);
+  assert.equal(profileResponse.payload.profile.schema, "game-screen-foundry.reference-quality-profile.v1");
+  assert.ok(profileResponse.payload.profile.source.analyzed >= 30);
+  assert.ok(profileResponse.payload.profile.summary.categories["ui-panel"].count > 0);
+  assert.equal(
+    profileResponse.payload.compactProfile.schema,
+    "game-screen-foundry.reference-quality-profile.compact.v1"
+  );
+
+  const auditResponse = await dispatchApi("POST", "/api/reference-asset-audit", {
+    input: getDemoProject(),
+    referenceQualityProfile: profileResponse.payload.profile
+  });
+  assert.equal(auditResponse.statusCode, 200);
+  assert.equal(auditResponse.payload.ok, true);
+  assert.equal(auditResponse.payload.audit.schema, "game-screen-foundry.reference-asset-audit.v1");
+  assert.equal(auditResponse.payload.audit.summary.inspectedCount, 51);
+  assert.ok(["pass", "warn", "fail"].includes(auditResponse.payload.audit.status));
+
+  const project = getDemoProject();
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "gcgt-reference-profile-"));
+  project.worldPreset.qualityProfile = {
+    ...(project.worldPreset.qualityProfile || {}),
+    referenceDerived: profileResponse.payload.compactProfile
+  };
+  project.worldPreset.imagegenWorkflow = {
+    jobDir: path.join(tempDir, "jobs"),
+    outputDir: path.join(tempDir, "generated"),
+    targetAssetIds: ["btn_start_sortie"]
+  };
+
+  try {
+    const jobResponse = await dispatchApi("POST", "/api/imagegen-job", project);
+    assert.equal(jobResponse.statusCode, 200);
+    const prompt = jobResponse.payload.imagegenReport.job.assets[0].prompt;
+    assert.match(prompt, /Reference-derived quality profile/u);
+    assert.match(prompt, /perimeter\/center/u);
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
 test("implementation report endpoint exports layer order and runtime overlays", async () => {
   const response = await dispatchApi("POST", "/api/implementation-report", getDemoProject());
 
@@ -850,6 +900,11 @@ test("frontend exposes the image generation flow tracker", () => {
   assert.match(html, /構成グループ/u);
   assert.match(html, /id="compositionSummary"/u);
   assert.match(html, /id="compositionGroupList"/u);
+  assert.match(html, /id="referenceQualityPanel"/u);
+  assert.match(html, /id="referenceRootInput"/u);
+  assert.match(html, /id="buildReferenceProfileButton"/u);
+  assert.match(html, /id="applyReferenceProfileButton"/u);
+  assert.match(html, /id="auditReferenceQualityButton"/u);
   assert.match(html, /仮組み確認/u);
   assert.match(html, /id="flowCurrentLabel"/u);
   assert.match(html, /data-flow-step="load"/u);
@@ -875,6 +930,9 @@ test("frontend exposes the image generation flow tracker", () => {
   assert.match(js, /function renderValidationReport/u);
   assert.match(js, /function renderCompositionGroups/u);
   assert.match(js, /function renderCompositionOverlays/u);
+  assert.match(js, /function buildReferenceQualityProfileFromPath/u);
+  assert.match(js, /function applyReferenceQualityProfileToPreset/u);
+  assert.match(js, /function auditGeneratedAssetsWithReferenceProfile/u);
   assert.match(js, /function showDraftWorkspace/u);
   assert.match(js, /function getDraftPayloadFromEditors/u);
   assert.match(js, /revisionMap: \{\}/u);
@@ -892,6 +950,8 @@ test("frontend exposes the image generation flow tracker", () => {
   assert.match(css, /\.screen-layer\.is-selected-placement/u);
   assert.match(css, /\.composition-group-card/u);
   assert.match(css, /\.composition-content-outline/u);
+  assert.match(css, /\.reference-quality-panel/u);
+  assert.match(css, /\.reference-diagnostic/u);
   assert.match(css, /repeat\(2, minmax\(0, 1fr\)\)/u);
 });
 
@@ -965,9 +1025,20 @@ test("imagegen job endpoint creates codex-ready asset prompts", async () => {
     assert.equal(report.job.assets.length, 3);
     assert.ok(fs.existsSync(report.job.jobPath));
     assert.ok(fs.existsSync(report.job.promptPath));
+    assert.ok(fs.existsSync(report.job.statusPath));
+    assert.equal(report.job.schema, "game-screen-foundry.imagegen-handoff.v2");
+    assert.equal(report.job.kind, "game-screen-foundry.imagegen-handoff");
+    assert.equal(report.job.workflowMode, "game-screen-asset-generation");
+    assert.equal(report.handoff.state, "waiting");
+    assert.equal(report.handoff.counts.total, 3);
+    assert.equal(report.handoff.paths.statusPath, report.job.statusPath);
+    assert.match(fs.readFileSync(report.job.promptPath, "utf8"), /blocker sidecar/u);
+    assert.match(fs.readFileSync(report.job.statusPath, "utf8"), /game-screen-foundry\.imagegen-status\.v1/u);
     assert.ok(backgroundJob);
     assert.ok(giftShellJob);
     assert.ok(sortieButtonJob);
+    assert.match(backgroundJob.blockerPath, /bg_sky_port_home\.blocked\.json$/u);
+    assert.equal(backgroundJob.qualityGate.placeholderPolicy, "blocked-sidecar-only");
     assert.match(backgroundJob.prompt, /Use case: stylized-concept/u);
     assert.match(backgroundJob.prompt, /Quality target: commercial-grade Japanese mobile game UI asset/u);
     assert.match(backgroundJob.prompt, /Reference policy: Use licensed or purchased assets only to derive quality criteria/u);
@@ -997,6 +1068,43 @@ test("imagegen job endpoint creates codex-ready asset prompts", async () => {
     assert.match(sortieButtonJob.prompt, /copied purchased asset pack style/u);
     assert.match(report.job.commandHint, /codex .* exec/u);
     assert.deepEqual(report.adoptedAssetIds, []);
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+test("imagegen job reports blocker sidecars without adopting placeholders", async () => {
+  const project = getDemoProject();
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "gcgt-imagegen-blocker-"));
+  project.worldPreset.imagegenWorkflow = {
+    jobDir: path.join(tempDir, "jobs"),
+    outputDir: path.join(tempDir, "generated"),
+    targetAssetIds: ["bg_sky_port_home"]
+  };
+  project.worldPreset.imagegenAssets = {};
+
+  try {
+    fs.mkdirSync(path.join(tempDir, "generated"), { recursive: true });
+    fs.writeFileSync(path.join(tempDir, "generated", "bg_sky_port_home.blocked.json"), JSON.stringify({
+      status: "blocked",
+      reasonKind: "imagegen_unavailable",
+      userMessage: "Imagegen is not available in this environment.",
+      suggestion: "Run again with a Codex imagegen-capable session."
+    }, null, 2));
+
+    const response = await dispatchApi("POST", "/api/imagegen-job", project);
+    const report = response.payload.imagegenReport;
+
+    assert.equal(response.statusCode, 200);
+    assert.equal(report.handoff.state, "blocked");
+    assert.deepEqual(report.adoptedAssetIds, []);
+    assert.deepEqual(report.missingAssetIds, ["bg_sky_port_home"]);
+    assert.equal(report.blockerReports.length, 1);
+    assert.equal(report.blockerReports[0].assetId, "bg_sky_port_home");
+    assert.equal(report.blockerReports[0].reasonKind, "imagegen_unavailable");
+    assert.equal(report.job.assets[0].status, "blocked");
+    assert.equal(report.job.assets[0].blocker.reasonKind, "imagegen_unavailable");
+    assert.match(fs.readFileSync(report.job.statusPath, "utf8"), /imagegen_unavailable/u);
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }

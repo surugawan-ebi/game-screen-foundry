@@ -6,8 +6,10 @@ const path = require("path");
 const root = path.resolve(__dirname, "..");
 const ignoredDirs = new Set([
   ".git",
+  ".reference-quality-profiles",
   "coverage",
   "imagegen-jobs",
+  "imagegen-status",
   "node_modules",
   "tmp"
 ]);
