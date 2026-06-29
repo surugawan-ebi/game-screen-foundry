@@ -145,6 +145,26 @@
 - `sortie_button_base` / `sortie_button_anchor` と `bottom_nav_shell` の重なりは禁止する
 - `daily_mission_receive_all` は `daily_mission_outer` 内に収め、ガチャCTAと重ねない
 
+## Composition Groups と layerFitRules
+
+公開サンプルとして、以下の4つを `compositionGroups` に定義している。
+
+| groupId | 目的 | 品質上の見どころ |
+| --- | --- | --- |
+| `primary_sortie_cta` | 主CTAボタン | ボタン土台、錨装飾、runtimeラベルを分け、ラベル安全域を保つ |
+| `gift_side_cta` | ギフトCTA | 箱アイコン、通知バッジ、文字レーンを別レイヤーにし、親シェルへ焼き込まない |
+| `gacha_side_cta` | ガチャCTA | 右端オーブを `edge_attached` として明示し、左側テキストレーンを固定する |
+| `daily_mission_rows_area` | 任務行スタック | 親パネルの `contentInset` 内に3行を収め、装飾フレームへ接触させない |
+
+`layerFitRules` は、装飾レイヤーの重なり方を機械的に説明するために使う。
+
+- `same_canvas`: 親/root と同じキャンバスを基準にする土台。
+- `inside_root`: 親の内側に余白を取って置く部品。
+- `edge_attached`: 端に掛かるが、はみ出し量を `allowedOverflow` で制御する部品。
+- `decorative_overlap`: バッジや小エンブレムなど、意図的に重ねる装飾。
+
+この分解により、100x200 の土台に 100x100 の部品をそのまま重ねて端に接触させるような事故を、合成品質チェックで検出できる。
+
 ## Overlay を分けた理由
 
 この画面では、以下を asset に含めない。

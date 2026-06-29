@@ -1,0 +1,13 @@
+{
+  "projectId": "blank_project",
+  "projectName": "Blank Project",
+  "defaultScreenId": "home",
+  "screens": [
+    {
+      "screenId": "home",
+      "name": "HOME",
+      "path": "screens/home"
+    }
+  ]
+}
+

@@ -13,6 +13,13 @@ const { getAiMode, normalizeCommentWithAi, reviewScreenWithAi } = require("./lib
 const { resolveBundleFromFolder } = require("./lib/folder-loader");
 const { prepareImagegenWorkflow } = require("./lib/imagegen-workflow");
 const { buildRegenerationRequest } = require("./lib/regeneration-queue");
+const { buildImplementationReport } = require("./lib/implementation-report");
+const {
+  UI_CATEGORIES,
+  auditGeneratedAssetsWithProfile,
+  buildReferenceQualityProfile,
+  compactReferenceQualityProfile
+} = require("./lib/reference-quality-profile");
 
 const PORT = Number(process.env.PORT || 4311);
 const HOST = process.env.HOST || "127.0.0.1";
@@ -36,6 +43,110 @@ function allowSourceRoot(rootPath) {
 function isAllowedSourceFile(filePath) {
   const resolved = path.resolve(filePath);
   return [...allowedSourceRoots].some((rootPath) => isPathInside(rootPath, resolved));
+}
+
+function sanitizeFileSlug(value, fallback = "screen") {
+  const slug = String(value || "")
+    .trim()
+    .replace(/[^a-z0-9_-]+/giu, "_")
+    .replace(/^_+|_+$/gu, "");
+  return slug || fallback;
+}
+
+function resolveRegenerationQueuePath(source = {}, screenKv = {}) {
+  if (!source || source.kind !== "folder") {
+    return null;
+  }
+
+  const baseDir = source.projectRoot || source.screenFolderPath || source.folderPath || "";
+  if (!baseDir) {
+    return null;
+  }
+
+  const resolvedBase = path.resolve(baseDir);
+  if (!fs.existsSync(resolvedBase) || !fs.statSync(resolvedBase).isDirectory()) {
+    throw new Error(`再生成キューの保存元フォルダが見つかりません: ${resolvedBase}`);
+  }
+  if (!isAllowedSourceFile(resolvedBase)) {
+    throw new Error("再生成キューを保存する前に、対象のプロジェクトフォルダを読み込んでください。");
+  }
+
+  const screenId = sanitizeFileSlug(source.screenId || screenKv.screenId || "screen");
+  const queuePath = path.join(
+    resolvedBase,
+    ".game-creative-generation",
+    "regeneration-queues",
+    `${screenId}.json`
+  );
+  const resolvedQueuePath = path.resolve(queuePath);
+  if (!isPathInside(resolvedBase, resolvedQueuePath)) {
+    throw new Error("再生成キューの保存先がプロジェクトフォルダ外に解決されました。");
+  }
+  return resolvedQueuePath;
+}
+
+function normalizeRegenerationQueue(queue) {
+  if (!Array.isArray(queue)) {
+    return [];
+  }
+  return queue
+    .filter((item) => item && item.assetId)
+    .map((item) => ({
+      queueId: String(item.queueId || `regen_${item.assetId}`),
+      assetId: String(item.assetId),
+      userComment: String(item.userComment || ""),
+      aiReviewComment: String(item.aiReviewComment || ""),
+      source: String(item.source || "asset_card"),
+      status: String(item.status || "queued"),
+      createdAt: String(item.createdAt || ""),
+      updatedAt: String(item.updatedAt || "")
+    }));
+}
+
+function resolveSourceFileRequest(filePath) {
+  if (!filePath) {
+    return {
+      statusCode: 400,
+      body: "Missing path"
+    };
+  }
+
+  const resolved = path.resolve(filePath);
+  if (!fs.existsSync(resolved) || !fs.statSync(resolved).isFile()) {
+    return {
+      statusCode: 404,
+      body: "Not found"
+    };
+  }
+
+  if (!isAllowedSourceFile(resolved)) {
+    return {
+      statusCode: 403,
+      body: "Source path is outside allowed project roots"
+    };
+  }
+
+  if (!/\.(png|jpe?g|webp|svg)$/iu.test(resolved)) {
+    return {
+      statusCode: 415,
+      body: "Unsupported file"
+    };
+  }
+
+  return {
+    statusCode: 200,
+    filePath: resolved
+  };
+}
+
+function sendSourceFile(response, filePath) {
+  const result = resolveSourceFileRequest(filePath);
+  if (result.statusCode !== 200) {
+    response.writeHead(result.statusCode);
+    response.end(result.body);
+    return;
+  }
+  sendFile(response, result.filePath);
 }
 
 function sendJson(response, statusCode, payload) {
@@ -96,7 +207,8 @@ function buildGenerateResponse(input) {
       mode: getAiMode()
     },
     input,
-    renderModel
+    renderModel,
+    compositionQuality: renderModel.compositionQuality
   };
 }
 
@@ -108,7 +220,8 @@ function buildDraftResponse(input) {
       mode: getAiMode()
     },
     input,
-    renderModel
+    renderModel,
+    compositionQuality: renderModel.compositionQuality
   };
 }
 
@@ -728,14 +841,19 @@ function handleImagegenJob(body, { run = false } = {}) {
     run,
     writeFiles: true
   });
+  const renderModel = generateRenderModel(nextInput);
   return {
     ok: true,
     ai: {
       mode: getAiMode()
     },
     input: nextInput,
-    renderModel: generateRenderModel(nextInput),
-    imagegenReport: report
+    renderModel,
+    compositionQuality: renderModel.compositionQuality,
+    imagegenReport: {
+      ...report,
+      compositionQuality: renderModel.compositionQuality
+    }
   };
 }
 
@@ -757,6 +875,210 @@ function handleBuildRegenerationRequest(body) {
     })),
     itemCount: queue.length,
     markdown
+  };
+}
+
+function handleSaveRegenerationQueue(body) {
+  const queuePath = resolveRegenerationQueuePath(body.source, body.screenKv);
+  if (!queuePath) {
+    return {
+      ok: true,
+      persisted: false,
+      message: "フォルダまたはプロジェクトを読み込むと、再生成キューを保存できます。"
+    };
+  }
+
+  const queue = normalizeRegenerationQueue(body.regenerationQueue);
+  const now = new Date().toISOString();
+  const screenId = body.source && body.source.screenId
+    ? body.source.screenId
+    : body.screenKv && body.screenKv.screenId
+      ? body.screenKv.screenId
+      : "";
+  const payload = {
+    version: 1,
+    savedAt: now,
+    source: {
+      projectRoot: body.source.projectRoot || "",
+      folderPath: body.source.folderPath || "",
+      screenFolderPath: body.source.screenFolderPath || "",
+      screenId,
+      screenName: body.source.screenName || (body.screenKv && body.screenKv.screenName) || ""
+    },
+    queue
+  };
+
+  fs.mkdirSync(path.dirname(queuePath), { recursive: true });
+  fs.writeFileSync(queuePath, `${JSON.stringify(payload, null, 2)}\n`);
+  return {
+    ok: true,
+    persisted: true,
+    queuePath,
+    itemCount: queue.length,
+    savedAt: now
+  };
+}
+
+function handleLoadRegenerationQueue(body) {
+  const queuePath = resolveRegenerationQueuePath(body.source, body.screenKv);
+  if (!queuePath) {
+    return {
+      ok: true,
+      persisted: false,
+      message: "フォルダまたはプロジェクトを読み込むと、保存済み再生成キューを読み込めます。"
+    };
+  }
+  if (!fs.existsSync(queuePath)) {
+    return {
+      ok: true,
+      persisted: false,
+      queuePath,
+      message: "この画面の保存済み再生成キューはまだありません。"
+    };
+  }
+
+  const payload = JSON.parse(fs.readFileSync(queuePath, "utf8"));
+  const queue = normalizeRegenerationQueue(payload.queue);
+  return {
+    ok: true,
+    persisted: true,
+    queuePath,
+    savedAt: payload.savedAt || "",
+    itemCount: queue.length,
+    queue
+  };
+}
+
+function handleCompositionQuality(body) {
+  const input = prepareInput(Object.keys(body).length ? body : getDemoProject());
+  const renderModel = generateRenderModel(input);
+  return {
+    ok: true,
+    ai: {
+      mode: getAiMode()
+    },
+    compositionQuality: renderModel.compositionQuality,
+    compositionGroups: renderModel.compositionGroups
+  };
+}
+
+function handleImplementationReport(body) {
+  const input = prepareInput(Object.keys(body).length ? body : getDemoProject());
+  const { report, markdown } = buildImplementationReport(input);
+  return {
+    ok: true,
+    ai: {
+      mode: getAiMode()
+    },
+    report,
+    markdown
+  };
+}
+
+function handleValidateWorkspace(body) {
+  try {
+    const input = prepareInput(Object.keys(body).length ? body : getDemoProject());
+    const renderModel = generateRenderModel(input);
+    const diagnostics = [];
+    const composition = renderModel.compositionQuality;
+    if (composition && composition.failCount > 0) {
+      diagnostics.push({
+        severity: "error",
+        code: "composition_quality",
+        message: `${composition.failCount} composition group(s) are failing.`
+      });
+    }
+    if (composition && composition.warnCount > 0) {
+      diagnostics.push({
+        severity: "warning",
+        code: "composition_quality",
+        message: `${composition.warnCount} composition group(s) need review.`
+      });
+    }
+    if (!renderModel.screen.layers.length) {
+      diagnostics.push({
+        severity: "error",
+        code: "empty_layers",
+        message: "Screen renders no layers."
+      });
+    }
+
+    return {
+      ok: true,
+      valid: diagnostics.every((item) => item.severity !== "error"),
+      summary: {
+        screenId: renderModel.screen.screenId,
+        screenName: renderModel.screen.screenName,
+        size: `${renderModel.screen.width}x${renderModel.screen.height}`,
+        assetCount: renderModel.assets.length,
+        layerCount: renderModel.screen.layers.length,
+        compositionStatus: composition ? composition.status : "pass",
+        compositionScore: composition ? composition.score : 100,
+        compositionGroupCount: composition ? composition.groupCount : 0
+      },
+      diagnostics
+    };
+  } catch (error) {
+    return {
+      ok: true,
+      valid: false,
+      summary: null,
+      diagnostics: [
+        {
+          severity: "error",
+          code: "workspace_parse",
+          message: error.message
+        }
+      ]
+    };
+  }
+}
+
+function normalizeProfileCategories(value) {
+  if (Array.isArray(value)) {
+    return value.filter((item) => UI_CATEGORIES.includes(item));
+  }
+  if (typeof value === "string" && value.trim()) {
+    return value
+      .split(",")
+      .map((item) => item.trim())
+      .filter((item) => UI_CATEGORIES.includes(item));
+  }
+  return UI_CATEGORIES;
+}
+
+function normalizePositiveInteger(value, fallback, { min = 1, max = 2000 } = {}) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) {
+    return fallback;
+  }
+  return Math.max(min, Math.min(max, Math.round(number)));
+}
+
+function handleReferenceQualityProfile(body) {
+  if (typeof body.rootPath !== "string" || !body.rootPath.trim()) {
+    throw new Error("rootPath is required");
+  }
+  const profile = buildReferenceQualityProfile(body.rootPath.trim(), {
+    categories: normalizeProfileCategories(body.categories),
+    maxFiles: normalizePositiveInteger(body.maxFiles, 260, { min: 12, max: 2000 }),
+    maxFilesPerAsset: normalizePositiveInteger(body.maxFilesPerAsset, 2, { min: 1, max: 8 })
+  });
+  return {
+    ok: true,
+    profile,
+    compactProfile: compactReferenceQualityProfile(profile)
+  };
+}
+
+function handleReferenceAssetAudit(body) {
+  const inputPayload = body.input && typeof body.input === "object" ? body.input : body;
+  const input = prepareInput(inputPayload);
+  const profile = body.referenceQualityProfile || body.profile;
+  const audit = auditGeneratedAssetsWithProfile(input, profile);
+  return {
+    ok: true,
+    audit
   };
 }
 
@@ -815,6 +1137,8 @@ async function dispatchApi(method, pathname, body = {}) {
           projectId: loaded.source.projectId,
           projectName: loaded.source.projectName,
           manifestPath: loaded.source.manifestPath,
+          defaultScreenId: loaded.source.defaultScreenId,
+          projectScreens: loaded.source.projectScreens,
           screenId: loaded.source.screenId,
           screenName: loaded.source.screenName,
           screenFolderPath: loaded.source.screenFolderPath,
@@ -833,12 +1157,16 @@ async function dispatchApi(method, pathname, body = {}) {
       writeFiles: true
     });
     const { nextInput, report } = executeGenerationJobs(imagegenWorkflow.nextInput);
+    const generated = buildGenerateResponse(nextInput);
     return {
       statusCode: 200,
       payload: {
-        ...buildGenerateResponse(nextInput),
+        ...generated,
         generationReport: report,
-        imagegenReport: imagegenWorkflow.report
+        imagegenReport: {
+          ...imagegenWorkflow.report,
+          compositionQuality: generated.renderModel.compositionQuality
+        }
       }
     };
   }
@@ -847,16 +1175,20 @@ async function dispatchApi(method, pathname, body = {}) {
     const payload = Object.keys(body).length ? body : getDemoProject();
     const input = prepareInput(payload);
     const { nextInput, report } = executeGenerationJobs(input);
+    const generated = buildGenerateResponse(nextInput);
     return {
       statusCode: 200,
       payload: {
-        ...buildGenerateResponse(nextInput),
+        ...generated,
         generationReport: {
           ...report,
           mode: "prebuilt_display",
           actionLabel: "生成後を表示"
         },
-        imagegenReport: summarizeRegisteredGeneratedAssets(nextInput)
+        imagegenReport: {
+          ...summarizeRegisteredGeneratedAssets(nextInput),
+          compositionQuality: generated.renderModel.compositionQuality
+        }
       }
     };
   }
@@ -879,6 +1211,55 @@ async function dispatchApi(method, pathname, body = {}) {
     return {
       statusCode: 200,
       payload: handleBuildRegenerationRequest(body)
+    };
+  }
+
+  if (method === "POST" && pathname === "/api/save-regeneration-queue") {
+    return {
+      statusCode: 200,
+      payload: handleSaveRegenerationQueue(body)
+    };
+  }
+
+  if (method === "POST" && pathname === "/api/load-regeneration-queue") {
+    return {
+      statusCode: 200,
+      payload: handleLoadRegenerationQueue(body)
+    };
+  }
+
+  if (method === "POST" && pathname === "/api/composition-quality") {
+    return {
+      statusCode: 200,
+      payload: handleCompositionQuality(body)
+    };
+  }
+
+  if (method === "POST" && pathname === "/api/implementation-report") {
+    return {
+      statusCode: 200,
+      payload: handleImplementationReport(body)
+    };
+  }
+
+  if (method === "POST" && pathname === "/api/validate-workspace") {
+    return {
+      statusCode: 200,
+      payload: handleValidateWorkspace(body)
+    };
+  }
+
+  if (method === "POST" && pathname === "/api/reference-quality-profile") {
+    return {
+      statusCode: 200,
+      payload: handleReferenceQualityProfile(body)
+    };
+  }
+
+  if (method === "POST" && pathname === "/api/reference-asset-audit") {
+    return {
+      statusCode: 200,
+      payload: handleReferenceAssetAudit(body)
     };
   }
 
@@ -940,29 +1321,7 @@ function createServer() {
     const url = new URL(request.url, `http://${request.headers.host}`);
     try {
       if (request.method === "GET" && url.pathname === "/api/source-file") {
-        const filePath = url.searchParams.get("path");
-        if (!filePath) {
-          response.writeHead(400);
-          response.end("Missing path");
-          return;
-        }
-        const resolved = path.resolve(filePath);
-        if (!fs.existsSync(resolved) || !fs.statSync(resolved).isFile()) {
-          response.writeHead(404);
-          response.end("Not found");
-          return;
-        }
-        if (!isAllowedSourceFile(resolved)) {
-          response.writeHead(403);
-          response.end("Source path is outside allowed project roots");
-          return;
-        }
-        if (!/\.(png|jpe?g|webp|svg)$/iu.test(resolved)) {
-          response.writeHead(415);
-          response.end("Unsupported file");
-          return;
-        }
-        sendFile(response, resolved);
+        sendSourceFile(response, url.searchParams.get("path"));
         return;
       }
 
@@ -991,5 +1350,6 @@ if (require.main === module) {
 
 module.exports = {
   createServer,
-  dispatchApi
+  dispatchApi,
+  resolveSourceFileRequest
 };

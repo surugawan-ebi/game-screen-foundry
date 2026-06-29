@@ -1,0 +1,294 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://surugawan-ebi.github.io/game-screen-foundry/schemas/material-spec.schema.json",
+  "title": "Game Screen Foundry Material Spec",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["screenMeta", "placements", "assets"],
+  "properties": {
+    "screenMeta": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["screenId", "canvas"],
+      "properties": {
+        "screenId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "canvas": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": ["width", "height"],
+          "properties": {
+            "width": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "height": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "coordinateSpace": {
+          "type": "string"
+        },
+        "safeAreas": {
+          "$ref": "#/$defs/safeAreas"
+        },
+        "defaultState": {
+          "type": "string"
+        },
+        "supportedStates": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "assemblyPolicy": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "placements": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/placement"
+      }
+    },
+    "compositionGroups": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/compositionGroup"
+      }
+    },
+    "assets": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/asset"
+      }
+    },
+    "contentOverlays": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/overlay"
+      }
+    }
+  },
+  "$defs": {
+    "safeAreas": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "top": { "type": "number", "minimum": 0 },
+        "right": { "type": "number", "minimum": 0 },
+        "bottom": { "type": "number", "minimum": 0 },
+        "left": { "type": "number", "minimum": 0 }
+      }
+    },
+    "placement": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["placementId", "assetId", "x", "y", "width", "height", "anchor", "zIndex"],
+      "properties": {
+        "placementId": { "type": "string", "minLength": 1 },
+        "assetId": { "type": "string", "minLength": 1 },
+        "parentId": { "type": "string" },
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "width": { "type": "number", "exclusiveMinimum": 0 },
+        "height": { "type": "number", "exclusiveMinimum": 0 },
+        "anchor": { "type": "string", "minLength": 1 },
+        "zIndex": { "type": "number" },
+        "blendMode": { "type": "string" },
+        "opacity": { "type": "number", "minimum": 0, "maximum": 1 },
+        "stateVisibility": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "boolean"
+          }
+        },
+        "slot": {
+          "$ref": "#/$defs/rect"
+        }
+      }
+    },
+    "compositionGroup": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["groupId", "kind", "rootPlacementId", "layerPlacementIds"],
+      "properties": {
+        "groupId": { "type": "string", "minLength": 1 },
+        "kind": { "type": "string", "minLength": 1 },
+        "rootPlacementId": { "type": "string", "minLength": 1 },
+        "layerPlacementIds": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "protectedOverlayIds": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "childContentPlacementIds": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "childGroupIds": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "layerFitRules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/compositionLayerFitRule"
+          }
+        },
+        "contentInset": {
+          "$ref": "#/$defs/insets"
+        },
+        "minChildInset": {
+          "oneOf": [
+            { "type": "number", "minimum": 0 },
+            { "$ref": "#/$defs/insets" }
+          ]
+        },
+        "outputAssetId": { "type": "string" },
+        "qualityChecks": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "notes": { "type": "string" }
+      }
+    },
+    "compositionLayerFitRule": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["placementId", "fit"],
+      "properties": {
+        "placementId": { "type": "string", "minLength": 1 },
+        "fit": {
+          "type": "string",
+          "enum": ["same_canvas", "inside_root", "edge_attached", "decorative_overlap"]
+        },
+        "minInset": {
+          "oneOf": [
+            { "type": "number", "minimum": 0 },
+            { "$ref": "#/$defs/insets" }
+          ]
+        },
+        "allowedOverflow": {
+          "oneOf": [
+            { "type": "number", "minimum": 0 },
+            { "$ref": "#/$defs/insets" }
+          ]
+        },
+        "notes": { "type": "string" }
+      }
+    },
+    "asset": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "assetId",
+        "assetType",
+        "role",
+        "purpose",
+        "renderGroup",
+        "visualPriority",
+        "styleNotes",
+        "functionNotes",
+        "exportRequirements"
+      ],
+      "properties": {
+        "assetId": { "type": "string", "minLength": 1 },
+        "assetType": { "type": "string", "minLength": 1 },
+        "role": { "type": "string", "minLength": 1 },
+        "purpose": { "type": "string" },
+        "renderGroup": { "type": "string" },
+        "visualPriority": {
+          "type": "string",
+          "enum": ["low", "medium", "high"]
+        },
+        "styleNotes": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "functionNotes": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "exportRequirements": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "sizes": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "transparent": { "type": "boolean" },
+            "format": { "type": "string" }
+          }
+        },
+        "generationPlan": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "textHandling": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "contentModel": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "overlay": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["overlayId", "kind", "x", "y", "width", "height", "anchor", "zIndex"],
+      "properties": {
+        "overlayId": { "type": "string", "minLength": 1 },
+        "kind": { "type": "string", "minLength": 1 },
+        "targetPlacementId": { "type": "string" },
+        "slot": { "$ref": "#/$defs/rect" },
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "width": { "type": "number", "exclusiveMinimum": 0 },
+        "height": { "type": "number", "exclusiveMinimum": 0 },
+        "anchor": { "type": "string", "minLength": 1 },
+        "zIndex": { "type": "number" },
+        "sampleText": { "type": "string" },
+        "fontSize": { "type": "number", "exclusiveMinimum": 0 },
+        "align": { "type": "string" },
+        "valign": { "type": "string" },
+        "color": { "type": "string" }
+      }
+    },
+    "insets": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "top": { "type": "number", "minimum": 0 },
+        "right": { "type": "number", "minimum": 0 },
+        "bottom": { "type": "number", "minimum": 0 },
+        "left": { "type": "number", "minimum": 0 }
+      }
+    },
+    "rect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y", "width", "height"],
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "width": { "type": "number", "exclusiveMinimum": 0 },
+        "height": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    }
+  }
+}

@@ -26,11 +26,16 @@
         </label>
         <input id="folderPathInput" class="path-input" type="text" placeholder="/path/to/creative または /path/to/creative#home" />
         <button id="loadFolderButton">フォルダから読み込む</button>
+        <select id="projectScreenSelect" class="screen-select" aria-label="プロジェクト画面選択" disabled>
+          <option value="">画面選択</option>
+        </select>
         <button id="imagegenJobButton">対話用imagegenジョブ作成</button>
         <button id="imagegenRefreshButton">生成済みPNGを再取り込み</button>
         <button id="draftButton">仮組み確認</button>
         <button id="generateButton" class="primary">生成後を表示</button>
+        <button id="validateButton">仕様チェック</button>
         <button id="reviewButton">AI で画面レビュー</button>
+        <button id="exportReportButton">実装レポート作成</button>
         <button id="applyLocksButton">固定候補を反映</button>
       </section>
       <section class="source-bar">
@@ -158,6 +163,104 @@
             </div>
           </article>
 
+          <article id="specEditorPanel" class="panel spec-editor-panel">
+            <div class="panel-header">
+              <h2>構造化編集</h2>
+              <span id="specEditorStatus" class="panel-note">未読み込み</span>
+            </div>
+            <div class="spec-editor-grid">
+              <section class="spec-editor-section">
+                <div class="spec-editor-section-header">
+                  <h3>Placement</h3>
+                  <select id="placementEditorSelect" class="compact-select" aria-label="編集する placement"></select>
+                </div>
+                <div class="field-grid field-grid-placement">
+                  <label>
+                    <span>x</span>
+                    <input id="placementXInput" type="number" step="1" />
+                  </label>
+                  <label>
+                    <span>y</span>
+                    <input id="placementYInput" type="number" step="1" />
+                  </label>
+                  <label>
+                    <span>w</span>
+                    <input id="placementWidthInput" type="number" step="1" min="1" />
+                  </label>
+                  <label>
+                    <span>h</span>
+                    <input id="placementHeightInput" type="number" step="1" min="1" />
+                  </label>
+                  <label>
+                    <span>z</span>
+                    <input id="placementZInput" type="number" step="1" />
+                  </label>
+                  <label>
+                    <span>parent</span>
+                    <input id="placementParentInput" type="text" />
+                  </label>
+                </div>
+                <button id="applyPlacementEditButton">配置を反映</button>
+              </section>
+
+              <section class="spec-editor-section">
+                <div class="spec-editor-section-header">
+                  <h3>Composition Inset</h3>
+                  <select id="compositionEditorSelect" class="compact-select" aria-label="編集する composition group"></select>
+                </div>
+                <div class="field-grid field-grid-inset">
+                  <label>
+                    <span>top</span>
+                    <input id="contentInsetTopInput" type="number" step="1" min="0" />
+                  </label>
+                  <label>
+                    <span>right</span>
+                    <input id="contentInsetRightInput" type="number" step="1" min="0" />
+                  </label>
+                  <label>
+                    <span>bottom</span>
+                    <input id="contentInsetBottomInput" type="number" step="1" min="0" />
+                  </label>
+                  <label>
+                    <span>left</span>
+                    <input id="contentInsetLeftInput" type="number" step="1" min="0" />
+                  </label>
+                </div>
+                <button id="applyCompositionInsetButton">Insetを反映</button>
+              </section>
+            </div>
+          </article>
+
+          <article id="compositionPanel" class="panel composition-panel">
+            <div class="panel-header">
+              <h2>構成グループ</h2>
+              <span id="compositionCountLabel" class="panel-note">0 件</span>
+            </div>
+            <div id="compositionSummary" class="composition-summary empty">
+              `compositionGroups` がある素材仕様書を読み込むと、重ね合わせ単位の品質チェックを表示します。
+            </div>
+            <div id="compositionGroupList" class="composition-group-list empty">
+              構成グループはまだありません。
+            </div>
+          </article>
+
+          <article id="referenceQualityPanel" class="panel reference-quality-panel">
+            <div class="panel-header">
+              <h2>参照品質プロファイル</h2>
+              <span id="referenceQualityStatus" class="panel-note">未作成</span>
+            </div>
+            <div class="reference-quality-controls">
+              <input id="referenceRootInput" class="path-input" type="text" placeholder="/path/to/assets/purchased/organized" />
+              <input id="referenceMaxFilesInput" class="reference-max-input" type="number" min="12" max="2000" step="1" value="260" aria-label="参照サンプル上限" />
+              <button id="buildReferenceProfileButton">プロファイル作成</button>
+              <button id="applyReferenceProfileButton">プリセットへ反映</button>
+              <button id="auditReferenceQualityButton">生成PNG監査</button>
+            </div>
+            <div id="referenceQualityOutput" class="reference-quality-output empty">
+              購入済み/参照用UI素材のフォルダから、透明余白、エッジ、外周/中央ディテールの傾向を測ります。
+            </div>
+          </article>
+
           <article class="panel review-panel">
             <div class="panel-header">
               <h2>AI レビュー</h2>
@@ -178,6 +281,8 @@
             </div>
             <div class="regen-queue-actions">
               <button id="buildRegenPromptButton" class="primary">Codex依頼文を作成</button>
+              <button id="saveRegenQueueButton">キューを保存</button>
+              <button id="loadRegenQueueButton">保存キューを読み込む</button>
               <button id="clearRegenQueueButton">キューを空にする</button>
             </div>
             <textarea
@@ -187,6 +292,43 @@
               placeholder="キューが溜まったら、ここにCodexへ渡す依頼文が生成されます。"
               spellcheck="false"
             ></textarea>
+          </article>
+
+          <article id="handoffPanel" class="panel handoff-panel">
+            <div class="panel-header">
+              <h2>Codex Handoff</h2>
+              <span id="handoffSummary" class="panel-note">未作成</span>
+            </div>
+            <div id="handoffDetailList" class="handoff-detail-list empty">
+              imagegenジョブ作成後に、job / prompt / status / output の場所を表示します。
+            </div>
+            <div id="handoffBlockerList" class="handoff-blocker-list empty">
+              blocker sidecar はまだありません。
+            </div>
+          </article>
+
+          <article id="implementationReportPanel" class="panel implementation-report-panel">
+            <div class="panel-header">
+              <h2>実装レポート</h2>
+              <span id="implementationReportStatus" class="panel-note">未作成</span>
+            </div>
+            <textarea
+              id="implementationReportOutput"
+              class="implementation-report-output"
+              readonly
+              placeholder="画面を読み込んだあと「実装レポート作成」を押すと、layer order / runtime overlay / asset path / composition quality をまとめたMarkdownが生成されます。"
+              spellcheck="false"
+            ></textarea>
+          </article>
+
+          <article id="validationPanel" class="panel validation-panel">
+            <div class="panel-header">
+              <h2>仕様チェック</h2>
+              <span id="validationStatus" class="panel-note">未実行</span>
+            </div>
+            <div id="validationOutput" class="validation-output empty">
+              エディタ内の3つのJSON、レンダリング可能性、composition quality を確認します。
+            </div>
           </article>
 
           <article id="assetPanel" class="panel asset-panel">
@@ -225,6 +367,7 @@
           <p class="asset-text-handling"></p>
           <p class="asset-revision"></p>
           <p class="asset-comment-log"></p>
+          <div class="asset-inspector"></div>
         </div>
         <textarea class="asset-comment" placeholder="この素材に対する具体的なコメントを入れる"></textarea>
         <div class="asset-actions">

@@ -1,0 +1,110 @@
+{
+  "id": "preset_blank_project_01",
+  "name": "Blank Project Default",
+  "genre": "game prototype",
+  "moodKeywords": ["clean", "readable", "adventure"],
+  "negativeKeywords": ["watermark", "illegible text", "marketing screenshot"],
+  "shapeLanguage": "rounded_game_ui",
+  "materialKeywords": ["painted UI", "soft highlight", "clear silhouette"],
+  "palette": {
+    "primary": "#6f8fd8",
+    "secondary": "#26344a",
+    "accent": "#f0c95a",
+    "danger": "#c45b5b",
+    "success": "#78b86a",
+    "neutralDark": "#101820",
+    "neutralLight": "#f4f1e8"
+  },
+  "lineTreatment": "clean_outline_soft",
+  "lightingStyle": "soft_front_light",
+  "detailDensity": "medium",
+  "uiTone": "prototype_ready",
+  "backgroundPolicy": "transparent_with_shadow",
+  "qualityProfile": {
+    "id": "commercial_mobile_ui_v1",
+    "targetLevel": "commercial-grade mobile game asset",
+    "sourcePolicy": "Use licensed or purchased assets only to derive quality criteria; do not imitate a specific asset pack.",
+    "principles": [
+      "Readable silhouette at target size",
+      "Clean functional lane for runtime text or child content",
+      "Strong edge separation from busy backgrounds",
+      "Controlled ornament density",
+      "Clear material and lighting direction"
+    ],
+    "productionChecks": [
+      "Target-size fit with useful padding",
+      "Clean alpha boundary for transparent assets",
+      "No accidental runtime text baked into PNGs",
+      "Consistent family logic across related assets"
+    ],
+    "layoutAnatomy": {
+      "foundationAssetTypes": [
+        "panel",
+        "card_frame",
+        "button"
+      ],
+      "outerDecoration": "Use the outer rim, corners, tabs, sockets, and silhouette breaks as the decorative zone.",
+      "contentSurface": "Keep declared runtime text slots and child-placement areas calm, empty, and low-detail.",
+      "boundaryTreatment": "Separate the decorative frame from the usable content surface with a clear bevel, inset shadow, highlight rim, or color/material step.",
+      "checks": [
+        "Decoration should frame the content area rather than cover it",
+        "Do not add fake labels, rows, icons, or child widgets inside reusable base assets"
+      ],
+      "assetTypeRules": {
+        "button": {
+          "contentSurface": "Preserve a clear center label lane for runtime text.",
+          "checks": [
+            "The pressable edge can be ornate, but the label lane stays readable"
+          ]
+        },
+        "panel": {
+          "contentSurface": "Keep the interior stable enough for values, labels, or repeated child UI."
+        },
+        "card_frame": {
+          "contentSurface": "Leave a broad readable inner area for child content and runtime copy."
+        }
+      }
+    },
+    "promptAdditions": [
+      "Use polished bevels, intentional rim highlights, and production-ready spacing."
+    ],
+    "avoid": [
+      "copied purchased asset pack style",
+      "placeholder vector geometry",
+      "baked runtime text",
+      "dirty transparent edges",
+      "cluttered functional lanes"
+    ],
+    "assetTypeChecks": {
+      "button": [
+        "Preserve a clear center text lane",
+        "Make the pressable silhouette obvious"
+      ],
+      "background": [
+        "Keep important UI placement zones calm enough for overlays",
+        "Avoid fake UI baked into the background"
+      ]
+    },
+    "roleChecks": {
+      "primary_cta": [
+        "Highest call-to-action contrast among buttons",
+        "Readable text lane remains empty"
+      ],
+      "ambient_backdrop": [
+        "Provide depth without competing with foreground UI"
+      ]
+    }
+  },
+  "referenceImages": [],
+  "kvGuidance": {
+    "screenMockPreferred": true,
+    "notes": [
+      "Use this as a starting template and replace style notes with project-specific direction.",
+      "Runtime text should stay in contentOverlays unless an asset explicitly owns baked text."
+    ]
+  },
+  "imagegenWorkflow": {
+    "targetAssetIds": ["bg_home", "btn_start"]
+  },
+  "imagegenAssets": {}
+}

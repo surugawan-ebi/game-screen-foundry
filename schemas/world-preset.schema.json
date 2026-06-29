@@ -1,0 +1,178 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://surugawan-ebi.github.io/game-screen-foundry/schemas/world-preset.schema.json",
+  "title": "Game Screen Foundry World Preset",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["id", "name", "palette"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "genre": {
+      "type": "string"
+    },
+    "moodKeywords": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "negativeKeywords": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "shapeLanguage": {
+      "type": "string"
+    },
+    "materialKeywords": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "palette": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "required": ["primary", "secondary", "accent", "neutralDark", "neutralLight"],
+      "properties": {
+        "primary": { "type": "string" },
+        "secondary": { "type": "string" },
+        "accent": { "type": "string" },
+        "danger": { "type": "string" },
+        "success": { "type": "string" },
+        "neutralDark": { "type": "string" },
+        "neutralLight": { "type": "string" }
+      }
+    },
+    "referenceImages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "path": { "type": "string" },
+          "role": { "type": "string" },
+          "notes": { "type": "string" }
+        }
+      }
+    },
+    "kvGuidance": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "kvStyleProfile": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "qualityProfile": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "id": { "type": "string" },
+        "targetLevel": { "type": "string" },
+        "sourcePolicy": { "type": "string" },
+        "principles": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "productionChecks": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "promptAdditions": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "avoid": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "assetTypeChecks": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "roleChecks": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "layoutAnatomy": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "foundationAssetTypes": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "outerDecoration": { "type": "string" },
+            "contentSurface": { "type": "string" },
+            "boundaryTreatment": { "type": "string" },
+            "checks": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "assetTypeRules": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/$defs/layoutAnatomyRule"
+              }
+            },
+            "roleRules": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/$defs/layoutAnatomyRule"
+              }
+            }
+          }
+        }
+      }
+    },
+    "imagegenWorkflow": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "outputDir": { "type": "string" },
+        "jobDir": { "type": "string" },
+        "targetAssetIds": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "disabled": { "type": "boolean" }
+      }
+    },
+    "imagegenAssets": {
+      "oneOf": [
+        {
+          "$ref": "imagegen-assets.schema.json#/$defs/assetMap"
+        },
+        {
+          "$ref": "imagegen-assets.schema.json#/$defs/assetArray"
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "layoutAnatomyRule": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "outerDecoration": { "type": "string" },
+        "contentSurface": { "type": "string" },
+        "boundaryTreatment": { "type": "string" },
+        "checks": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}

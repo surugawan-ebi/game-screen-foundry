@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://surugawan-ebi.github.io/game-screen-foundry/schemas/imagegen-assets.schema.json",
+  "title": "Game Screen Foundry Imagegen Assets",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["assets"],
+      "properties": {
+        "assets": {
+          "$ref": "#/$defs/assetArray"
+        }
+      }
+    },
+    {
+      "$ref": "#/$defs/assetArray"
+    }
+  ],
+  "$defs": {
+    "assetMap": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/assetEntry"
+      }
+    },
+    "assetArray": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/assetEntry"
+      }
+    },
+    "assetEntry": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["assetId", "path"],
+      "properties": {
+        "assetId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "backend": {
+          "type": "string"
+        },
+        "usesImagegen": {
+          "type": "boolean"
+        },
+        "prompt": {
+          "type": "string"
+        },
+        "jobId": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "sourceReference": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
+
