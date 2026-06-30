@@ -26,11 +26,18 @@ This file is the handoff note for the public beta. The current repository is usa
 - Shared assets: support a project-level shared registry for common nav buttons, resource icons, and panel families.
 - Safer local file permissions: move from process-level allowlist to project session allowlist with explicit UI feedback.
 - UI polish: make the workbench usable on smaller laptop screens and add clearer loading/progress states.
+- Image postprocess: batch trim transparent gutters, normalize alpha edges, resize to declared final pixel size, and write adoption notes.
+- 9-slice specs: separate generation base size from placement size, and validate fixed-size vs stretchable UI parts.
+- Modal/bottom-sheet templates: add explicit screen templates for fixed-height and content-following modal behavior.
+- Runtime style assets: distinguish `imageAsset`, `runtimeStyleToken`, and `proceduralEffect` so scrims/barriers are not forced into PNG assets.
+- State variants: validate representative overlay sets per `stateVariant` so shared screens reveal density differences.
 
 ## Technical TODO
 
 - Reduce coupling between demo data and app startup.
 - Consider replacing ad-hoc HTTP server routing with a small framework only if route complexity keeps growing.
+- Extend validation from placement boxes to PNG alpha bbox, transparent gutter thresholds, safe label lanes, max runtime text length, max lines, CTA count, and child count.
+- Add a clean-start/reset generated assets command for applying the tool to repos that already contain manually produced assets.
 
 ## Completed Handoff Cleanup
 
@@ -61,6 +68,10 @@ This file is the handoff note for the public beta. The current repository is usa
 - Added a browser structured spec editor for placement coordinates and composition content insets.
 - Added project-local regeneration queue save/load.
 - Added asset inspector provenance rows for placement details, composition references, and adopted source images.
+- Removed demo-specific sky-port style leakage from external imagegen prompts and heuristic reviews.
+- Added recursive `generated-assets/**/<assetId>.png` auto-registration for loaded screen folders.
+- Resolved relative external `imagegenWorkflow.outputDir` from the screen folder and relative `jobDir` from the project root when a manifest is used.
+- Documented external repo `.gitignore` guidance and `commandHint` absolute-path caveats.
 
 ## Public Beta Boundaries
 

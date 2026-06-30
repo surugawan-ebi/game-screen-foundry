@@ -397,6 +397,10 @@ filled automatically:
 - `outputDir`: `<screen-folder>/generated-assets`
 - `jobDir`: `<project-root>/.game-creative-generation/imagegen-jobs`
 
+If these fields are present but relative, `outputDir` is resolved from the
+loaded screen folder. `jobDir` is resolved from the project root when a project
+manifest is used, otherwise from the loaded screen folder.
+
 ## `imagegen-assets.json`
 
 Purpose: register generated PNG files that should replace SVG previews.
@@ -425,8 +429,9 @@ Rules:
 - Relative `path` values are resolved from the folder containing
   `imagegen-assets.json`.
 - If `imagegen-assets.json` is absent, files named
-  `generated-assets/<assetId>.png` are auto-registered when the screen folder is
-  loaded.
+  `generated-assets/<assetId>.png` or `generated-assets/**/<assetId>.png` are
+  auto-registered when the screen folder is loaded. The filename basename must
+  match an asset in `material-spec.json`.
 
 `world-preset.json` may also include `imagegenAssets` directly. For folder
 loads, relative inline paths are resolved from the loaded screen folder when

@@ -49,6 +49,16 @@ function overlapArea(left, right) {
     * Math.max(0, Math.min(left.bottom, right.bottom) - Math.max(left.top, right.top));
 }
 
+function getBlankProject() {
+  const screenDir = path.join(__dirname, "..", "templates", "blank-project", "creative", "screens", "home");
+  return {
+    screenKv: JSON.parse(fs.readFileSync(path.join(screenDir, "screen-kv.json"), "utf8")),
+    materialSpecSheet: JSON.parse(fs.readFileSync(path.join(screenDir, "material-spec.json"), "utf8")),
+    worldPreset: JSON.parse(fs.readFileSync(path.join(screenDir, "world-preset.json"), "utf8")),
+    revisionMap: {}
+  };
+}
+
 test("source-file only serves repository or explicitly loaded project images", async () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "gcgt-source-file-"));
   const externalImage = path.join(tempDir, "external.png");
@@ -245,6 +255,46 @@ test("imagegen output fallback is generic and not demo-specific", () => {
   assert.equal(job.assets.length, 1);
   assert.equal(job.assets[0].outputPath, path.join(expectedOutputDir, "bg_sky_port_home.png"));
   assert.doesNotMatch(job.outputDir, /examples\/sky-port-home/u);
+});
+
+test("loaded screen folders auto-register nested generated assets and resolve workflow paths", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "gcgt-nested-assets-"));
+  const project = getBlankProject();
+  project.worldPreset.imagegenAssets = {};
+  project.worldPreset.imagegenWorkflow = {
+    outputDir: "generated-assets",
+    jobDir: ".game-creative-generation/imagegen-jobs",
+    targetAssetIds: ["btn_start"]
+  };
+
+  try {
+    fs.mkdirSync(path.join(tempDir, "generated-assets", "ui", "buttons"), { recursive: true });
+    fs.writeFileSync(path.join(tempDir, "screen-kv.json"), JSON.stringify(project.screenKv, null, 2));
+    fs.writeFileSync(path.join(tempDir, "material-spec.json"), JSON.stringify(project.materialSpecSheet, null, 2));
+    fs.writeFileSync(path.join(tempDir, "world-preset.json"), JSON.stringify(project.worldPreset, null, 2));
+    fs.writeFileSync(path.join(tempDir, "generated-assets", "ui", "buttons", "btn_start.png"), "fake generated image");
+
+    const response = await dispatchApi("POST", "/api/load-from-folder", {
+      folderPath: tempDir
+    });
+
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.payload.ok, true);
+    assert.equal(
+      response.payload.bundle.worldPreset.imagegenAssets.btn_start.path,
+      path.join(tempDir, "generated-assets", "ui", "buttons", "btn_start.png")
+    );
+    assert.equal(
+      response.payload.bundle.worldPreset.imagegenWorkflow.outputDir,
+      path.join(tempDir, "generated-assets")
+    );
+    assert.equal(
+      response.payload.bundle.worldPreset.imagegenWorkflow.jobDir,
+      path.join(tempDir, ".game-creative-generation", "imagegen-jobs")
+    );
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
 });
 
 test("demo and generate endpoints return a renderable payload", async () => {
@@ -1070,6 +1120,68 @@ test("imagegen job endpoint creates codex-ready asset prompts", async () => {
     assert.deepEqual(report.adoptedAssetIds, []);
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+test("external imagegen prompts derive style from the loaded world preset without demo leakage", async () => {
+  const project = getBlankProject();
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "gcgt-external-prompt-"));
+  project.screenKv.screenName = "Forest Puzzle Home";
+  project.worldPreset.name = "Forest Puzzle Default";
+  project.worldPreset.genre = "cozy puzzle";
+  project.worldPreset.moodKeywords = ["forest", "soft glow", "friendly"];
+  project.worldPreset.materialKeywords = ["leaf enamel", "painted wood", "warm glass"];
+  project.worldPreset.shapeLanguage = "rounded_leaf_ui";
+  project.worldPreset.lineTreatment = "painted_clean_outline";
+  project.worldPreset.lightingStyle = "dappled_morning_light";
+  project.worldPreset.referenceImages = [];
+  project.worldPreset.kvGuidance = {
+    notes: ["Keep runtime text out of generated reusable assets."]
+  };
+  project.worldPreset.imagegenWorkflow = {
+    jobDir: path.join(tempDir, "jobs"),
+    outputDir: path.join(tempDir, "generated"),
+    targetAssetIds: ["btn_start"]
+  };
+  project.worldPreset.imagegenAssets = {};
+
+  try {
+    const response = await dispatchApi("POST", "/api/imagegen-job", project);
+    const prompt = response.payload.imagegenReport.job.assets[0].prompt;
+
+    assert.equal(response.statusCode, 200);
+    assert.match(prompt, /cozy puzzle/u);
+    assert.match(prompt, /forest, soft glow, friendly/u);
+    assert.match(prompt, /leaf enamel, painted wood, warm glass/u);
+    assert.match(prompt, /dappled_morning_light/u);
+    assert.doesNotMatch(prompt, /bg_sky_port_home|sky-port|brass-and-blue|星港|空港都市/u);
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+test("external heuristic reviews only reference current screen assets", async () => {
+  const project = getBlankProject();
+  project.revisionMap = {
+    btn_start: {
+      revisionCount: 1,
+      comments: [],
+      directives: {},
+      generationMeta: {
+        usesImagegen: false
+      }
+    }
+  };
+
+  const response = await dispatchApi("POST", "/api/ai-review", project);
+  const review = response.payload.review;
+  const reviewText = JSON.stringify(review);
+  const assetIds = new Set(project.materialSpecSheet.assets.map((asset) => asset.assetId));
+
+  assert.equal(response.statusCode, 200);
+  assert.doesNotMatch(reviewText, /bg_sky_port_home|sky-port|星港|空港都市|真鍮装飾|黒金/u);
+  for (const action of review.suggestedActions) {
+    assert.ok(assetIds.has(action.assetId), `unexpected assetId ${action.assetId}`);
   }
 });
 

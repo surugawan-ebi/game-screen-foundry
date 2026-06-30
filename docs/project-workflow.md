@@ -135,7 +135,7 @@ npm run validate:project -- /path/to/game-repo/creative shop
 }
 ```
 
-`imagegen-assets.json` がない場合でも、`generated-assets/<assetId>.png` が存在すれば読み込み時に自動登録する。
+`imagegen-assets.json` がない場合でも、`generated-assets/<assetId>.png` または `generated-assets/**/<assetId>.png` が存在すれば読み込み時に自動登録する。basename が `material-spec.json` の `assetId` と一致する PNG / JPG / WebP が対象。
 
 ## Default Output Paths
 
@@ -146,6 +146,8 @@ npm run validate:project -- /path/to/game-repo/creative shop
 - imagegen status sidecar: `worldPreset.imagegenWorkflow.jobDir` の sibling にある `.game-creative-generation/imagegen-status/`
 
 これにより、生成ジョブやPNGがツール本体の `examples/` に混ざらない。
+
+既存の `outputDir` が相対パスの場合は画面フォルダ基準で解決する。既存の `jobDir` が相対パスの場合は、manifest 経由の読み込みでは project root 基準、画面フォルダを直接読む場合は画面フォルダ基準で解決する。
 
 ## Reference-Derived Quality Profile
 
@@ -191,3 +193,5 @@ npm run profile:reference -- /path/to/assets/purchased/organized --out /path/to/
 - `material-spec.json` は素材の責務を曖昧にしない。親枠、ヘッダー、行、アイコン、runtime text は別レイヤーとして明示する。
 - `generated-assets/` は最終候補だけを置く。没案や履歴は必要になってから `history/` に分ける。
 - imagegen が失敗したときは placeholder PNG を採用しない。`status=blocked` の JSON sidecar で理由を残す。
+- 外部ゲーム repo の `.gitignore` では `creative/.game-creative-generation/` を除外する。採用済みの `generated-assets/` はゲーム実装で使うならコミット対象にする。
+- `commandHint` に出る絶対パスは実行環境の clone 先なので、別PCや README へ転記するときは読み替える。

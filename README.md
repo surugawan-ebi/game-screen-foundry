@@ -116,6 +116,7 @@ game-repo/
     game-creative-project.json
     .game-creative-generation/
       imagegen-jobs/
+      imagegen-status/
     screens/
       home/
         screen-kv.json
@@ -213,8 +214,8 @@ Optional files:
 - `bundle.json`: 必須 3 JSON をまとめた互換形式。  
   Compatibility format that combines the three required JSON files.
 
-`imagegen-assets.json` がない場合でも、`generated-assets/<assetId>.png` が存在すれば読み込み時に自動登録します。  
-If `imagegen-assets.json` is not present, files named `generated-assets/<assetId>.png` are auto-registered when loading a screen folder.
+`imagegen-assets.json` がない場合でも、`generated-assets/<assetId>.png` または `generated-assets/**/<assetId>.png` が存在すれば読み込み時に自動登録します。
+If `imagegen-assets.json` is not present, files named `generated-assets/<assetId>.png` or `generated-assets/**/<assetId>.png` are auto-registered when loading a screen folder.
 
 ## 空プロジェクトテンプレート / Blank Project Template
 
@@ -258,6 +259,16 @@ creative/
   screens/<screenId>/generated-assets/
     <assetId>.png
 ```
+
+外部ゲーム repo 側の `.gitignore` では、ジョブ作業ファイルだけを除外し、採用済み PNG は必要に応じてコミットしてください。
+In the game repository, ignore only job work files and commit adopted PNGs when they are part of the game:
+
+```gitignore
+creative/.game-creative-generation/
+```
+
+生成される `commandHint` には、このローカル clone の絶対パスが入ることがあります。別の環境や README に貼る場合は、自分の clone 先に読み替えてください。
+Generated `commandHint` values may include this machine's absolute clone path. Replace it with your own clone path before reusing it elsewhere.
 
 生成できない場合は、偽画像やプレースホルダーを置かず、対象 asset の blocker sidecar を返します。
 If generation is blocked or unavailable, do not write fake images or placeholders. Return an asset blocker sidecar instead:
