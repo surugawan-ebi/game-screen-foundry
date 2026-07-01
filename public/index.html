@@ -200,6 +200,25 @@
                     <input id="placementParentInput" type="text" />
                   </label>
                 </div>
+                <div class="placement-tune-row">
+                  <button id="placementTuneToggle" type="button" aria-pressed="false">微調整 OFF</button>
+                  <label class="placement-step-field">
+                    <span>step</span>
+                    <input id="placementStepInput" type="number" step="1" min="1" value="8" />
+                  </label>
+                  <div class="placement-nudge-grid" aria-label="位置微調整">
+                    <button id="placementNudgeUp" type="button" aria-label="上へ移動">↑</button>
+                    <button id="placementNudgeLeft" type="button" aria-label="左へ移動">←</button>
+                    <button id="placementNudgeRight" type="button" aria-label="右へ移動">→</button>
+                    <button id="placementNudgeDown" type="button" aria-label="下へ移動">↓</button>
+                  </div>
+                  <div class="placement-size-actions" aria-label="サイズ微調整">
+                    <button id="placementShrinkWidth" type="button" aria-label="幅を小さく">W-</button>
+                    <button id="placementGrowWidth" type="button" aria-label="幅を大きく">W+</button>
+                    <button id="placementShrinkHeight" type="button" aria-label="高さを小さく">H-</button>
+                    <button id="placementGrowHeight" type="button" aria-label="高さを大きく">H+</button>
+                  </div>
+                </div>
                 <button id="applyPlacementEditButton">配置を反映</button>
               </section>
 

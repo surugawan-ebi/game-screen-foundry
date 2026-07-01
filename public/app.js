@@ -23,6 +23,8 @@ const state = {
   selectedCompositionEditorGroupId: "",
   selectedCompositionGroupId: "",
   selectedPlacementId: "",
+  placementPointerEdit: null,
+  placementTuneMode: false,
   source: {
     kind: "demo"
   }
@@ -73,7 +75,17 @@ const elements = {
   presetInput: document.getElementById("presetInput"),
   placementEditorSelect: document.getElementById("placementEditorSelect"),
   placementHeightInput: document.getElementById("placementHeightInput"),
+  placementGrowHeight: document.getElementById("placementGrowHeight"),
+  placementGrowWidth: document.getElementById("placementGrowWidth"),
+  placementNudgeDown: document.getElementById("placementNudgeDown"),
+  placementNudgeLeft: document.getElementById("placementNudgeLeft"),
+  placementNudgeRight: document.getElementById("placementNudgeRight"),
+  placementNudgeUp: document.getElementById("placementNudgeUp"),
   placementParentInput: document.getElementById("placementParentInput"),
+  placementShrinkHeight: document.getElementById("placementShrinkHeight"),
+  placementShrinkWidth: document.getElementById("placementShrinkWidth"),
+  placementStepInput: document.getElementById("placementStepInput"),
+  placementTuneToggle: document.getElementById("placementTuneToggle"),
   placementWidthInput: document.getElementById("placementWidthInput"),
   placementXInput: document.getElementById("placementXInput"),
   placementYInput: document.getElementById("placementYInput"),
@@ -403,6 +415,10 @@ function getPlacements() {
     : [];
 }
 
+function getSelectedPlacement() {
+  return getPlacements().find((item) => item.placementId === state.selectedPlacementId) || null;
+}
+
 function getMaterialCompositionGroups() {
   return state.materialSpecSheet && Array.isArray(state.materialSpecSheet.compositionGroups)
     ? state.materialSpecSheet.compositionGroups
@@ -435,6 +451,16 @@ function setSpecEditorDisabled(disabled) {
     elements.placementHeightInput,
     elements.placementZInput,
     elements.placementParentInput,
+    elements.placementStepInput,
+    elements.placementTuneToggle,
+    elements.placementNudgeUp,
+    elements.placementNudgeLeft,
+    elements.placementNudgeRight,
+    elements.placementNudgeDown,
+    elements.placementShrinkWidth,
+    elements.placementGrowWidth,
+    elements.placementShrinkHeight,
+    elements.placementGrowHeight,
     elements.applyPlacementEditButton,
     elements.compositionEditorSelect,
     elements.contentInsetTopInput,
@@ -465,6 +491,84 @@ function normalizeInsetForEditor(value) {
   };
 }
 
+function syncPlacementEditorFields(placement) {
+  elements.placementXInput.value = placement ? placement.x : "";
+  elements.placementYInput.value = placement ? placement.y : "";
+  elements.placementWidthInput.value = placement ? placement.width : "";
+  elements.placementHeightInput.value = placement ? placement.height : "";
+  elements.placementZInput.value = placement ? placement.zIndex : "";
+  elements.placementParentInput.value = placement ? placement.parentId || "" : "";
+}
+
+function getPlacementStep() {
+  const value = Number(elements.placementStepInput.value || 8);
+  return Number.isFinite(value) && value > 0 ? Math.round(value) : 8;
+}
+
+function getPlacementBoxFromGeometry(geometry) {
+  return {
+    left: Math.round(geometry.x - geometry.width / 2),
+    top: Math.round(geometry.y - geometry.height / 2),
+    width: Math.max(1, Math.round(geometry.width)),
+    height: Math.max(1, Math.round(geometry.height))
+  };
+}
+
+function findLayerElementByPlacementId(placementId) {
+  return [...elements.screenCanvas.querySelectorAll(".screen-layer")]
+    .find((element) => element.dataset.placementId === placementId) || null;
+}
+
+function updateLivePlacementDom(placement) {
+  const box = getPlacementBoxFromGeometry(placement);
+  const layerElement = findLayerElementByPlacementId(placement.placementId);
+  if (layerElement) {
+    layerElement.style.left = `${box.left}px`;
+    layerElement.style.top = `${box.top}px`;
+    layerElement.style.width = `${box.width}px`;
+    layerElement.style.height = `${box.height}px`;
+  }
+
+  const overlay = elements.screenCanvas.querySelector(".placement-edit-overlay");
+  if (overlay && overlay.dataset.placementId === placement.placementId) {
+    overlay.style.left = `${box.left}px`;
+    overlay.style.top = `${box.top}px`;
+    overlay.style.width = `${box.width}px`;
+    overlay.style.height = `${box.height}px`;
+    const label = overlay.querySelector(".placement-edit-label");
+    if (label) {
+      label.textContent = `${placement.placementId} ${placement.width}x${placement.height} @ ${placement.x},${placement.y}`;
+    }
+  }
+}
+
+function updateRenderLayerGeometry(placement) {
+  if (!state.renderModel || !state.renderModel.screen) {
+    return;
+  }
+  const layer = state.renderModel.screen.layers.find((item) => item.placementId === placement.placementId);
+  if (!layer) {
+    return;
+  }
+  const box = getPlacementBoxFromGeometry(placement);
+  layer.left = box.left;
+  layer.top = box.top;
+  layer.width = box.width;
+  layer.height = box.height;
+}
+
+function applyPlacementGeometry(placement, geometry, { liveDom = true } = {}) {
+  placement.x = Math.round(geometry.x);
+  placement.y = Math.round(geometry.y);
+  placement.width = Math.max(1, Math.round(geometry.width));
+  placement.height = Math.max(1, Math.round(geometry.height));
+  updateRenderLayerGeometry(placement);
+  syncPlacementEditorFields(placement);
+  if (liveDom) {
+    updateLivePlacementDom(placement);
+  }
+}
+
 function renderStructuredSpecEditor() {
   const placements = getPlacements();
   const groups = getMaterialCompositionGroups();
@@ -484,13 +588,10 @@ function renderStructuredSpecEditor() {
     state.selectedPlacementId = placements[0].placementId;
   }
   elements.placementEditorSelect.value = state.selectedPlacementId || "";
-  const placement = placements.find((item) => item.placementId === state.selectedPlacementId) || null;
-  elements.placementXInput.value = placement ? placement.x : "";
-  elements.placementYInput.value = placement ? placement.y : "";
-  elements.placementWidthInput.value = placement ? placement.width : "";
-  elements.placementHeightInput.value = placement ? placement.height : "";
-  elements.placementZInput.value = placement ? placement.zIndex : "";
-  elements.placementParentInput.value = placement ? placement.parentId || "" : "";
+  const placement = getSelectedPlacement();
+  syncPlacementEditorFields(placement);
+  elements.placementTuneToggle.textContent = state.placementTuneMode ? "微調整 ON" : "微調整 OFF";
+  elements.placementTuneToggle.setAttribute("aria-pressed", state.placementTuneMode ? "true" : "false");
 
   setOptions(
     elements.compositionEditorSelect,
@@ -530,7 +631,9 @@ function readNumberField(input, label, { min = -Infinity } = {}) {
 
 async function refreshAfterStructuredSpecEdit(message, button) {
   const busyStartedAt = Date.now();
-  setBusy(button, true, "反映中...");
+  if (button) {
+    setBusy(button, true, "反映中...");
+  }
   setWorkspaceBusy(true, "構造化編集を反映しています...");
   try {
     elements.specInput.value = JSON.stringify(state.materialSpecSheet, null, 2);
@@ -545,21 +648,25 @@ async function refreshAfterStructuredSpecEdit(message, button) {
   } finally {
     await ensureMinimumBusy(busyStartedAt);
     setWorkspaceBusy(false, "待機中");
-    setBusy(button, false);
+    if (button) {
+      setBusy(button, false);
+    }
     renderStructuredSpecEditor();
   }
 }
 
 async function applyPlacementEditor() {
   try {
-    const placement = getPlacements().find((item) => item.placementId === state.selectedPlacementId);
+    const placement = getSelectedPlacement();
     if (!placement) {
       return;
     }
-    placement.x = readNumberField(elements.placementXInput, "x");
-    placement.y = readNumberField(elements.placementYInput, "y");
-    placement.width = readNumberField(elements.placementWidthInput, "w", { min: 1 });
-    placement.height = readNumberField(elements.placementHeightInput, "h", { min: 1 });
+    applyPlacementGeometry(placement, {
+      x: readNumberField(elements.placementXInput, "x"),
+      y: readNumberField(elements.placementYInput, "y"),
+      width: readNumberField(elements.placementWidthInput, "w", { min: 1 }),
+      height: readNumberField(elements.placementHeightInput, "h", { min: 1 })
+    });
     placement.zIndex = readNumberField(elements.placementZInput, "z");
     const parentId = elements.placementParentInput.value.trim();
     if (parentId) {
@@ -572,6 +679,137 @@ async function applyPlacementEditor() {
     window.alert(error.message);
     setActivityStatus(`配置反映失敗: ${error.message}`);
   }
+}
+
+async function adjustSelectedPlacementGeometry(delta, label) {
+  try {
+    const placement = getSelectedPlacement();
+    if (!placement) {
+      return;
+    }
+    applyPlacementGeometry(placement, {
+      x: placement.x + (delta.x || 0),
+      y: placement.y + (delta.y || 0),
+      width: placement.width + (delta.width || 0),
+      height: placement.height + (delta.height || 0)
+    });
+    await refreshAfterStructuredSpecEdit(`${placement.placementId} を${label}しました ${nowLabel()}`, null);
+  } catch (error) {
+    window.alert(error.message);
+    setActivityStatus(`配置微調整失敗: ${error.message}`);
+  }
+}
+
+function togglePlacementTuneMode() {
+  state.placementTuneMode = !state.placementTuneMode;
+  renderStructuredSpecEditor();
+  if (state.renderModel) {
+    renderScreen();
+  }
+  setActivityStatus(`配置微調整 ${state.placementTuneMode ? "ON" : "OFF"} ${nowLabel()}`);
+}
+
+function getCanvasPoint(event) {
+  const rect = elements.screenCanvas.getBoundingClientRect();
+  const screen = state.renderModel ? state.renderModel.screen : null;
+  const scaleX = screen && rect.width ? screen.width / rect.width : 1;
+  const scaleY = screen && rect.height ? screen.height / rect.height : 1;
+  return {
+    x: (event.clientX - rect.left) * scaleX,
+    y: (event.clientY - rect.top) * scaleY
+  };
+}
+
+function getPointerEditGeometry(edit, point) {
+  const dx = point.x - edit.startPoint.x;
+  const dy = point.y - edit.startPoint.y;
+  if (edit.mode === "resize-se") {
+    const width = Math.max(1, edit.startPlacement.width + dx);
+    const height = Math.max(1, edit.startPlacement.height + dy);
+    return {
+      x: edit.startLeft + width / 2,
+      y: edit.startTop + height / 2,
+      width,
+      height
+    };
+  }
+
+  return {
+    x: edit.startPlacement.x + dx,
+    y: edit.startPlacement.y + dy,
+    width: edit.startPlacement.width,
+    height: edit.startPlacement.height
+  };
+}
+
+function handlePlacementPointerMove(event) {
+  const edit = state.placementPointerEdit;
+  if (!edit || event.pointerId !== edit.pointerId) {
+    return;
+  }
+  event.preventDefault();
+  const placement = getSelectedPlacement();
+  if (!placement) {
+    return;
+  }
+  applyPlacementGeometry(placement, getPointerEditGeometry(edit, getCanvasPoint(event)));
+}
+
+function finishPlacementPointerEdit(event) {
+  const edit = state.placementPointerEdit;
+  if (!edit || event.pointerId !== edit.pointerId) {
+    return;
+  }
+  event.preventDefault();
+  window.removeEventListener("pointermove", handlePlacementPointerMove);
+  window.removeEventListener("pointerup", finishPlacementPointerEdit);
+  window.removeEventListener("pointercancel", finishPlacementPointerEdit);
+  state.placementPointerEdit = null;
+
+  const placement = getSelectedPlacement();
+  if (!placement) {
+    return;
+  }
+  const moved = placement.x !== edit.startPlacement.x
+    || placement.y !== edit.startPlacement.y
+    || placement.width !== edit.startPlacement.width
+    || placement.height !== edit.startPlacement.height;
+  if (!moved) {
+    return;
+  }
+  refreshAfterStructuredSpecEdit(`${placement.placementId} の微調整を反映しました ${nowLabel()}`, null);
+}
+
+function startPlacementPointerEdit(event, mode) {
+  if (!state.placementTuneMode || !state.renderModel) {
+    return;
+  }
+  const placement = getSelectedPlacement();
+  if (!placement) {
+    return;
+  }
+  event.preventDefault();
+  event.stopPropagation();
+  const startPoint = getCanvasPoint(event);
+  state.placementPointerEdit = {
+    pointerId: event.pointerId,
+    mode,
+    startPoint,
+    startPlacement: {
+      x: placement.x,
+      y: placement.y,
+      width: placement.width,
+      height: placement.height
+    },
+    startLeft: placement.x - placement.width / 2,
+    startTop: placement.y - placement.height / 2
+  };
+  if (event.currentTarget.setPointerCapture) {
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+  window.addEventListener("pointermove", handlePlacementPointerMove);
+  window.addEventListener("pointerup", finishPlacementPointerEdit);
+  window.addEventListener("pointercancel", finishPlacementPointerEdit);
 }
 
 async function applyCompositionInsetEditor() {
@@ -929,6 +1167,42 @@ function renderCompositionOverlays(group) {
   });
 }
 
+function renderPlacementEditOverlay() {
+  if (!state.placementTuneMode || !state.renderModel || !state.selectedPlacementId) {
+    return;
+  }
+  const layer = state.renderModel.screen.layers.find((item) => item.placementId === state.selectedPlacementId);
+  if (!layer) {
+    return;
+  }
+
+  const overlay = document.createElement("div");
+  overlay.className = "placement-edit-overlay";
+  overlay.dataset.placementId = layer.placementId;
+  overlay.style.left = `${layer.left}px`;
+  overlay.style.top = `${layer.top}px`;
+  overlay.style.width = `${layer.width}px`;
+  overlay.style.height = `${layer.height}px`;
+  overlay.style.zIndex = "10020";
+  overlay.addEventListener("pointerdown", (event) => {
+    const target = event.target;
+    const mode = target && target.classList && target.classList.contains("placement-resize-handle")
+      ? "resize-se"
+      : "move";
+    startPlacementPointerEdit(event, mode);
+  });
+
+  const label = document.createElement("span");
+  label.className = "placement-edit-label";
+  label.textContent = `${layer.placementId} ${layer.width}x${layer.height} @ ${Math.round(layer.left + layer.width / 2)},${Math.round(layer.top + layer.height / 2)}`;
+  overlay.appendChild(label);
+
+  const handle = document.createElement("span");
+  handle.className = "placement-resize-handle";
+  overlay.appendChild(handle);
+  elements.screenCanvas.appendChild(overlay);
+}
+
 function renderScreen() {
   const screen = state.renderModel.screen;
   const selectedGroup = getSelectedCompositionGroup();
@@ -978,6 +1252,7 @@ function renderScreen() {
   safeRect.style.height = `${screen.height - (safe.top || 0) - (safe.bottom || 0)}px`;
   elements.screenCanvas.appendChild(safeRect);
   renderCompositionOverlays(selectedGroup);
+  renderPlacementEditOverlay();
 }
 
 function renderReview() {
@@ -2462,6 +2737,31 @@ elements.generateButton.addEventListener("click", showGeneratedResults);
 elements.validateButton.addEventListener("click", validateWorkspaceSpec);
 elements.exportReportButton.addEventListener("click", buildImplementationReport);
 elements.applyPlacementEditButton.addEventListener("click", applyPlacementEditor);
+elements.placementTuneToggle.addEventListener("click", togglePlacementTuneMode);
+elements.placementNudgeUp.addEventListener("click", () => {
+  adjustSelectedPlacementGeometry({ y: -getPlacementStep() }, "上へ移動");
+});
+elements.placementNudgeLeft.addEventListener("click", () => {
+  adjustSelectedPlacementGeometry({ x: -getPlacementStep() }, "左へ移動");
+});
+elements.placementNudgeRight.addEventListener("click", () => {
+  adjustSelectedPlacementGeometry({ x: getPlacementStep() }, "右へ移動");
+});
+elements.placementNudgeDown.addEventListener("click", () => {
+  adjustSelectedPlacementGeometry({ y: getPlacementStep() }, "下へ移動");
+});
+elements.placementShrinkWidth.addEventListener("click", () => {
+  adjustSelectedPlacementGeometry({ width: -getPlacementStep() }, "幅縮小");
+});
+elements.placementGrowWidth.addEventListener("click", () => {
+  adjustSelectedPlacementGeometry({ width: getPlacementStep() }, "幅拡大");
+});
+elements.placementShrinkHeight.addEventListener("click", () => {
+  adjustSelectedPlacementGeometry({ height: -getPlacementStep() }, "高さ縮小");
+});
+elements.placementGrowHeight.addEventListener("click", () => {
+  adjustSelectedPlacementGeometry({ height: getPlacementStep() }, "高さ拡大");
+});
 elements.applyCompositionInsetButton.addEventListener("click", applyCompositionInsetEditor);
 elements.buildRegenPromptButton.addEventListener("click", buildRegenerationPrompt);
 elements.buildReferenceProfileButton.addEventListener("click", buildReferenceQualityProfileFromPath);

@@ -656,6 +656,49 @@ textarea {
   filter: saturate(1.12) brightness(1.06);
 }
 
+.placement-edit-overlay {
+  position: absolute;
+  border: 2px solid rgba(241, 199, 116, 0.95);
+  box-shadow:
+    0 0 0 1px rgba(7, 11, 17, 0.72),
+    0 0 0 4px rgba(241, 199, 116, 0.16);
+  cursor: move;
+  touch-action: none;
+}
+
+.placement-edit-label {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 5px);
+  max-width: 260px;
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: rgba(7, 11, 17, 0.88);
+  border: 1px solid rgba(241, 199, 116, 0.42);
+  color: #f3d79b;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+.placement-resize-handle {
+  position: absolute;
+  right: -8px;
+  bottom: -8px;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  background: #f1c774;
+  border: 2px solid rgba(7, 11, 17, 0.86);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.36);
+  cursor: nwse-resize;
+  touch-action: none;
+}
+
 .safe-area {
   position: absolute;
   border: 1px dashed rgba(121, 191, 208, 0.56);
@@ -739,6 +782,80 @@ textarea {
 
 .field-grid-placement {
   grid-template-columns: repeat(5, minmax(58px, 1fr)) minmax(100px, 1.4fr);
+}
+
+.placement-tune-row {
+  display: grid;
+  grid-template-columns: minmax(112px, max-content) minmax(72px, 92px) minmax(104px, max-content) minmax(160px, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+
+.placement-step-field {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 4px;
+  min-width: 0;
+  color: var(--muted);
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+}
+
+.placement-step-field input {
+  width: 100%;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid rgba(126, 199, 215, 0.22);
+  background: rgba(7, 11, 17, 0.72);
+  color: var(--text);
+  padding: 0 9px;
+}
+
+.placement-nudge-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 32px);
+  grid-template-rows: repeat(2, 32px);
+  gap: 4px;
+}
+
+.placement-nudge-grid button,
+.placement-size-actions button,
+#placementTuneToggle {
+  min-height: 32px;
+  padding: 0 9px;
+  border-radius: 10px;
+  font-size: 12px;
+}
+
+#placementNudgeUp {
+  grid-column: 2;
+}
+
+#placementNudgeLeft {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+#placementNudgeRight {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+#placementNudgeDown {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+.placement-size-actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(36px, 1fr));
+  gap: 6px;
+}
+
+#placementTuneToggle[aria-pressed="true"] {
+  border-color: rgba(241, 199, 116, 0.56);
+  background: rgba(241, 199, 116, 0.16);
+  color: #f3d79b;
 }
 
 .field-grid-inset {
@@ -1743,8 +1860,13 @@ textarea {
 
   .spec-editor-grid,
   .field-grid-placement,
+  .placement-tune-row,
   .reference-quality-controls {
     grid-template-columns: 1fr;
+  }
+
+  .placement-size-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .app-shell {

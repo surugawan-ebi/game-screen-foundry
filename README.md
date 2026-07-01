@@ -29,8 +29,8 @@ The project is currently beta-quality. It is useful for validating a production 
   Shows the generated PNG version, with a structural wireframe-style preview for layout checks.
 - エディタ内JSON、レンダリング可能性、composition quality をブラウザ内でチェックできます。  
   Checks editor JSON, renderability, and composition quality in the browser.
-- placement と composition inset をフォームで編集し、JSON と仮組みプレビューへ反映できます。
-  Edits placements and composition insets through structured controls, then syncs JSON and draft preview.
+- placement と composition inset をフォームやプレビュー上の微調整で編集し、JSON と仮組みプレビューへ反映できます。
+  Edits placements and composition insets through structured controls and preview fine-tuning, then syncs JSON and draft preview.
 - 素材ごとのコメント、固定、履歴、再生成キューを扱います。  
   Tracks per-asset comments, locks, history, and regeneration queues.
 - 選択した素材の Codex/imagegen 向け依頼文を作ります。  

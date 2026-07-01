@@ -947,6 +947,10 @@ test("frontend exposes the image generation flow tracker", () => {
   assert.match(html, /id="placementEditorSelect"/u);
   assert.match(html, /id="compositionEditorSelect"/u);
   assert.match(html, /id="applyPlacementEditButton"/u);
+  assert.match(html, /id="placementTuneToggle"/u);
+  assert.match(html, /id="placementStepInput"/u);
+  assert.match(html, /id="placementNudgeUp"/u);
+  assert.match(html, /id="placementGrowWidth"/u);
   assert.match(html, /構成グループ/u);
   assert.match(html, /id="compositionSummary"/u);
   assert.match(html, /id="compositionGroupList"/u);
@@ -976,6 +980,10 @@ test("frontend exposes the image generation flow tracker", () => {
   assert.match(js, /function loadSavedRegenerationQueue/u);
   assert.match(js, /function renderStructuredSpecEditor/u);
   assert.match(js, /function applyPlacementEditor/u);
+  assert.match(js, /function togglePlacementTuneMode/u);
+  assert.match(js, /function adjustSelectedPlacementGeometry/u);
+  assert.match(js, /function startPlacementPointerEdit/u);
+  assert.match(js, /function renderPlacementEditOverlay/u);
   assert.match(js, /function applyCompositionInsetEditor/u);
   assert.match(js, /function renderValidationReport/u);
   assert.match(js, /function renderCompositionGroups/u);
@@ -998,6 +1006,9 @@ test("frontend exposes the image generation flow tracker", () => {
   assert.match(css, /\.asset-inspector-row/u);
   assert.match(css, /\.spec-editor-grid/u);
   assert.match(css, /\.screen-layer\.is-selected-placement/u);
+  assert.match(css, /\.placement-tune-row/u);
+  assert.match(css, /\.placement-edit-overlay/u);
+  assert.match(css, /\.placement-resize-handle/u);
   assert.match(css, /\.composition-group-card/u);
   assert.match(css, /\.composition-content-outline/u);
   assert.match(css, /\.reference-quality-panel/u);
