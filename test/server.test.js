@@ -257,6 +257,33 @@ test("imagegen output fallback is generic and not demo-specific", () => {
   assert.doesNotMatch(job.outputDir, /examples\/sky-port-home/u);
 });
 
+test("imagegen jobs carry layout context, canvas coverage rules, and agent-neutral hints", () => {
+  const project = getDemoProject();
+  project.worldPreset.imagegenAssets = {};
+  project.worldPreset.imagegenWorkflow = {
+    targetAssetIds: ["btn_start_sortie", "frame_daily_mission_outer"]
+  };
+
+  const job = buildImagegenJob(prepareInput(project), {
+    jobId: "imagegen_test_layout_context"
+  });
+
+  assert.equal(job.assets.length, 2);
+  for (const assetJob of job.assets) {
+    assert.ok(assetJob.layoutContext, `${assetJob.assetId} must carry layoutContext`);
+    assert.ok(Array.isArray(assetJob.layoutContext.issues));
+    assert.ok(Array.isArray(assetJob.layoutContext.stackings));
+    assert.match(assetJob.prompt, /Canvas coverage:/u);
+  }
+
+  const frameJob = job.assets.find((assetJob) => assetJob.assetId === "frame_daily_mission_outer");
+  assert.match(frameJob.prompt, /Decoration budget:/u);
+
+  assert.ok(job.commandHints.codex);
+  assert.match(job.commandHints.claudeCode, /claude -p/u);
+  assert.match(job.productBoundary.expectedProcessor, /Claude Code/u);
+});
+
 test("loaded screen folders auto-register nested generated assets and resolve workflow paths", async () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "gcgt-nested-assets-"));
   const project = getBlankProject();
@@ -622,7 +649,7 @@ test("daily mission rows use a shared internal layout grid", () => {
     );
     assert.deepEqual(
       localBox(placementById[`daily_mission_btn_${kind}`], row),
-      { x: 201, y: 8, width: 84, height: 38 },
+      { x: 201, y: 9, width: 84, height: 38 },
       `daily_mission_btn_${kind} must use the shared action slot`
     );
     assert.deepEqual(
@@ -641,12 +668,12 @@ test("daily mission rows use a shared internal layout grid", () => {
     const row = placementById[`daily_mission_row_${kind}`];
     assert.deepEqual(
       localBox(placementById[`daily_mission_reward_${kind}`], row),
-      { x: 153, y: 10, width: 44, height: 34 },
+      { x: 149, y: 13, width: 48, height: 34 },
       `daily_mission_reward_${kind} must use the shared reward chip slot`
     );
     assert.deepEqual(
       overlayById[`ov_mission_${kind}_reward`].slot,
-      { x: 1, y: 18, width: 42, height: 14 },
+      { x: 0, y: 16, width: 48, height: 14 },
       `ov_mission_${kind}_reward must use the shared reward value slot`
     );
   }
@@ -767,8 +794,16 @@ test("major sibling surfaces have no unapproved overlaps", async () => {
   const allowed = project.materialSpecSheet.assemblyPolicy.layoutSafetyPolicy.allowedOverlaps
     .map((item) => `${item.source}->${item.target}`);
   assert.deepEqual(allowed, [
+    "top_profile_hub_badge->top_profile_hub_shell",
     "gift_cta_badge->gift_cta_crate",
-    "gacha_cta_orb->gacha_cta_shell"
+    "gacha_cta_orb->gacha_cta_shell",
+    "player_profile_header_tab->player_profile_outer",
+    "player_profile_tile_achievement->player_profile_outer",
+    "player_profile_tile_codex->player_profile_outer",
+    "player_profile_tile_ranking->player_profile_outer",
+    "player_profile_tile_friends->player_profile_outer",
+    "event_banner_live_ribbon->event_banner_outer",
+    "event_banner_live_ribbon->event_banner_art"
   ]);
 
   const demoResponse = await dispatchApi("GET", "/api/demo");

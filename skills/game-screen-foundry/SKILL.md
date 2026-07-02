@@ -1,6 +1,6 @@
 ---
 name: game-screen-foundry
-description: Build, modify, validate, and review Game Screen Foundry projects and screen folders. Use when Codex needs to create or edit `screen-kv.json`, `material-spec.json`, `world-preset.json`, `imagegen-assets.json`, `game-creative-project.json`, generated asset workflows, regeneration prompts, or public-beta quality checks for this local game UI asset workbench.
+description: Build, modify, validate, and review Game Screen Foundry projects and screen folders. Use when an AI agent (Codex or Claude Code) needs to create or edit `screen-kv.json`, `material-spec.json`, `world-preset.json`, `imagegen-assets.json`, `game-creative-project.json`, generated asset workflows, imagegen handoff jobs, regeneration prompts, or quality checks for this local game UI asset workbench.
 ---
 
 # Game Screen Foundry
@@ -34,7 +34,21 @@ Use this skill for Game Screen Foundry project work: creating screen folders, ed
 - Do not commit proprietary external game assets into this tool repository.
 - Do not commit full reference profiles that contain machine-local source paths; commit only compact `qualityProfile.referenceDerived` data when needed.
 
+## Imagegen Handoff Execution
+
+- Handoff jobs under `imagegen-jobs/<jobId>.json` are agent-neutral: Codex CLI and Claude Code can both process them. Follow `<jobId>.prompt.md`, generate each asset with the available image generation path, and save each accepted PNG exactly to its `outputPath`.
+- Each job asset carries `qualityPlan`, `compositionContexts`, and `layoutContext` (overlap clearances, stacking partners, open layout issues). Respect the canvas coverage rule: fill the asset canvas edge-to-edge and never let artwork spill past it.
+- If generation is unavailable, write the blocker sidecar described in the job JSON. Never save placeholder or wireframe images.
+
 ## Validation
+
+Before handing back spec edits, run layout and composition checks:
+
+```sh
+npm run validate:project -- /path/to/creative [screen-id]
+```
+
+This validates renderability, composition groups, and layout quality: overlap padding between stacked assets, text slot fit at the declared font size, and horizontal/vertical guide-line alignment. Fix `fail` checks; treat `warn` checks as review items.
 
 For code, docs, schema, template, or workflow changes, run:
 

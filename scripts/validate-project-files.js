@@ -244,6 +244,10 @@ function validateScreenFolder(folderPath) {
     !model.compositionQuality || model.compositionQuality.failCount === 0,
     `${folderPath} composition quality has ${model.compositionQuality.failCount} failing group(s)`
   );
+  assert(
+    !model.layoutQuality || model.layoutQuality.failCount === 0,
+    `${folderPath} layout quality has ${model.layoutQuality ? model.layoutQuality.failCount : 0} failing check(s): ${(model.layoutChecks || []).filter((check) => check.status === "fail").map((check) => check.message).join(" / ")}`
+  );
 }
 
 function validateProjectFolder(folderPath) {
@@ -257,6 +261,10 @@ function validateProjectFolder(folderPath) {
   assert(
     !model.compositionQuality || model.compositionQuality.failCount === 0,
     `${folderPath} default composition quality has ${model.compositionQuality.failCount} failing group(s)`
+  );
+  assert(
+    !model.layoutQuality || model.layoutQuality.failCount === 0,
+    `${folderPath} default layout quality has ${model.layoutQuality ? model.layoutQuality.failCount : 0} failing check(s): ${(model.layoutChecks || []).filter((check) => check.status === "fail").map((check) => check.message).join(" / ")}`
   );
 }
 

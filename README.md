@@ -27,8 +27,8 @@ The project is currently beta-quality. It is useful for validating a production 
   Assembles the screen from separate layers such as panels, buttons, icons, backgrounds, badges, runtime text, and overlays.
 - 生成済み PNG 版を表示し、構造確認用の wireframe preview も確認できます。  
   Shows the generated PNG version, with a structural wireframe-style preview for layout checks.
-- エディタ内JSON、レンダリング可能性、composition quality をブラウザ内でチェックできます。  
-  Checks editor JSON, renderability, and composition quality in the browser.
+- エディタ内JSON、レンダリング可能性、composition quality、layout quality をブラウザ内でチェックできます。layout quality は、素材が重なる際の padding 十分性、フォントサイズを考慮したテキストスロットの収まり、素材同士の横/縦ガイドラインの整列を検証します。
+  Checks editor JSON, renderability, composition quality, and layout quality in the browser. Layout quality validates overlap padding between stacked assets, font-size-aware text slot fit, and horizontal/vertical guide-line alignment.
 - placement と composition inset をフォームやプレビュー上の微調整で編集し、JSON と仮組みプレビューへ反映できます。
   Edits placements and composition insets through structured controls and preview fine-tuning, then syncs JSON and draft preview.
 - 素材ごとのコメント、固定、履歴、再生成キューを扱います。  
@@ -159,8 +159,8 @@ See [docs/project-workflow.md](docs/project-workflow.md) for the full operationa
 ファイル契約の短い説明は [docs/schema.md](docs/schema.md) にあります。  
 For the concise file contract, see [docs/schema.md](docs/schema.md).
 
-フォーマットチェックは `npm run validate` で実行できます。`compositionGroups` の placement / overlay 参照整合性、`layerFitRules`、子要素が `contentInset` 内に収まるかを確認します。  
-Run `npm run validate` for format checks, including `compositionGroups` placement/overlay references, `layerFitRules`, and child-content inset validation.
+フォーマットチェックは `npm run validate` で実行できます。`compositionGroups` の placement / overlay 参照整合性、`layerFitRules`、子要素が `contentInset` 内に収まるか、および layout quality(重なり padding、テキスト収まり、整列ライン)を確認します。
+Run `npm run validate` for format checks, including `compositionGroups` placement/overlay references, `layerFitRules`, child-content inset validation, and layout quality (overlap padding, text fit, guide-line alignment).
 
 販売素材レベルの品質基準は [docs/quality-rubric.md](docs/quality-rubric.md) にあります。  
 The commercial-grade asset quality rubric is documented in [docs/quality-rubric.md](docs/quality-rubric.md).
@@ -287,7 +287,8 @@ Environment variables:
 
 - `BETA_AI_MODE=auto|codex|heuristic|mock`
 - `BETA_CODEX_BIN=/path/to/codex`
-- `BETA_IMAGEGEN_MODE=off|mock|codex|command`
+- `BETA_CLAUDE_BIN=/path/to/claude`
+- `BETA_IMAGEGEN_MODE=off|mock|codex|claude|command`
 - `BETA_IMAGEGEN_AUTORUN=1`
 - `BETA_IMAGEGEN_RUNNER='your-command'`
 - `BETA_IMAGEGEN_TIMEOUT_MS=120000`
@@ -295,6 +296,12 @@ Environment variables:
 
 デフォルトでは imagegen 実行は off です。アプリは job file と prompt text を作り、画像生成自体は外部で行う想定です。  
 By default, imagegen execution is off. The app creates job files and prompt text, then expects you to generate PNGs externally.
+
+handoff job はエージェント中立です。job JSON の `commandHints` に Codex CLI 用と Claude Code 用の実行例が入ります。Claude Code から使う場合は `<jobId>.prompt.md` をそのまま渡すか、`BETA_IMAGEGEN_MODE=claude` で `claude -p` を起動できます(Claude 側に画像生成手段、例: imagegen MCP ツールが必要です)。
+Handoff jobs are agent-neutral. The job JSON `commandHints` includes both a Codex CLI and a Claude Code invocation. From Claude Code, pass `<jobId>.prompt.md` directly, or set `BETA_IMAGEGEN_MODE=claude` to launch `claude -p` (Claude needs an image generation path, such as an imagegen MCP tool).
+
+各 job asset には `qualityPlan` に加えて `layoutContext`(重なり相手とのクリアランス、未解決のレイアウト指摘)が入り、プロンプトには「キャンバスを端まで使い、はみ出さない」canvas coverage ルールと、contentInset から計算した装飾バジェット(装飾は外周◯pxまで、内側はカームな地)が注入されます。
+Each job asset carries `layoutContext` (stacking clearances and open layout findings) in addition to `qualityPlan`. Prompts include a canvas coverage rule (fill the canvas edge-to-edge, never spill past it) and a decoration budget computed from `contentInset` (ornament stays within the outer band; the interior stays a calm surface).
 
 ## 参照品質プロファイル / Reference Quality Profile
 
@@ -355,14 +362,18 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines and [SECURITY
 
 ## AI 導入 / AI Adoption
 
-Codex 向け skill を [skills/game-screen-foundry](skills/game-screen-foundry) に同梱しています。別環境で使う場合は、このフォルダを `$CODEX_HOME/skills` または `~/.codex/skills` にコピーしてください。  
-A Codex skill is bundled at [skills/game-screen-foundry](skills/game-screen-foundry). To use it in another environment, copy that folder into `$CODEX_HOME/skills` or `~/.codex/skills`.
+Codex / Claude Code 兼用の skill を [skills/game-screen-foundry](skills/game-screen-foundry) に同梱しています。
+An agent-neutral skill for Codex and Claude Code is bundled at [skills/game-screen-foundry](skills/game-screen-foundry).
 
 この repo から直接インストールする場合:  
 To install it directly from this repository:
 
 ```sh
+# Codex ($CODEX_HOME/skills または ~/.codex/skills)
 npm run skill:install
+
+# Claude Code ($CLAUDE_CONFIG_DIR/skills または ~/.claude/skills)
+npm run skill:install:claude
 ```
 
 この skill は、画面フォルダ作成、素材仕様編集、再生成レビュー、release check の手順を AI に渡すための最小ガイドです。  

@@ -1421,7 +1421,7 @@ function renderValidationReport(report) {
 
   if (!report) {
     elements.validationStatus.textContent = "未実行";
-    elements.validationOutput.textContent = "エディタ内の3つのJSON、レンダリング可能性、composition quality を確認します。";
+    elements.validationOutput.textContent = "エディタ内の3つのJSON、レンダリング可能性、composition quality、layout quality(重なりpadding・テキスト収まり・整列ライン)を確認します。";
     return;
   }
 
@@ -1434,8 +1434,9 @@ function renderValidationReport(report) {
       `size: ${report.summary.size}`,
       `assets: ${report.summary.assetCount}`,
       `layers: ${report.summary.layerCount}`,
-      `composition: ${report.summary.compositionStatus} ${report.summary.compositionScore}`
-    ].forEach((text) => {
+      `composition: ${report.summary.compositionStatus} ${report.summary.compositionScore}`,
+      report.summary.layoutStatus ? `layout: ${report.summary.layoutStatus} ${report.summary.layoutScore}` : ""
+    ].filter(Boolean).forEach((text) => {
       const chip = document.createElement("span");
       chip.textContent = text;
       summary.appendChild(chip);

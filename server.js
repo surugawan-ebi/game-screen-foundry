@@ -958,7 +958,9 @@ function handleCompositionQuality(body) {
       mode: getAiMode()
     },
     compositionQuality: renderModel.compositionQuality,
-    compositionGroups: renderModel.compositionGroups
+    compositionGroups: renderModel.compositionGroups,
+    layoutQuality: renderModel.layoutQuality,
+    layoutChecks: renderModel.layoutChecks
   };
 }
 
@@ -1002,6 +1004,22 @@ function handleValidateWorkspace(body) {
         message: "Screen renders no layers."
       });
     }
+    const layout = renderModel.layoutQuality;
+    const layoutIssues = (renderModel.layoutChecks || []).filter((check) => check.status !== "pass");
+    for (const issue of layoutIssues.slice(0, 40)) {
+      diagnostics.push({
+        severity: issue.status === "fail" ? "error" : "warning",
+        code: `layout_${issue.code}`,
+        message: issue.message
+      });
+    }
+    if (layoutIssues.length > 40) {
+      diagnostics.push({
+        severity: "warning",
+        code: "layout_more_issues",
+        message: `${layoutIssues.length - 40} more layout issue(s) were truncated.`
+      });
+    }
 
     return {
       ok: true,
@@ -1014,7 +1032,10 @@ function handleValidateWorkspace(body) {
         layerCount: renderModel.screen.layers.length,
         compositionStatus: composition ? composition.status : "pass",
         compositionScore: composition ? composition.score : 100,
-        compositionGroupCount: composition ? composition.groupCount : 0
+        compositionGroupCount: composition ? composition.groupCount : 0,
+        layoutStatus: layout ? layout.status : "pass",
+        layoutScore: layout ? layout.score : 100,
+        layoutIssueCount: layoutIssues.length
       },
       diagnostics
     };

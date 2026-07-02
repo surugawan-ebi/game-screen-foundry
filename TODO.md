@@ -36,10 +36,15 @@ This file is the handoff note for the public beta. The current repository is usa
 
 - Reduce coupling between demo data and app startup.
 - Consider replacing ad-hoc HTTP server routing with a small framework only if route complexity keeps growing.
-- Extend validation from placement boxes to PNG alpha bbox, transparent gutter thresholds, safe label lanes, max runtime text length, max lines, CTA count, and child count.
+- Extend validation from placement boxes to PNG alpha bbox, transparent gutter thresholds, CTA count, and child count. (Safe label lanes, runtime text fit, and max lines are now covered by the layout quality review.)
 - Add a clean-start/reset generated assets command for applying the tool to repos that already contain manually produced assets.
 
 ## Completed Handoff Cleanup
+
+- Added a shared layout quality checker (`lib/layout-quality.js`): overlap padding between stacked assets, undeclared sibling overlap detection, parent-overflow warnings, font-size-aware text slot fit with CJK-aware width estimation, overlay slot padding, and horizontal/vertical guide-line alignment near-miss detection. Wired into the render model, `/api/composition-quality`, the browser spec check panel, `npm run validate`, and `npm run validate:project`.
+- Injected layout context into imagegen jobs and prompts: per-asset stacking clearances, open layout findings, an explicit canvas coverage rule (fill edge-to-edge, never spill past the canvas), and a decoration budget computed from composition `contentInset` so frame ornament stays in the outer band and the content surface stays calm.
+- Made imagegen handoff jobs agent-neutral: `commandHints` for Codex CLI and Claude Code, `BETA_IMAGEGEN_MODE=claude`, `BETA_CLAUDE_BIN`, and `npm run skill:install:claude` for installing the bundled skill into `~/.claude/skills`.
+- Cleaned the Sky Port HOME demo against the new layout review: resolved a real coin-capsule/mail-button overlap, snapped top bar / CTA row / mission row / profile tile guide lines, declared intentional decorative overhangs in `allowedOverlaps`, and enlarged the mission reward value slot to a readable font size.
 
 - Added `docs/schema.md` with the public file contract for project manifests, screen folders, `screen-kv.json`, `material-spec.json`, `world-preset.json`, and `imagegen-assets.json`.
 - Added `schemas/project-manifest.schema.json`.

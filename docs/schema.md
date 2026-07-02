@@ -239,6 +239,45 @@ Important rules:
 - Major sibling overlaps should be explicit in
   `assemblyPolicy.layoutSafetyPolicy.allowedOverlaps`.
 
+### `assemblyPolicy.layoutSafetyPolicy`
+
+The layout safety policy drives the automated layout quality review (overlap
+padding, text slot fit, and guide-line alignment). All fields are optional:
+
+- `mode`: `explicit_overlap_only` (default) makes undeclared partial sibling
+  overlaps fail; other values downgrade them to warnings.
+- `siblingOverlapDefault`: `forbidden` (default) or `allowed`.
+- `allowedOverlaps`: array of `{ "source", "target", "reason", "minPadding" }`
+  entries. `source`/`target` accept placement ids or asset ids, in either
+  order. Declared pairs are exempt from undeclared-overlap failures,
+  parent-overflow warnings, and alignment near-miss warnings. Optional
+  `minPadding` overrides the required clearance for contained overlaps.
+- `overlapPaddingDefault` (falls back to `parentPaddingDefault`, default 8):
+  minimum clearance in px required when one asset is stacked fully inside
+  another asset's box. A stacked asset touching the underlying edge fails; a
+  clearance below this value warns.
+- `overlaySlotPaddingDefault` (default 4): minimum clearance between a runtime
+  overlay slot and its target placement edge. Slots that span the full target
+  on an axis are treated as intentional full-bleed lanes.
+- `alignmentTolerance` (default 4): near-miss window in px. Sibling placements
+  (same parent, or both top-level) that share a row or column and miss a shared
+  top/bottom/left/right/center line by up to this value produce a warning with
+  the suggested snap values.
+- `minFontSize` (default 10): readability floor for resolved overlay font
+  sizes at 1x.
+
+Layout quality review codes include `overlap_undeclared`, `overlap_sticks_out`,
+`overlap_padding_missing`, `overlap_padding_tight`, `child_overflows_parent`,
+`overlay_outside_target`, `overlay_slot_padding_tight`, `text_overflow_x`,
+`text_overflow_y`, `text_tight_x`, `text_max_lines`, `text_font_small`,
+`text_sample_missing`, `alignment_near_miss_x`, `alignment_near_miss_y`, and
+`size_near_miss`. Text fit is estimated from `sampleText`, `fontSize`,
+`lineHeight`, and `letterSpacing` with CJK-aware character widths, so give each
+text overlay a representative worst-case `sampleText`. The review runs in
+`npm run validate`, `npm run validate:project`, the browser spec check panel,
+and `/api/composition-quality`, and per-asset findings are injected into
+imagegen job prompts.
+
 Example:
 
 ```json
