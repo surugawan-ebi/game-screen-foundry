@@ -794,7 +794,7 @@
   ],
   "designRules": {
     "spacingUnit": 4,
-    "frameThickness": 10,
+    "frameThickness": 8,
     "iconTextCenterTolerance": 2,
     "principles": [
       "アイコンとテキストラベルは同一の水平センターラインに揃える",

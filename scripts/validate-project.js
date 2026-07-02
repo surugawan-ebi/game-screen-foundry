@@ -3,7 +3,7 @@
 
 const path = require("path");
 
-const { auditAssetScaling } = require("../lib/asset-scaling");
+const { auditAssetScaling, suggestCraftStyleForInput } = require("../lib/asset-scaling");
 const { buildCompositionReview } = require("../lib/composition-quality");
 const { buildLayoutReview } = require("../lib/layout-quality");
 const { generateRenderModel } = require("../lib/generator");
@@ -64,6 +64,11 @@ function main() {
       `Asset scaling audit has ${scalingFailures.length} failing check(s):`,
       ...scalingFailures.map((check) => `- [${check.code}] ${check.message}`)
     ].join("\n"));
+  }
+
+  const craftSuggestion = suggestCraftStyleForInput(input);
+  if (craftSuggestion) {
+    process.stderr.write(`hint [craft_style_unset] designRules.craftStyle is not declared, so the craft quality audit is off. Based on ${craftSuggestion.sampledCount} adopted PNG(s), "${craftSuggestion.craftStyle}" fits this project: ${craftSuggestion.reason}. Add it to world-preset.json designRules.\n`);
   }
 
   process.stdout.write([

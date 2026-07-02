@@ -2,10 +2,22 @@
   "id": "preset_blank_project_01",
   "name": "Blank Project Default",
   "genre": "game prototype",
-  "moodKeywords": ["clean", "readable", "adventure"],
-  "negativeKeywords": ["watermark", "illegible text", "marketing screenshot"],
+  "moodKeywords": [
+    "clean",
+    "readable",
+    "adventure"
+  ],
+  "negativeKeywords": [
+    "watermark",
+    "illegible text",
+    "marketing screenshot"
+  ],
   "shapeLanguage": "rounded_game_ui",
-  "materialKeywords": ["painted UI", "soft highlight", "clear silhouette"],
+  "materialKeywords": [
+    "painted UI",
+    "soft highlight",
+    "clear silhouette"
+  ],
   "palette": {
     "primary": "#6f8fd8",
     "secondary": "#26344a",
@@ -104,7 +116,22 @@
     ]
   },
   "imagegenWorkflow": {
-    "targetAssetIds": ["bg_home", "btn_start"]
+    "targetAssetIds": [
+      "bg_home",
+      "btn_start"
+    ]
   },
-  "imagegenAssets": {}
+  "imagegenAssets": {},
+  "designRules": {
+    "spacingUnit": 4,
+    "frameThickness": 10,
+    "iconTextCenterTolerance": 2,
+    "minTouchTarget": 44,
+    "craftStyle": "outlined_cel",
+    "principles": [
+      "アイコンとテキストラベルは同一の水平センターラインに揃える",
+      "装飾フレームは外周バンドに収め、内側の地はカームに保つ",
+      "素材は最終ピクセルサイズで生成し、実行時の引き伸ばしに頼らない"
+    ]
+  }
 }

@@ -803,7 +803,8 @@ test("major sibling surfaces have no unapproved overlaps", async () => {
     "player_profile_tile_ranking->player_profile_outer",
     "player_profile_tile_friends->player_profile_outer",
     "event_banner_live_ribbon->event_banner_outer",
-    "event_banner_live_ribbon->event_banner_art"
+    "event_banner_live_ribbon->event_banner_art",
+    "player_profile_emblem->player_profile_outer"
   ]);
 
   const demoResponse = await dispatchApi("GET", "/api/demo");

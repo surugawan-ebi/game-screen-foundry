@@ -399,12 +399,40 @@ imagegen prompt. All fields are optional:
   these checks.
 - `iconTextCenterTolerance` (default 2): side-by-side icon + text lanes must
   share a horizontal center line within this many px
-  (`icon_text_center_mismatch`).
+  (`icon_text_center_mismatch`). The same tolerance governs sibling lane
+  rhythm (`lane_rhythm_inconsistent`): runtime lanes sharing one row on one
+  shell (or on repeated instances of one asset) must share one vertical
+  center, comparable slot heights, and one font scale — a 1.4x+ font ratio is
+  treated as intentional title/meta hierarchy.
+- `frameThickness` also applies to discrete children: an icon/badge/token
+  child placed closer than the frame band to its foundation parent's edge
+  warns (`child_in_frame_band`).
 - `iconTextPairGap` (default 24): max horizontal gap for an icon and text slot
   to count as one lane.
 - `minTouchTarget` (default 0 = disabled): minimum button placement size
   (`touch_target_small`).
 - `scalingPolicyDefault` (default `fixed`): see the asset scaling audit below.
+- `craftStyle` (default off): opt-in craft quality target enforced by the PNG
+  audit and described in every generation prompt. Values:
+  - `outlined_cel`: commercial 2D asset pack language — consistent dark
+    outline along the whole silhouette, 3-6 decisive cel shading bands, a
+    darker bottom thickness band, restrained palette, calm interiors.
+    Baselines are derived from measured distributions of purchased sprite
+    packs (outline coverage p25 ≈ 0.7-0.95, luminance bands 3-10, quantized
+    colors 3-17).
+  - `flat_minimal`: clean flat GUI kit — uniform strokes, flat fills, one
+    accent system, no outlines/textures.
+  - `painterly`: painted UI production art — organized value groupings,
+    detail at focal points, crisp alpha edges.
+  Audit codes: `craft_outline_weak`, `craft_shading_flat` (placeholder/vector
+  fills — also catches non-imagegen output), `craft_shading_muddy` (soft AI
+  gradients), `craft_interior_busy`.
+  When `craftStyle` is not declared and adopted PNGs exist,
+  `npm run validate:project` and the browser spec check emit a
+  `craft_style_unset` hint with a measured suggestion (median outline
+  coverage, band count, and color count of the sampled artwork). Declare the
+  suggested value — or the one matching the intended art direction — in
+  `designRules.craftStyle`; the skill contains the selection table.
 - `principles`: free-text design principles appended to generation prompts.
 
 ### Asset scaling audit
@@ -420,6 +448,10 @@ imagegen prompt. All fields are optional:
   the base size instead of the placement size, and prompts instruct a
   stretch-safe center.
 - `tile`: the asset tiles; prompts require a seamless pattern.
+
+The audit also samples the generated PNG under each runtime text slot and
+warns when the declared text color (or its stroke) falls below a 2.5
+contrast ratio against the actual backdrop (`text_contrast_low`).
 
 The audit also flags excessive transparent gutters
 (`asset_gutter_excessive`): foundation assets must cover ≥92% of their canvas

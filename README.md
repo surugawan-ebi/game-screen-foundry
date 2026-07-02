@@ -33,6 +33,8 @@ The project is currently beta-quality. It is useful for validating a production 
   Applies `designRules` from `world-preset.json` (spacing grid, frame budget, no-stretch policy) to both validators and imagegen prompts. Generated PNGs are audited at native size: non-uniform stretching fails, and 9-slice is only allowed with an explicit `exportRequirements.scalingPolicy` declaration.
 - `npm run postprocess:assets -- <screen-folder> --apply` で、生成PNGの透明ガター除去と最終ピクセルサイズへの正規化を一括実行できます。
   Batch-trims transparent gutters and normalizes generated PNGs to their final pixel size via `npm run postprocess:assets`.
+- `designRules.craftStyle`(`outlined_cel` / `flat_minimal` / `painterly`)を宣言すると、市販素材パック水準のクラフト仕様(シルエットの一貫アウトライン、セル調シェーディング段数、パレット節度、ファミリー統一)をプロンプトへ注入し、生成PNGを実測監査します。フラットなプレースホルダー出力(imagegen不使用の疑い)やマッディな軟階調も検出します。
+  Declaring `designRules.craftStyle` injects a commercial-asset-pack craft spec into prompts and audits each generated PNG for weak outlines, flat placeholder fills (suspected non-imagegen output), muddy gradients, and busy interiors.
 - placement と composition inset をフォームやプレビュー上の微調整で編集し、JSON と仮組みプレビューへ反映できます。
   Edits placements and composition insets through structured controls and preview fine-tuning, then syncs JSON and draft preview.
 - 素材ごとのコメント、固定、履歴、再生成キューを扱います。  

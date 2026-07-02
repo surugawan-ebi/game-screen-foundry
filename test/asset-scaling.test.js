@@ -6,23 +6,41 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 
-const { auditAssetScaling } = require("../lib/asset-scaling");
+const { auditAssetScaling, suggestCraftStyleForInput } = require("../lib/asset-scaling");
 const { alphaBounds, encodePng, fitRgba, resizeRgba } = require("../lib/png-write");
 const { parsePng } = require("../lib/png-metrics");
 
-function makePng({ width, height, artRect = null }) {
+function makePng({ width, height, artRect = null, painter = null }) {
   const rgba = Buffer.alloc(width * height * 4);
   const rect = artRect || { x: 0, y: 0, width, height };
   for (let y = rect.y; y < rect.y + rect.height; y += 1) {
     for (let x = rect.x; x < rect.x + rect.width; x += 1) {
       const offset = (y * width + x) * 4;
-      rgba[offset] = 180;
-      rgba[offset + 1] = 120;
-      rgba[offset + 2] = 60;
+      const color = painter
+        ? painter(x - rect.x, y - rect.y, rect.width, rect.height)
+        : [180, 120, 60];
+      rgba[offset] = color[0];
+      rgba[offset + 1] = color[1];
+      rgba[offset + 2] = color[2];
       rgba[offset + 3] = 255;
     }
   }
   return encodePng({ width, height, rgba });
+}
+
+// A crafted cel sprite: dark outline ring, top highlight band, base tone,
+// bottom shadow band — mirrors the structure of commercial sprite packs.
+function celSpritePainter(x, y, width, height) {
+  if (x < 3 || y < 3 || x >= width - 3 || y >= height - 3) {
+    return [40, 30, 50];
+  }
+  if (y < height * 0.25) {
+    return [235, 200, 140];
+  }
+  if (y > height * 0.75) {
+    return [120, 70, 40];
+  }
+  return [190, 130, 80];
 }
 
 function makeInput({ tempDir, assets, placements, files }) {
@@ -120,6 +138,114 @@ test("foundation assets with large transparent gutters warn", (t) => {
   const gutterChecks = audit.checks.filter((check) => check.code === "asset_gutter_excessive");
   assert.equal(gutterChecks.length, 1);
   assert.equal(gutterChecks[0].refs.assetId, "a_panel");
+});
+
+test("low-contrast label colors on the generated backdrop warn", (t) => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "gsf-contrast-"));
+  t.after(() => fs.rmSync(tempDir, { recursive: true, force: true }));
+  const input = makeInput({
+    tempDir,
+    assets: [{ assetId: "a_btn", assetType: "button", role: "cta", exportRequirements: {} }],
+    placements: [placement("p_btn", "a_btn", 60, 40)],
+    // Backdrop fill is rgb(180,120,60); the label uses a near-identical brown.
+    files: { a_btn: { width: 60, height: 40 } }
+  });
+  input.materialSpecSheet.contentOverlays = [
+    {
+      overlayId: "ov_dark",
+      kind: "text",
+      sampleText: "配置",
+      x: 100,
+      y: 100,
+      width: 40,
+      height: 14,
+      anchor: "center",
+      zIndex: 20,
+      fontSize: 10,
+      color: "#8a6a3c",
+      targetPlacementId: "p_btn",
+      slot: { x: 10, y: 13, width: 40, height: 14 }
+    },
+    {
+      overlayId: "ov_light",
+      kind: "text",
+      sampleText: "配置",
+      x: 100,
+      y: 100,
+      width: 40,
+      height: 14,
+      anchor: "center",
+      zIndex: 21,
+      fontSize: 10,
+      color: "#fff1c7",
+      targetPlacementId: "p_btn",
+      slot: { x: 10, y: 13, width: 40, height: 14 }
+    }
+  ];
+
+  const audit = auditAssetScaling(input);
+  const contrastWarns = audit.checks.filter((check) => check.code === "text_contrast_low");
+  assert.equal(contrastWarns.length, 1);
+  assert.equal(contrastWarns[0].refs.overlayId, "ov_dark");
+});
+
+test("craft audit flags flat fills and missing outlines when craftStyle is declared", (t) => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "gsf-craft-"));
+  t.after(() => fs.rmSync(tempDir, { recursive: true, force: true }));
+  const input = makeInput({
+    tempDir,
+    assets: [
+      { assetId: "a_crafted", assetType: "button", role: "cta", exportRequirements: {} },
+      { assetId: "a_flat", assetType: "button", role: "cta", exportRequirements: {} }
+    ],
+    placements: [
+      placement("p1", "a_crafted", 64, 64),
+      placement("p2", "a_flat", 64, 64)
+    ],
+    files: {
+      a_crafted: { width: 64, height: 64, painter: celSpritePainter },
+      a_flat: { width: 64, height: 64 }
+    }
+  });
+  input.worldPreset.designRules = { craftStyle: "outlined_cel" };
+
+  const audit = auditAssetScaling(input);
+  const craftWarns = audit.checks.filter((check) => /^craft_/u.test(check.code));
+  const flatWarns = craftWarns.filter((check) => check.refs.assetId === "a_flat");
+  const craftedWarns = craftWarns.filter((check) => check.refs.assetId === "a_crafted");
+  assert.ok(flatWarns.some((check) => check.code === "craft_shading_flat"));
+  assert.ok(flatWarns.some((check) => check.code === "craft_outline_weak"));
+  assert.equal(craftedWarns.length, 0);
+
+  // Without a declared craft style the audit stays silent.
+  input.worldPreset.designRules = {};
+  const silent = auditAssetScaling(input);
+  assert.equal(silent.checks.filter((check) => /^craft_/u.test(check.code)).length, 0);
+});
+
+test("craft style suggestion measures adopted PNGs and stays silent once declared", (t) => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "gsf-suggest-"));
+  t.after(() => fs.rmSync(tempDir, { recursive: true, force: true }));
+  const input = makeInput({
+    tempDir,
+    assets: [
+      { assetId: "a1", assetType: "button", role: "cta", exportRequirements: {} },
+      { assetId: "a2", assetType: "panel", role: "shell", exportRequirements: {} }
+    ],
+    placements: [placement("p1", "a1", 64, 64), placement("p2", "a2", 64, 64)],
+    files: {
+      a1: { width: 64, height: 64, painter: celSpritePainter },
+      a2: { width: 64, height: 64, painter: celSpritePainter }
+    }
+  });
+
+  const suggestion = suggestCraftStyleForInput(input);
+  assert.ok(suggestion);
+  assert.equal(suggestion.craftStyle, "outlined_cel");
+  assert.equal(suggestion.sampledCount, 2);
+
+  input.worldPreset.designRules = { craftStyle: "outlined_cel" };
+  assert.equal(suggestCraftStyleForInput(input), null);
 });
 
 test("nine_slice placements below the corner band fail", (t) => {

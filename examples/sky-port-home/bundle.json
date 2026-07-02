@@ -159,6 +159,11 @@
             "source": "event_banner_live_ribbon",
             "target": "event_banner_art",
             "reason": "LIVEリボンはバナーアートの左上に意図的に重ねる"
+          },
+          {
+            "source": "player_profile_emblem",
+            "target": "player_profile_outer",
+            "reason": "プレイヤーエンブレムはパネル左端に意図的にドッキングさせる"
           }
         ]
       }
@@ -5210,7 +5215,7 @@
     ],
     "designRules": {
       "spacingUnit": 4,
-      "frameThickness": 10,
+      "frameThickness": 8,
       "iconTextCenterTolerance": 2,
       "principles": [
         "アイコンとテキストラベルは同一の水平センターラインに揃える",

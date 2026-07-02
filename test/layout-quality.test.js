@@ -273,6 +273,63 @@ test("icon and text lanes on the same shell must share a center line", () => {
   assert.ok(!codes(review, "warn").includes("icon_text_center_mismatch"));
 });
 
+test("sibling lanes with drifting centers or mixed font scales warn", () => {
+  const overlay = (id, slotY, height, fontSize) => ({
+    overlayId: id,
+    kind: "text",
+    sampleText: "123",
+    x: 0,
+    y: 0,
+    width: 60,
+    height,
+    anchor: "center",
+    zIndex: 20,
+    fontSize,
+    targetPlacementId: "shell",
+    slot: { x: id === "ov_a" ? 20 : 120, y: slotY, width: 60, height }
+  });
+  const base = {
+    placements: [placement("shell", "asset_shell", 200, 50, 360, 80)],
+    assets: [asset("asset_shell", "panel", "hud_shell")]
+  };
+
+  const drifting = buildLayoutReview(makeInput({
+    ...base,
+    contentOverlays: [overlay("ov_a", 18, 22, 15), overlay("ov_b", 22, 22, 12)]
+  }));
+  assert.ok(codes(drifting, "warn").includes("lane_rhythm_inconsistent"));
+
+  const uniform = buildLayoutReview(makeInput({
+    ...base,
+    contentOverlays: [overlay("ov_a", 18, 22, 15), overlay("ov_b", 18, 22, 15)]
+  }));
+  assert.ok(!codes(uniform, "warn").includes("lane_rhythm_inconsistent"));
+
+  // Title + meta hierarchy (1.4x+ font ratio) is intentional.
+  const hierarchy = buildLayoutReview(makeInput({
+    ...base,
+    contentOverlays: [overlay("ov_a", 14, 26, 18), overlay("ov_b", 19, 16, 11)]
+  }));
+  assert.ok(!codes(hierarchy, "warn").includes("lane_rhythm_inconsistent"));
+});
+
+test("discrete children inside a foundation parent's frame band warn", () => {
+  const base = (iconY) => makeInput({
+    placements: [
+      placement("btn", "asset_btn", 200, 200, 64, 56),
+      placement("btn_icon", "asset_icon", 200, iconY, 24, 24, { parentId: "btn", zIndex: 15 })
+    ],
+    assets: [asset("asset_btn", "button", "dock_button"), asset("asset_icon", "icon", "glyph")]
+  });
+
+  // Button box is 172..228 vertically; icon at y188 leaves only 4px on top.
+  const tight = buildLayoutReview(base(188));
+  assert.ok(codes(tight, "warn").includes("child_in_frame_band"));
+
+  const centered = buildLayoutReview(base(200));
+  assert.ok(!codes(centered, "warn").includes("child_in_frame_band"));
+});
+
 test("backdrop placements are excluded from overlap checks", () => {
   const review = buildLayoutReview(makeInput({
     placements: [

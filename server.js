@@ -14,7 +14,7 @@ const { resolveBundleFromFolder } = require("./lib/folder-loader");
 const { prepareImagegenWorkflow } = require("./lib/imagegen-workflow");
 const { buildRegenerationRequest } = require("./lib/regeneration-queue");
 const { buildImplementationReport } = require("./lib/implementation-report");
-const { auditAssetScaling } = require("./lib/asset-scaling");
+const { auditAssetScaling, suggestCraftStyleForInput } = require("./lib/asset-scaling");
 const {
   UI_CATEGORIES,
   auditGeneratedAssetsWithProfile,
@@ -1027,6 +1027,14 @@ function handleValidateWorkspace(body) {
         severity: "warning",
         code: "layout_more_issues",
         message: `${layoutIssues.length - 40} more layout issue(s) were truncated.`
+      });
+    }
+    const craftSuggestion = suggestCraftStyleForInput(input, { baseDir: path.resolve(__dirname) });
+    if (craftSuggestion) {
+      diagnostics.push({
+        severity: "info",
+        code: "craft_style_unset",
+        message: `designRules.craftStyle is not declared, so the craft quality audit is off. Based on ${craftSuggestion.sampledCount} adopted PNG(s), "${craftSuggestion.craftStyle}" fits this project (${craftSuggestion.reason}).`
       });
     }
 

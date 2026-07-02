@@ -115,6 +115,11 @@
           "source": "event_banner_live_ribbon",
           "target": "event_banner_art",
           "reason": "LIVEリボンはバナーアートの左上に意図的に重ねる"
+        },
+        {
+          "source": "player_profile_emblem",
+          "target": "player_profile_outer",
+          "reason": "プレイヤーエンブレムはパネル左端に意図的にドッキングさせる"
         }
       ]
     }

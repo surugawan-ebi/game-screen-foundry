@@ -33,7 +33,10 @@ Use this skill for Game Screen Foundry project work: creating screen folders, ed
 - Do not bake functional surfaces (world maps, boards, list surfaces, tap targets) into background assets. Split the backdrop and the functional surface into separate assets, give the functional surface its own frame, and place tokens/markers on the surface asset.
 - Do not rely on runtime stretching. Generate every raster at its final placement pixel size. Declare `exportRequirements.scalingPolicy: "nine_slice"` with `nineSliceInsets` only when the asset family is genuinely designed for slicing; otherwise the scaling audit fails the asset.
 - Do not add `allowedOverlaps`, `layerFitRules` with `minInset: 0`, or other declarations merely to make validation pass. Declarations must describe real visual intent; a layer that sits flush on a foundation root fails regardless of the declared minInset.
-- Foundation shells (docks, bottom sheets, panels, HUD plates) must declare a composition group `contentInset` matching their baked frame thickness, so the decoration budget and child-content checks reflect the real usable area.
+- Foundation shells (docks, bottom sheets, panels, HUD plates) must declare a composition group `contentInset` matching their baked frame thickness, so the decoration budget and child-content checks reflect the real usable area. The declared inset must match the frame actually painted in the PNG — if the generated art grew a wider frame, regenerate it with the decoration budget or raise the inset and re-place children.
+- Sibling runtime lanes on one shell (HUD values, row counters) must share one lane template: same slot height, same vertical center, one font scale per rank. Intentional hierarchy (title + meta) needs a 1.4x+ font ratio. The `lane_rhythm_inconsistent` check enforces this, and the imagegen prompt declares the exact lane count so baked segment dividers match the content structure.
+- Functional surfaces (maps, boards) are full raster art at key-visual detail density — never simplified vector-style diagrams, even when generated separately from the backdrop.
+- Runtime text colors must survive on the generated backdrop; the scaling audit samples the PNG under each slot and warns below a 2.5 contrast ratio (`text_contrast_low`).
 - Do not move layout coordinates while responding to visual feedback unless the task explicitly asks for layout changes.
 - Do not commit proprietary external game assets into this tool repository.
 - Do not commit full reference profiles that contain machine-local source paths; commit only compact `qualityProfile.referenceDerived` data when needed.
@@ -47,7 +50,27 @@ Screen design constraints live in `world-preset.json` under `designRules` and ar
 - `iconTextCenterTolerance` (default 2): icons and text labels forming one lane must share a horizontal center line within this many px.
 - `minTouchTarget` (default 0 = off): minimum interactive size for buttons.
 - `scalingPolicyDefault` (default `fixed`): assets are used at native pixel size; stretching requires an explicit per-asset `nine_slice`/`tile` declaration.
+- `craftStyle`: opt-in craft target (`outlined_cel` / `flat_minimal` / `painterly`). Declaring it injects a craft spec into every prompt (outline treatment, cel band counts, palette restraint, family consistency) and makes the PNG audit measure each generated asset: weak silhouette outlines (`craft_outline_weak`), flat placeholder/vector fills (`craft_shading_flat`), muddy soft gradients (`craft_shading_muddy`), and busy foundation interiors (`craft_interior_busy`).
+
+### Choosing craftStyle (do this when creating or first validating a project)
+
+Pick the value that matches the key visual / world preset art direction. Look at the KV (or existing adopted assets) and decide:
+
+| Signal in the KV / assets | craftStyle |
+| --- | --- |
+| Sprites have a visible dark contour line around every shape; shading is flat color steps (cel/pixel-art game look, like commercial 2D asset packs) | `outlined_cel` |
+| Flat single-color shapes, uniform thin strokes, modern minimal mobile UI, no textures | `flat_minimal` |
+| Painted/brushy rendering, soft lit materials, rich tonal ranges, no hard contour line (painterly fantasy UI) | `painterly` |
+
+Rules of thumb:
+
+- If the project has adopted PNGs and no declared craftStyle, `npm run validate:project` prints a `craft_style_unset` hint with a measured suggestion — use it as the default answer unless the user states a different art direction.
+- Declare exactly one craftStyle per world preset; all screens sharing that preset inherit it, keeping the whole game one family.
+- If many `craft_*` warnings appear right after declaring a style, first re-check the style choice (a `painterly` project audited as `outlined_cel` floods outline warnings). Only after the style is confirmed should you treat the warnings as regeneration work.
+- Do not leave craftStyle unset in real projects: unset means the craft audit is off and prompts carry no craft spec.
 - `principles`: free-text design principles added to every generation prompt.
+
+For richer, project-specific targets, run `npm run profile:reference -- <purchased-asset-root>` and apply the compact profile to `worldPreset.qualityProfile.referenceDerived`; the profile now also captures outline coverage/contrast and luminance band counts from the reference set.
 
 After importing generated PNGs, run `npm run postprocess:assets -- <screen-folder> --apply` to trim transparent gutters and normalize each PNG to its target pixel size (foundation surfaces are stretched edge-to-edge; icons are uniform-fitted and centered).
 
