@@ -41,6 +41,14 @@ This file is the handoff note for the public beta. The current repository is usa
 
 ## Completed Handoff Cleanup
 
+- Added `worldPreset.designRules` (spacing unit, frame thickness, icon+text center tolerance, min touch target, scaling policy default, free-form principles) enforced by validators and injected into imagegen prompts.
+- Added the asset scaling audit (`lib/asset-scaling.js`): PNG native size vs placement comparison (non-uniform stretch fails; uniform @2x downscale passes; upscale warns), explicit `exportRequirements.scalingPolicy` (`fixed`/`nine_slice`/`tile`) with `nineSliceInsets` slice-band validation, and transparent-gutter coverage checks (foundation assets must fill their canvas; icons must not float small).
+- Upgraded composition review: layers flush against a foundation root now fail (`layer_fit_flush_frame`) regardless of declared `minInset`, and insets below the design frame band warn unless the group declares `contentInset` — closing the "declare minInset 0 to silence validation" loophole.
+- Added icon+text center-line matching (`icon_text_center_mismatch`) and optional touch-target checks to the layout review.
+- Added `npm run postprocess:assets`: batch trim of transparent gutters and normalization to final pixel size (foundation surfaces stretch edge-to-edge; icons uniform-fit and center), built on a new dependency-free PNG encoder (`lib/png-write.js`).
+- Nine-slice assets now generate at their declared base size instead of the placement size, with stretch-safe center instructions in prompts.
+- Documented design rules in the skill (no functional surfaces baked into backgrounds, no runtime stretching, no validation-silencing declarations, contentInset required on foundation shells).
+
 - Added a shared layout quality checker (`lib/layout-quality.js`): overlap padding between stacked assets, undeclared sibling overlap detection, parent-overflow warnings, font-size-aware text slot fit with CJK-aware width estimation, overlay slot padding, and horizontal/vertical guide-line alignment near-miss detection. Wired into the render model, `/api/composition-quality`, the browser spec check panel, `npm run validate`, and `npm run validate:project`.
 - Injected layout context into imagegen jobs and prompts: per-asset stacking clearances, open layout findings, an explicit canvas coverage rule (fill edge-to-edge, never spill past the canvas), and a decoration budget computed from composition `contentInset` so frame ornament stays in the outer band and the content surface stays calm.
 - Made imagegen handoff jobs agent-neutral: `commandHints` for Codex CLI and Claude Code, `BETA_IMAGEGEN_MODE=claude`, `BETA_CLAUDE_BIN`, and `npm run skill:install:claude` for installing the bundled skill into `~/.claude/skills`.

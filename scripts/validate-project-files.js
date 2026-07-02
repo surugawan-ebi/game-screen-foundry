@@ -3,6 +3,7 @@
 const fs = require("fs");
 const path = require("path");
 
+const { auditAssetScaling } = require("../lib/asset-scaling");
 const { resolveBundleFromFolder } = require("../lib/folder-loader");
 const { generateRenderModel } = require("../lib/generator");
 const { prepareInput } = require("../lib/spec");
@@ -247,6 +248,11 @@ function validateScreenFolder(folderPath) {
   assert(
     !model.layoutQuality || model.layoutQuality.failCount === 0,
     `${folderPath} layout quality has ${model.layoutQuality ? model.layoutQuality.failCount : 0} failing check(s): ${(model.layoutChecks || []).filter((check) => check.status === "fail").map((check) => check.message).join(" / ")}`
+  );
+  const scalingAudit = auditAssetScaling(input, { baseDir: root });
+  assert(
+    scalingAudit.summary.failCount === 0,
+    `${folderPath} asset scaling audit has ${scalingAudit.summary.failCount} failing check(s): ${scalingAudit.checks.filter((check) => check.status === "fail").map((check) => check.message).join(" / ")}`
   );
 }
 

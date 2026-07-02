@@ -866,9 +866,16 @@ test("bottom nav separates the rail from individual tab buttons", () => {
       { x: 38, y: 28, width: 40, height: 40 },
       `bottom_nav_${kind}_icon must use the shared icon slot`
     );
+    const labelSlot = overlayById[`ov_nav_${kind}`].slot;
+    assert.equal(overlayById[`ov_nav_${kind}`].targetPlacementId, `bottom_nav_${kind}`);
     assert.ok(
-      overlayById[`ov_nav_${kind}`].slot.y >= 50,
+      labelSlot.y >= 0 && labelSlot.y + labelSlot.height <= 96,
       `ov_nav_${kind} must be a button overlay, not baked into panel_bottom_nav`
+    );
+    assert.equal(
+      labelSlot.y + labelSlot.height / 2,
+      28 + 20,
+      `ov_nav_${kind} label lane must share the icon center line`
     );
   }
 });

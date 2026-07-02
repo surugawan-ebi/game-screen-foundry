@@ -2431,7 +2431,7 @@
         "targetPlacementId": "bottom_nav_home",
         "slot": {
           "x": 96,
-          "y": 50,
+          "y": 34,
           "width": 92,
           "height": 28
         },
@@ -2457,7 +2457,7 @@
         "targetPlacementId": "bottom_nav_fleet",
         "slot": {
           "x": 96,
-          "y": 50,
+          "y": 34,
           "width": 92,
           "height": 28
         },
@@ -2483,7 +2483,7 @@
         "targetPlacementId": "bottom_nav_shop",
         "slot": {
           "x": 86,
-          "y": 50,
+          "y": 34,
           "width": 112,
           "height": 28
         },
@@ -2509,7 +2509,7 @@
         "targetPlacementId": "bottom_nav_mission",
         "slot": {
           "x": 96,
-          "y": 50,
+          "y": 34,
           "width": 92,
           "height": 28
         },
@@ -2535,7 +2535,7 @@
         "targetPlacementId": "bottom_nav_settings",
         "slot": {
           "x": 96,
-          "y": 50,
+          "y": 34,
           "width": 92,
           "height": 28
         },
@@ -3125,7 +3125,14 @@
           "transparent": true,
           "sizes": [
             "136x20"
-          ]
+          ],
+          "scalingPolicy": "nine_slice",
+          "nineSliceInsets": {
+            "top": 0,
+            "right": 10,
+            "bottom": 0,
+            "left": 10
+          }
         },
         "generationPlan": {
           "firstPassMode": "bulk_generate_family_shared",
@@ -3778,7 +3785,14 @@
           "transparent": true,
           "sizes": [
             "44x34"
-          ]
+          ],
+          "scalingPolicy": "nine_slice",
+          "nineSliceInsets": {
+            "top": 8,
+            "right": 10,
+            "bottom": 8,
+            "left": 10
+          }
         },
         "contentModel": {
           "mode": "frame_only",
@@ -5193,7 +5207,17 @@
         "role": "screen_mock_reference",
         "notes": "採用したHOME画面KV。背景ではなく主要UI込みの目標イメージ。"
       }
-    ]
+    ],
+    "designRules": {
+      "spacingUnit": 4,
+      "frameThickness": 10,
+      "iconTextCenterTolerance": 2,
+      "principles": [
+        "アイコンとテキストラベルは同一の水平センターラインに揃える",
+        "装飾フレームは外周バンドに収め、内側の地はカームに保つ",
+        "素材は最終ピクセルサイズで生成し、実行時の引き伸ばしに頼らない"
+      ]
+    }
   },
   "revisionMap": {}
 }

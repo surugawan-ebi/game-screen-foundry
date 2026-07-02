@@ -385,6 +385,55 @@ Recommended fields:
 - `neutralDark`
 - `neutralLight`
 
+### `designRules`
+
+Screen design constraints enforced by the validators and injected into every
+imagegen prompt. All fields are optional:
+
+- `spacingUnit` (default 4): base layout grid in px.
+- `frameThickness` (default 10): baked decorative frame budget on foundation
+  assets (panel / card_frame / button). A layer whose measured inset from a
+  foundation root edge is under 2px **fails** (`layer_fit_flush_frame`), and
+  an inset below `frameThickness` warns unless the group declares
+  `contentInset`. Declared `layerFitRules.minInset` values cannot silence
+  these checks.
+- `iconTextCenterTolerance` (default 2): side-by-side icon + text lanes must
+  share a horizontal center line within this many px
+  (`icon_text_center_mismatch`).
+- `iconTextPairGap` (default 24): max horizontal gap for an icon and text slot
+  to count as one lane.
+- `minTouchTarget` (default 0 = disabled): minimum button placement size
+  (`touch_target_small`).
+- `scalingPolicyDefault` (default `fixed`): see the asset scaling audit below.
+- `principles`: free-text design principles appended to generation prompts.
+
+### Asset scaling audit
+
+`exportRequirements.scalingPolicy` declares how a generated PNG may be used:
+
+- `fixed` (default): the PNG must be used at its native pixel size. A uniform
+  downscale (e.g. @2x source) passes; a uniform upscale warns
+  (`asset_upscaled`); a non-uniform stretch **fails** (`asset_stretched`).
+- `nine_slice`: requires `exportRequirements.nineSliceInsets`
+  (`{top,right,bottom,left}`). Placements smaller than the corner band fail
+  (`nine_slice_compressed`). Generation uses `exportRequirements.sizes[0]` as
+  the base size instead of the placement size, and prompts instruct a
+  stretch-safe center.
+- `tile`: the asset tiles; prompts require a seamless pattern.
+
+The audit also flags excessive transparent gutters
+(`asset_gutter_excessive`): foundation assets must cover ≥92% of their canvas
+on both axes; icons/decor only warn when the artwork floats small on both
+axes (<70%). Progress fill roles are exempt. Run the audit through
+`npm run validate:project`, the spec check panel, or fix files in bulk with:
+
+```sh
+npm run postprocess:assets -- /path/to/screen-folder --apply
+```
+
+This trims transparent gutters and normalizes each PNG to its target size
+(foundation surfaces stretch edge-to-edge; icons uniform-fit and center).
+
 `imagegenWorkflow` fields:
 
 - `outputDir`: where generated PNGs should be saved.

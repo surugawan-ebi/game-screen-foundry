@@ -30,9 +30,26 @@ Use this skill for Game Screen Foundry project work: creating screen folders, ed
 - Do not promise hosted or fully automated image generation. The stable workflow is prompt/job file creation, external image generation, and PNG re-import.
 - Do not bake runtime text, values, labels, timers, or notification counts into generated PNGs unless `textHandling.ownership` is explicitly `baked_in_asset`.
 - Do not collapse parent frames and child UI into one image when the material spec separates them.
+- Do not bake functional surfaces (world maps, boards, list surfaces, tap targets) into background assets. Split the backdrop and the functional surface into separate assets, give the functional surface its own frame, and place tokens/markers on the surface asset.
+- Do not rely on runtime stretching. Generate every raster at its final placement pixel size. Declare `exportRequirements.scalingPolicy: "nine_slice"` with `nineSliceInsets` only when the asset family is genuinely designed for slicing; otherwise the scaling audit fails the asset.
+- Do not add `allowedOverlaps`, `layerFitRules` with `minInset: 0`, or other declarations merely to make validation pass. Declarations must describe real visual intent; a layer that sits flush on a foundation root fails regardless of the declared minInset.
+- Foundation shells (docks, bottom sheets, panels, HUD plates) must declare a composition group `contentInset` matching their baked frame thickness, so the decoration budget and child-content checks reflect the real usable area.
 - Do not move layout coordinates while responding to visual feedback unless the task explicitly asks for layout changes.
 - Do not commit proprietary external game assets into this tool repository.
 - Do not commit full reference profiles that contain machine-local source paths; commit only compact `qualityProfile.referenceDerived` data when needed.
+
+## Design Rules
+
+Screen design constraints live in `world-preset.json` under `designRules` and are enforced by the validators and injected into imagegen prompts:
+
+- `spacingUnit` (default 4): layout coordinates snap to this grid.
+- `frameThickness` (default 10): baked decorative frame budget on foundation assets; layers and text slots must stay inside it.
+- `iconTextCenterTolerance` (default 2): icons and text labels forming one lane must share a horizontal center line within this many px.
+- `minTouchTarget` (default 0 = off): minimum interactive size for buttons.
+- `scalingPolicyDefault` (default `fixed`): assets are used at native pixel size; stretching requires an explicit per-asset `nine_slice`/`tile` declaration.
+- `principles`: free-text design principles added to every generation prompt.
+
+After importing generated PNGs, run `npm run postprocess:assets -- <screen-folder> --apply` to trim transparent gutters and normalize each PNG to its target pixel size (foundation surfaces are stretched edge-to-edge; icons are uniform-fitted and centered).
 
 ## Imagegen Handoff Execution
 

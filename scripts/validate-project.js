@@ -3,6 +3,7 @@
 
 const path = require("path");
 
+const { auditAssetScaling } = require("../lib/asset-scaling");
 const { buildCompositionReview } = require("../lib/composition-quality");
 const { buildLayoutReview } = require("../lib/layout-quality");
 const { generateRenderModel } = require("../lib/generator");
@@ -53,6 +54,18 @@ function main() {
     process.stderr.write(`layout warn [${warning.code}] ${warning.message}\n`);
   }
 
+  const scalingAudit = auditAssetScaling(input);
+  const scalingFailures = scalingAudit.checks.filter((check) => check.status === "fail");
+  for (const warning of scalingAudit.checks.filter((check) => check.status === "warn")) {
+    process.stderr.write(`asset warn [${warning.code}] ${warning.message}\n`);
+  }
+  if (scalingFailures.length > 0) {
+    throw new Error([
+      `Asset scaling audit has ${scalingFailures.length} failing check(s):`,
+      ...scalingFailures.map((check) => `- [${check.code}] ${check.message}`)
+    ].join("\n"));
+  }
+
   process.stdout.write([
     "Project validation ok",
     `source: ${loaded.source.projectRoot || loaded.source.screenFolderPath || loaded.source.folderPath}`,
@@ -61,7 +74,8 @@ function main() {
     `assets: ${renderModel.assets.length}`,
     `layers: ${renderModel.screen.layers.length}`,
     `composition: ${compositionReview.summary.status} ${compositionReview.summary.score}`,
-    `layout: ${layoutReview.summary.status} ${layoutReview.summary.score} (fail ${layoutReview.summary.failCount} / warn ${layoutReview.summary.warnCount})`
+    `layout: ${layoutReview.summary.status} ${layoutReview.summary.score} (fail ${layoutReview.summary.failCount} / warn ${layoutReview.summary.warnCount})`,
+    `asset scaling: ${scalingAudit.summary.status} (${scalingAudit.summary.auditedCount} PNG audited / fail ${scalingAudit.summary.failCount} / warn ${scalingAudit.summary.warnCount})`
   ].join("\n"));
   process.stdout.write("\n");
 }

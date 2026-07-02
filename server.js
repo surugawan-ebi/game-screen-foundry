@@ -14,6 +14,7 @@ const { resolveBundleFromFolder } = require("./lib/folder-loader");
 const { prepareImagegenWorkflow } = require("./lib/imagegen-workflow");
 const { buildRegenerationRequest } = require("./lib/regeneration-queue");
 const { buildImplementationReport } = require("./lib/implementation-report");
+const { auditAssetScaling } = require("./lib/asset-scaling");
 const {
   UI_CATEGORIES,
   auditGeneratedAssetsWithProfile,
@@ -960,7 +961,8 @@ function handleCompositionQuality(body) {
     compositionQuality: renderModel.compositionQuality,
     compositionGroups: renderModel.compositionGroups,
     layoutQuality: renderModel.layoutQuality,
-    layoutChecks: renderModel.layoutChecks
+    layoutChecks: renderModel.layoutChecks,
+    assetScaling: auditAssetScaling(input, { baseDir: path.resolve(__dirname) })
   };
 }
 
@@ -1005,7 +1007,14 @@ function handleValidateWorkspace(body) {
       });
     }
     const layout = renderModel.layoutQuality;
-    const layoutIssues = (renderModel.layoutChecks || []).filter((check) => check.status !== "pass");
+    const scalingAudit = auditAssetScaling(input, { baseDir: path.resolve(__dirname) });
+    const layoutIssues = [
+      ...(renderModel.layoutChecks || []).filter((check) => check.status !== "pass"),
+      ...scalingAudit.checks.filter((check) => check.status !== "pass").map((check) => ({
+        ...check,
+        code: `asset_${check.code}`.replace(/^asset_asset_/u, "asset_")
+      }))
+    ];
     for (const issue of layoutIssues.slice(0, 40)) {
       diagnostics.push({
         severity: issue.status === "fail" ? "error" : "warning",

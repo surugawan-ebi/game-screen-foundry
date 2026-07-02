@@ -2387,7 +2387,7 @@
       "targetPlacementId": "bottom_nav_home",
       "slot": {
         "x": 96,
-        "y": 50,
+        "y": 34,
         "width": 92,
         "height": 28
       },
@@ -2413,7 +2413,7 @@
       "targetPlacementId": "bottom_nav_fleet",
       "slot": {
         "x": 96,
-        "y": 50,
+        "y": 34,
         "width": 92,
         "height": 28
       },
@@ -2439,7 +2439,7 @@
       "targetPlacementId": "bottom_nav_shop",
       "slot": {
         "x": 86,
-        "y": 50,
+        "y": 34,
         "width": 112,
         "height": 28
       },
@@ -2465,7 +2465,7 @@
       "targetPlacementId": "bottom_nav_mission",
       "slot": {
         "x": 96,
-        "y": 50,
+        "y": 34,
         "width": 92,
         "height": 28
       },
@@ -2491,7 +2491,7 @@
       "targetPlacementId": "bottom_nav_settings",
       "slot": {
         "x": 96,
-        "y": 50,
+        "y": 34,
         "width": 92,
         "height": 28
       },
@@ -3081,7 +3081,14 @@
         "transparent": true,
         "sizes": [
           "136x20"
-        ]
+        ],
+        "scalingPolicy": "nine_slice",
+        "nineSliceInsets": {
+          "top": 0,
+          "right": 10,
+          "bottom": 0,
+          "left": 10
+        }
       },
       "generationPlan": {
         "firstPassMode": "bulk_generate_family_shared",
@@ -3734,7 +3741,14 @@
         "transparent": true,
         "sizes": [
           "44x34"
-        ]
+        ],
+        "scalingPolicy": "nine_slice",
+        "nineSliceInsets": {
+          "top": 8,
+          "right": 10,
+          "bottom": 8,
+          "left": 10
+        }
       },
       "contentModel": {
         "mode": "frame_only",

@@ -791,5 +791,15 @@
       "role": "screen_mock_reference",
       "notes": "採用したHOME画面KV。背景ではなく主要UI込みの目標イメージ。"
     }
-  ]
+  ],
+  "designRules": {
+    "spacingUnit": 4,
+    "frameThickness": 10,
+    "iconTextCenterTolerance": 2,
+    "principles": [
+      "アイコンとテキストラベルは同一の水平センターラインに揃える",
+      "装飾フレームは外周バンドに収め、内側の地はカームに保つ",
+      "素材は最終ピクセルサイズで生成し、実行時の引き伸ばしに頼らない"
+    ]
+  }
 }

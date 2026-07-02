@@ -51,7 +51,7 @@ test("revision directives affect generated asset revisions", () => {
   assert.equal(button.directives.ornamentDelta, 1);
 });
 
-test("composition quality warns when a stacked child layer touches root edges without a fit rule", () => {
+test("composition quality fails when a stacked layer sits flush on a foundation root", () => {
   const payload = getDemoProject();
   payload.materialSpecSheet.placements.push({
     placementId: "bad_same_width_layer",
@@ -80,10 +80,10 @@ test("composition quality warns when a stacked child layer touches root edges wi
   const renderModel = generateRenderModel(prepareInput(payload));
   const badGroup = renderModel.compositionGroups.find((group) => group.groupId === "bad_same_width_stack");
 
-  assert.equal(badGroup.status, "warn");
-  assert.ok(badGroup.checks.some((check) => check.code === "layer_fit_default_tight"));
+  assert.equal(badGroup.status, "fail");
+  assert.ok(badGroup.checks.some((check) => check.code === "layer_fit_flush_frame"));
   assert.match(
-    badGroup.checks.find((check) => check.code === "layer_fit_default_tight").message,
-    /touches an edge/u
+    badGroup.checks.find((check) => check.code === "layer_fit_flush_frame").message,
+    /touches the edge/u
   );
 });

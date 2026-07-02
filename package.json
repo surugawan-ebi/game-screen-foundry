@@ -25,6 +25,7 @@
     "dev": "node server.js",
     "init-project": "node scripts/init-project.js",
     "lint": "node scripts/check-js-syntax.js",
+    "postprocess:assets": "node scripts/postprocess-assets.js",
     "profile:reference": "node scripts/build-reference-quality-profile.js",
     "release:check": "npm run check && node scripts/check-local-paths.js && node scripts/check-tracked-imagegen.js",
     "skill:install": "node scripts/install-codex-skill.js",

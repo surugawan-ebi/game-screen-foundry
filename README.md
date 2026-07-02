@@ -28,7 +28,11 @@ The project is currently beta-quality. It is useful for validating a production 
 - 生成済み PNG 版を表示し、構造確認用の wireframe preview も確認できます。  
   Shows the generated PNG version, with a structural wireframe-style preview for layout checks.
 - エディタ内JSON、レンダリング可能性、composition quality、layout quality をブラウザ内でチェックできます。layout quality は、素材が重なる際の padding 十分性、フォントサイズを考慮したテキストスロットの収まり、素材同士の横/縦ガイドラインの整列を検証します。
-  Checks editor JSON, renderability, composition quality, and layout quality in the browser. Layout quality validates overlap padding between stacked assets, font-size-aware text slot fit, and horizontal/vertical guide-line alignment.
+  Checks editor JSON, renderability, composition quality, and layout quality in the browser. Layout quality validates overlap padding between stacked assets, font-size-aware text slot fit, horizontal/vertical guide-line alignment, and icon+text center-line matching.
+- `world-preset.json` の `designRules`(スペーシンググリッド、装飾フレーム幅、引き伸ばし禁止など)をバリデータと imagegen prompt の両方に適用します。生成PNGは実寸監査され、非等倍の引き伸ばしは fail、9-slice は `exportRequirements.scalingPolicy` の明示宣言時のみ許容されます。
+  Applies `designRules` from `world-preset.json` (spacing grid, frame budget, no-stretch policy) to both validators and imagegen prompts. Generated PNGs are audited at native size: non-uniform stretching fails, and 9-slice is only allowed with an explicit `exportRequirements.scalingPolicy` declaration.
+- `npm run postprocess:assets -- <screen-folder> --apply` で、生成PNGの透明ガター除去と最終ピクセルサイズへの正規化を一括実行できます。
+  Batch-trims transparent gutters and normalizes generated PNGs to their final pixel size via `npm run postprocess:assets`.
 - placement と composition inset をフォームやプレビュー上の微調整で編集し、JSON と仮組みプレビューへ反映できます。
   Edits placements and composition insets through structured controls and preview fine-tuning, then syncs JSON and draft preview.
 - 素材ごとのコメント、固定、履歴、再生成キューを扱います。  

@@ -242,6 +242,37 @@ test("same asset placed at nearly identical sizes warns", () => {
   assert.ok(codes(review, "warn").includes("size_near_miss"));
 });
 
+test("icon and text lanes on the same shell must share a center line", () => {
+  const base = {
+    placements: [
+      placement("shell", "asset_shell", 200, 50, 360, 80),
+      placement("coin_icon", "asset_icon", 60, 46, 18, 18, { parentId: "shell", zIndex: 15 })
+    ],
+    assets: [asset("asset_shell", "panel", "hud_shell"), asset("asset_icon", "icon", "resource_icon")],
+    contentOverlays: [{
+      overlayId: "ov_value",
+      kind: "text",
+      sampleText: "920G",
+      x: 120,
+      y: 41,
+      width: 80,
+      height: 22,
+      anchor: "center",
+      zIndex: 20,
+      fontSize: 14,
+      targetPlacementId: "shell",
+      slot: { x: 60, y: 20, width: 80, height: 22 }
+    }]
+  };
+  const misaligned = buildLayoutReview(makeInput(base));
+  assert.ok(codes(misaligned, "warn").includes("icon_text_center_mismatch"));
+
+  const aligned = JSON.parse(JSON.stringify(base));
+  aligned.contentOverlays[0].slot.y = 26;
+  const review = buildLayoutReview(makeInput(aligned));
+  assert.ok(!codes(review, "warn").includes("icon_text_center_mismatch"));
+});
+
 test("backdrop placements are excluded from overlap checks", () => {
   const review = buildLayoutReview(makeInput({
     placements: [
