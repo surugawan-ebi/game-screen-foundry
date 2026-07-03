@@ -34,3 +34,6 @@ coverage/
 Thumbs.db
 .idea/
 .vscode/
+
+# local editor/agent workspace
+.claude/

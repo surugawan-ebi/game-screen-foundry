@@ -37,6 +37,7 @@ Use this skill for Game Screen Foundry project work: creating screen folders, ed
 - Sibling runtime lanes on one shell (HUD values, row counters) must share one lane template: same slot height, same vertical center, one font scale per rank. Intentional hierarchy (title + meta) needs a 1.4x+ font ratio. The `lane_rhythm_inconsistent` check enforces this, and the imagegen prompt declares the exact lane count so baked segment dividers match the content structure.
 - Functional surfaces (maps, boards) are full raster art at key-visual detail density — never simplified vector-style diagrams, even when generated separately from the backdrop.
 - Runtime text colors must survive on the generated backdrop; the scaling audit samples the PNG under each slot and warns below a 2.5 contrast ratio (`text_contrast_low`).
+- Raster asset bodies must be opaque inside the silhouette; largely semi-transparent output fails (`asset_interior_translucent`). Intentionally translucent assets (scrims, glows) declare `exportRequirements.renderIntent: "translucent_effect"`, which also exempts them from the craft audit. Never declare it just to silence a broken generation.
 - Do not move layout coordinates while responding to visual feedback unless the task explicitly asks for layout changes.
 - Do not commit proprietary external game assets into this tool repository.
 - Do not commit full reference profiles that contain machine-local source paths; commit only compact `qualityProfile.referenceDerived` data when needed.
@@ -79,6 +80,16 @@ After importing generated PNGs, run `npm run postprocess:assets -- <screen-folde
 - Handoff jobs under `imagegen-jobs/<jobId>.json` are agent-neutral: Codex CLI and Claude Code can both process them. Follow `<jobId>.prompt.md`, generate each asset with the available image generation path, and save each accepted PNG exactly to its `outputPath`.
 - Each job asset carries `qualityPlan`, `compositionContexts`, and `layoutContext` (overlap clearances, stacking partners, open layout issues). Respect the canvas coverage rule: fill the asset canvas edge-to-edge and never let artwork spill past it.
 - If generation is unavailable, write the blocker sidecar described in the job JSON. Never save placeholder or wireframe images.
+
+## Structure Preview (before generating images)
+
+Review the screen structure visually before any imagegen work:
+
+```sh
+npm run structure:preview -- /path/to/creative [screen-id] --out structure.svg
+```
+
+Every placement renders as a flat colored rectangle whose lightness rises with stacking depth (topmost = lightest), runtime overlays render as real text, and placement ids are labeled. Composition-group roots with a declared `contentInset` additionally show the decorative frame band as diagonal hatching and the content surface as a dashed box — a root without hatching is a shell whose contentInset is still undeclared. When the shell hosts functional children between the frame and the child-content area (header strips, footer buttons), declare `frameInset` for the painted frame band: the hatch then shrinks to the real decoration, the dashed box stays at the contentInset, and the un-marked band between them is where those children live. If the whole contentInset band shows hatched but contains functional children, that is the signal to add `frameInset`. Runtime text overlays render inside their declared text region (`slot` / `width`/`height`) as a dashed box; a red box + red tint means the `sampleText` overflows the region width (same CJK-aware estimation as `text_overflow_x`), so fix the slot, font size, or copy before generating. Check that the pile depths, paddings, frame bands, and text slots look right here first; fixing the spec at this stage is far cheaper than regenerating art. The browser has the same view via the 構造プレビュー button.
 
 ## Validation
 

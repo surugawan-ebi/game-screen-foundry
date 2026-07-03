@@ -29,6 +29,7 @@
     "profile:reference": "node scripts/build-reference-quality-profile.js",
     "release:check": "npm run check && node scripts/check-local-paths.js && node scripts/check-tracked-imagegen.js",
     "skill:install": "node scripts/install-codex-skill.js",
+    "structure:preview": "node scripts/structure-preview.js",
     "skill:install:claude": "node scripts/install-claude-skill.js",
     "validate": "node scripts/check-json.js && node scripts/check-skills.js && node scripts/validate-project-files.js",
     "validate:project": "node scripts/validate-project.js",

@@ -330,6 +330,36 @@ test("discrete children inside a foundation parent's frame band warn", () => {
   assert.ok(!codes(centered, "warn").includes("child_in_frame_band"));
 });
 
+test("overlay absolute geometry must agree with its slot", () => {
+  const base = (x, y) => makeInput({
+    placements: [placement("btn", "asset_btn", 200, 200, 200, 60)],
+    assets: [asset("asset_btn")],
+    contentOverlays: [{
+      overlayId: "ov_label",
+      kind: "text",
+      sampleText: "OK",
+      x,
+      y,
+      width: 100,
+      height: 24,
+      anchor: "center",
+      zIndex: 20,
+      fontSize: 16,
+      targetPlacementId: "btn",
+      slot: { x: 50, y: 18, width: 100, height: 24 }
+    }]
+  });
+
+  // Slot resolves to center 200,200; declaring 180,208 disagrees.
+  const mismatched = buildLayoutReview(base(180, 208));
+  const warning = mismatched.checks.find((check) => check.code === "overlay_xy_slot_mismatch");
+  assert.ok(warning);
+  assert.deepEqual(warning.refs.suggested, { x: 200, y: 200, width: 100, height: 24 });
+
+  const consistent = buildLayoutReview(base(200, 200));
+  assert.ok(!consistent.checks.some((check) => check.code === "overlay_xy_slot_mismatch"));
+});
+
 test("backdrop placements are excluded from overlap checks", () => {
   const review = buildLayoutReview(makeInput({
     placements: [

@@ -12,6 +12,7 @@ const state = {
   referenceQualityCompactProfile: null,
   assetQualityAudit: null,
   viewMode: "draft",
+  compositionFocus: false,
   regenerationQueue: [],
   regenerationQueueDirty: false,
   regenerationQueuePath: "",
@@ -52,6 +53,7 @@ const elements = {
   contentInsetRightInput: document.getElementById("contentInsetRightInput"),
   contentInsetTopInput: document.getElementById("contentInsetTopInput"),
   draftButton: document.getElementById("draftButton"),
+  structureButton: document.getElementById("structureButton"),
   folderPathInput: document.getElementById("folderPathInput"),
   flowCurrentLabel: document.getElementById("flowCurrentLabel"),
   flowSteps: document.getElementById("flowSteps"),
@@ -181,6 +183,7 @@ function setFlowStep(stepId) {
 function setViewMode(mode) {
   state.viewMode = mode;
   elements.draftButton.classList.toggle("is-active", mode === "draft");
+  elements.structureButton.classList.toggle("is-active", mode === "structure");
   elements.generateButton.classList.toggle("is-active", mode === "generated");
   elements.screenCanvasWrap.dataset.viewMode = mode;
 }
@@ -998,8 +1001,11 @@ function ensureCompositionSelection() {
   return groups[0];
 }
 
+// Canvas focus (dimming + composition outlines) is opt-in: the default view
+// shows the whole screen, and a group is only spotlighted after the user
+// presses its 表示 button.
 function getSelectedCompositionGroup() {
-  return ensureCompositionSelection();
+  return state.compositionFocus ? ensureCompositionSelection() : null;
 }
 
 function getCompositionStatusLabel(status) {
@@ -1071,12 +1077,19 @@ function renderCompositionGroups() {
 
     const selectButton = document.createElement("button");
     selectButton.className = "composition-select-button";
-    selectButton.textContent = group.groupId === state.selectedCompositionGroupId ? "表示中" : "表示";
+    const isFocused = state.compositionFocus && group.groupId === state.selectedCompositionGroupId;
+    selectButton.textContent = isFocused ? "表示中" : "表示";
     selectButton.addEventListener("click", () => {
-      state.selectedCompositionGroupId = group.groupId;
+      if (isFocused) {
+        state.compositionFocus = false;
+        setActivityStatus(`構成フォーカスを解除しました ${nowLabel()}`);
+      } else {
+        state.compositionFocus = true;
+        state.selectedCompositionGroupId = group.groupId;
+        setActivityStatus(`${group.groupId} の構成枠を表示しました ${nowLabel()}`);
+      }
       renderScreen();
       renderCompositionGroups();
-      setActivityStatus(`${group.groupId} の構成枠を表示しました ${nowLabel()}`);
     });
 
     header.appendChild(title);
@@ -1225,7 +1238,7 @@ function renderScreen() {
       image.classList.toggle("is-selected-composition-layer", selectedPlacementIds.has(layer.placementId));
     }
     image.classList.toggle("is-selected-placement", layer.placementId === state.selectedPlacementId);
-    image.src = layer.src;
+    image.src = state.viewMode === "structure" && layer.structureSrc ? layer.structureSrc : layer.src;
     image.alt = layer.assetId;
     image.title = `${layer.assetId} (${layer.role})`;
     image.dataset.placementId = layer.placementId;
@@ -2445,7 +2458,35 @@ async function refreshImagegenOutputs() {
   const busyStartedAt = Date.now();
   setBusy(elements.imagegenRefreshButton, true, "再取込中...");
   setWorkspaceBusy(true, "生成済みPNGを再取り込みしています...");
+  let autoRegisteredCount = 0;
   try {
+    // For folder-based projects, rescan the folder first so manually
+    // generated PNGs are picked up and persisted into imagegen-assets.json.
+    const sourceFolder = state.source
+      ? state.source.projectRoot || state.source.screenFolderPath || state.source.folderPath
+      : "";
+    if (sourceFolder) {
+      const scanResponse = await fetch("/api/load-from-folder", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          folderPath: sourceFolder,
+          screenId: state.source.screenId || "",
+          persistAutoRegistered: true
+        })
+      });
+      const scanPayload = await scanResponse.json();
+      if (scanPayload.ok) {
+        syncStateFromPayload(scanPayload.bundle);
+        updateEditors();
+        autoRegisteredCount = Array.isArray(scanPayload.autoRegisteredAssetIds)
+          ? scanPayload.autoRegisteredAssetIds.length
+          : 0;
+      }
+    }
+
     const response = await fetch("/api/imagegen-job", {
       method: "POST",
       headers: {
@@ -2480,7 +2521,8 @@ async function refreshImagegenOutputs() {
     const missing = Array.isArray(report.missingAssetIds) ? report.missingAssetIds.length : 0;
     setFlowStep("import");
     setViewMode("generated");
-    setActivityStatus(`生成済みPNGを再取り込みしました。採用 ${adopted} / 未生成 ${missing} ${nowLabel()}`);
+    const autoLabel = autoRegisteredCount ? ` / manifest自動追記 ${autoRegisteredCount}` : "";
+    setActivityStatus(`生成済みPNGを再取り込みしました。採用 ${adopted} / 未生成 ${missing}${autoLabel} ${nowLabel()}`);
   } catch (error) {
     window.alert(error.message);
     setActivityStatus(`再取り込み失敗: ${error.message}`);
@@ -2596,6 +2638,27 @@ async function showDraftWorkspace() {
   }
 }
 
+async function showStructureWorkspace() {
+  const busyStartedAt = Date.now();
+  setBusy(elements.structureButton, true, "表示中...");
+  setWorkspaceBusy(true, "構造プレビューを表示しています...");
+  try {
+    if (!state.renderModel) {
+      await renderDraftWorkspace(`構造プレビューを表示しました ${nowLabel()}`);
+    }
+    setViewMode("structure");
+    renderScreen();
+    setActivityStatus(`構造プレビューを表示しました ${nowLabel()}`);
+  } catch (error) {
+    window.alert(error.message);
+    setActivityStatus(`構造プレビュー表示失敗: ${error.message}`);
+  } finally {
+    await ensureMinimumBusy(busyStartedAt);
+    setWorkspaceBusy(false, "待機中");
+    setBusy(elements.structureButton, false);
+  }
+}
+
 async function loadBundleObject(bundle, source) {
   syncStateFromPayload({
     screenKv: bundle.screenKv,
@@ -2626,6 +2689,34 @@ async function loadBundleObject(bundle, source) {
     resetReview: true,
     resetComments: true
   });
+}
+
+const LAST_SOURCE_STORAGE_KEY = "gsf.lastFolderSource";
+
+function saveLastFolderSource(folderPath, screenId) {
+  try {
+    localStorage.setItem(LAST_SOURCE_STORAGE_KEY, JSON.stringify({ folderPath, screenId: screenId || "" }));
+  } catch (error) {
+    // Storage may be unavailable; restoring is best-effort only.
+  }
+}
+
+function readLastFolderSource() {
+  try {
+    const raw = localStorage.getItem(LAST_SOURCE_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    return parsed && typeof parsed.folderPath === "string" && parsed.folderPath ? parsed : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function clearLastFolderSource() {
+  try {
+    localStorage.removeItem(LAST_SOURCE_STORAGE_KEY);
+  } catch (error) {
+    // Ignore.
+  }
 }
 
 async function loadFolder(options = {}) {
@@ -2661,7 +2752,14 @@ async function loadFolder(options = {}) {
     }
     await loadBundleObject(payload.bundle, payload.source);
     elements.aiModeLabel.textContent = payload.ai.mode;
+    saveLastFolderSource(
+      payload.source && payload.source.projectRoot ? payload.source.projectRoot : folderPath,
+      payload.source ? payload.source.screenId : screenId
+    );
   } catch (error) {
+    if (options.silent) {
+      throw error;
+    }
     window.alert(error.message);
     setActivityStatus(`読込失敗: ${error.message}`);
   } finally {
@@ -2734,6 +2832,7 @@ elements.bundleFileInput.addEventListener("change", async (event) => {
 elements.imagegenJobButton.addEventListener("click", prepareImagegenJob);
 elements.imagegenRefreshButton.addEventListener("click", refreshImagegenOutputs);
 elements.draftButton.addEventListener("click", showDraftWorkspace);
+elements.structureButton.addEventListener("click", showStructureWorkspace);
 elements.generateButton.addEventListener("click", showGeneratedResults);
 elements.validateButton.addEventListener("click", validateWorkspaceSpec);
 elements.exportReportButton.addEventListener("click", buildImplementationReport);
@@ -2774,8 +2873,50 @@ elements.clearRegenQueueButton.addEventListener("click", clearRegenerationQueue)
 elements.reviewButton.addEventListener("click", runReview);
 elements.applyLocksButton.addEventListener("click", applyLockSuggestions);
 
+// During boot the workflow buttons stay disabled so early clicks are not
+// swallowed by the initial load.
+function setBootBusy(busy) {
+  const bootButtons = [
+    elements.draftButton,
+    elements.structureButton,
+    elements.generateButton,
+    elements.validateButton,
+    elements.reviewButton,
+    elements.imagegenJobButton,
+    elements.imagegenRefreshButton,
+    elements.exportReportButton,
+    elements.applyLocksButton,
+    elements.loadDemoButton,
+    elements.loadFolderButton
+  ];
+  for (const button of bootButtons) {
+    button.disabled = busy;
+  }
+}
+
+async function bootWorkspace() {
+  setBootBusy(true);
+  try {
+    const last = readLastFolderSource();
+    if (last) {
+      elements.folderPathInput.value = last.folderPath;
+      try {
+        await loadFolder({ folderPath: last.folderPath, screenId: last.screenId, silent: true });
+        setActivityStatus(`前回のフォルダを復元しました: ${last.folderPath}${last.screenId ? `#${last.screenId}` : ""} ${nowLabel()}`);
+        return;
+      } catch (error) {
+        clearLastFolderSource();
+        setActivityStatus(`前回フォルダの復元に失敗したためデモを読み込みます: ${error.message}`);
+      }
+    }
+    await loadDemo();
+  } catch (error) {
+    window.alert(error.message);
+  } finally {
+    setBootBusy(false);
+  }
+}
+
 setFlowStep("load");
 renderReferenceQualityPanel();
-loadDemo().catch((error) => {
-  window.alert(error.message);
-});
+bootWorkspace();

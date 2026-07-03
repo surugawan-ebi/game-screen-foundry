@@ -27,6 +27,8 @@ The project is currently beta-quality. It is useful for validating a production 
   Assembles the screen from separate layers such as panels, buttons, icons, backgrounds, badges, runtime text, and overlays.
 - 生成済み PNG 版を表示し、構造確認用の wireframe preview も確認できます。  
   Shows the generated PNG version, with a structural wireframe-style preview for layout checks.
+- 画像生成前に「構造プレビュー」で画面を仮素材(色付き矩形)として確認できます。重なりが上のレイヤーほど明るく表示され、runtime テキストは実テキストで載るため、レイヤー構造・padding・スロットの破綻が生成前に見えます。`compositionGroups.contentInset` を宣言したベース素材は、装飾フレーム帯が斜線の網掛け、地(コンテンツ面)が点線枠で描き分けられます。runtime テキストは宣言済みのテキスト領域(slot)が点線枠で表示され、sampleText が領域幅を超える場合は赤枠+赤網掛けで警告されます。CLI では `npm run structure:preview -- <folder> [screen] --out file.svg` で同じ構造図をSVG出力できます。
+  Before generating any images, the structure preview renders every placement as a flat colored rectangle — lighter the higher it sits in the stack — with runtime text as real text, so layering, padding, and slot problems are visible pre-generation. Foundation assets with a declared `compositionGroups.contentInset` show their decorative frame band as diagonal hatching and the content surface as a dashed box. Runtime text renders inside its declared region (slot) as a dashed box, turning red when the sample text overflows the region width. The CLI equivalent is `npm run structure:preview`.
 - エディタ内JSON、レンダリング可能性、composition quality、layout quality をブラウザ内でチェックできます。layout quality は、素材が重なる際の padding 十分性、フォントサイズを考慮したテキストスロットの収まり、素材同士の横/縦ガイドラインの整列を検証します。
   Checks editor JSON, renderability, composition quality, and layout quality in the browser. Layout quality validates overlap padding between stacked assets, font-size-aware text slot fit, horizontal/vertical guide-line alignment, and icon+text center-line matching.
 - `world-preset.json` の `designRules`(スペーシンググリッド、装飾フレーム幅、引き伸ばし禁止など)をバリデータと imagegen prompt の両方に適用します。生成PNGは実寸監査され、非等倍の引き伸ばしは fail、9-slice は `exportRequirements.scalingPolicy` の明示宣言時のみ許容されます。
@@ -41,8 +43,10 @@ The project is currently beta-quality. It is useful for validating a production 
   Tracks per-asset comments, locks, history, and regeneration queues.
 - 選択した素材の Codex/imagegen 向け依頼文を作ります。  
   Builds Codex/imagegen-ready prompts for selected assets.
-- 生成済み PNG を画面フォルダから再取り込みします。  
-  Re-imports generated PNGs from a project folder.
+- 生成済み PNG を画面フォルダから再取り込みします。フォルダ読み込み中のプロジェクトでは、再取り込み時にフォルダを再スキャンし、未登録の生成PNGを `imagegen-assets.json` へ自動追記します。
+  Re-imports generated PNGs from a project folder. For folder-loaded projects, re-import rescans the folder and appends newly found PNGs to `imagegen-assets.json` automatically.
+- 最後に読み込んだフォルダと画面IDを記憶し、リロード後も同じプロジェクトを復元します。
+  Remembers the last loaded folder and screen id, restoring the same project after a reload.
 - layer order、runtime overlay、採用PNG、composition quality を実装レポートとして出力します。  
   Exports an implementation handoff report with layer order, runtime overlays, adopted PNGs, and composition quality.
 - `game-creative-project.json` による複数画面プロジェクトを扱えます。  

@@ -10,7 +10,7 @@ const { prepareInput, clone } = require("./lib/spec");
 const { generateRenderModel } = require("./lib/generator");
 const { baseDirectives, mergeDirectives } = require("./lib/comment-tools");
 const { getAiMode, normalizeCommentWithAi, reviewScreenWithAi } = require("./lib/codex-adapter");
-const { resolveBundleFromFolder } = require("./lib/folder-loader");
+const { persistAutoRegisteredAssets, resolveBundleFromFolder } = require("./lib/folder-loader");
 const { prepareImagegenWorkflow } = require("./lib/imagegen-workflow");
 const { buildRegenerationRequest } = require("./lib/regeneration-queue");
 const { buildImplementationReport } = require("./lib/implementation-report");
@@ -1160,6 +1160,14 @@ async function dispatchApi(method, pathname, body = {}) {
     if (loaded.source.projectRoot) {
       allowSourceRoot(loaded.source.projectRoot);
     }
+    let persistedAssets = { written: 0, manifestPath: "" };
+    if (body.persistAutoRegistered === true && loaded.source.autoRegisteredAssetIds.length) {
+      persistedAssets = persistAutoRegisteredAssets(
+        loaded.source.screenFolderPath,
+        loaded.bundle,
+        loaded.source.autoRegisteredAssetIds
+      );
+    }
     return {
       statusCode: 200,
       payload: {
@@ -1167,6 +1175,8 @@ async function dispatchApi(method, pathname, body = {}) {
         ai: {
           mode: getAiMode()
         },
+        autoRegisteredAssetIds: loaded.source.autoRegisteredAssetIds,
+        persistedAssets,
         bundle: loaded.bundle,
         source: {
           kind: "folder",

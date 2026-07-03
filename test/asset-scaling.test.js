@@ -22,7 +22,7 @@ function makePng({ width, height, artRect = null, painter = null }) {
       rgba[offset] = color[0];
       rgba[offset + 1] = color[1];
       rgba[offset + 2] = color[2];
-      rgba[offset + 3] = 255;
+      rgba[offset + 3] = color.length > 3 ? color[3] : 255;
     }
   }
   return encodePng({ width, height, rgba });
@@ -30,6 +30,11 @@ function makePng({ width, height, artRect = null, painter = null }) {
 
 // A crafted cel sprite: dark outline ring, top highlight band, base tone,
 // bottom shadow band — mirrors the structure of commercial sprite packs.
+// Ghost-blob output: most of the body is semi-transparent.
+function translucentPainter() {
+  return [230, 220, 190, 120];
+}
+
 function celSpritePainter(x, y, width, height) {
   if (x < 3 || y < 3 || x >= width - 3 || y >= height - 3) {
     return [40, 30, 50];
@@ -221,6 +226,30 @@ test("craft audit flags flat fills and missing outlines when craftStyle is decla
   input.worldPreset.designRules = {};
   const silent = auditAssetScaling(input);
   assert.equal(silent.checks.filter((check) => /^craft_/u.test(check.code)).length, 0);
+});
+
+test("largely semi-transparent raster bodies fail unless declared translucent_effect", (t) => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "gsf-translucent-"));
+  t.after(() => fs.rmSync(tempDir, { recursive: true, force: true }));
+  const makeGhostInput = (renderIntent) => makeInput({
+    tempDir,
+    assets: [{
+      assetId: "a_ghost",
+      assetType: "panel",
+      role: "surface",
+      exportRequirements: renderIntent ? { renderIntent } : {}
+    }],
+    placements: [placement("p1", "a_ghost", 64, 64)],
+    files: { a_ghost: { width: 64, height: 64, painter: translucentPainter } }
+  });
+
+  const broken = auditAssetScaling(makeGhostInput(""));
+  const failure = broken.checks.find((check) => check.code === "asset_interior_translucent");
+  assert.ok(failure);
+  assert.equal(failure.status, "fail");
+
+  const declared = auditAssetScaling(makeGhostInput("translucent_effect"));
+  assert.ok(!declared.checks.some((check) => check.code === "asset_interior_translucent"));
 });
 
 test("craft style suggestion measures adopted PNGs and stays silent once declared", (t) => {

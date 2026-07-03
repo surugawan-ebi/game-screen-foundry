@@ -207,6 +207,14 @@ Recommended composition group fields:
   placement's usable content area.
 - `contentInset`: root-local inset object `{ "top", "right", "bottom", "left" }`
   defining the safe area for `childContentPlacementIds`.
+- `frameInset`: optional root-local inset describing the painted decorative
+  frame band of the root asset. Distinct from `contentInset`: the band between
+  `frameInset` and `contentInset` may host other functional children (header
+  strips, footer buttons) and is neither decoration nor child-content area.
+  When declared it drives the imagegen decoration budget, the structure
+  preview hatching, and per-side layer frame checks; without it the whole
+  `contentInset` band is treated as decoration. Declaring a `frameInset` wider
+  than `contentInset` warns (`frame_inset_exceeds_content`).
 - `minChildInset`: shorthand minimum inset. It can be a number or an inset
   object. When both `contentInset` and `minChildInset` are present, the stricter
   edge value is used.
@@ -265,6 +273,12 @@ padding, text slot fit, and guide-line alignment). All fields are optional:
   the suggested snap values.
 - `minFontSize` (default 10): readability floor for resolved overlay font
   sizes at 1x.
+
+Overlays that declare both `targetPlacementId`+`slot` (which the renderer
+uses) and absolute `x`/`y`/`width`/`height` are checked for agreement:
+`overlay_xy_slot_mismatch` warns with the recomputed absolute values when
+they diverge, so external implementations reading either representation stay
+consistent.
 
 Layout quality review codes include `overlap_undeclared`, `overlap_sticks_out`,
 `overlap_padding_missing`, `overlap_padding_tight`, `child_overflows_parent`,
@@ -449,6 +463,17 @@ imagegen prompt. All fields are optional:
   stretch-safe center.
 - `tile`: the asset tiles; prompts require a seamless pattern.
 
+`exportRequirements.renderIntent` declares how the pixels are meant to
+render:
+
+- `raster_art` (default): the body inside the silhouette must be effectively
+  opaque. Assets whose semi-transparent pixel ratio exceeds 35% warn and 55%
+  fail (`asset_interior_translucent`) — this catches ghost blobs, holes, and
+  un-flattened effect layers that let underlying layers bleed through.
+- `translucent_effect`: intentional semi-transparency (scrims, glows,
+  vignettes). Exempt from the translucency and craft audits; prompts state
+  that the alpha gradient is part of the design.
+
 The audit also samples the generated PNG under each runtime text slot and
 warns when the declared text color (or its stroke) falls below a 2.5
 contrast ratio against the actual backdrop (`text_contrast_low`).
@@ -548,6 +573,10 @@ Rules:
 - `assetId` must match an asset in `material-spec.json`.
 - Relative `path` values are resolved from the folder containing
   `imagegen-assets.json`.
+- The browser's PNG re-import rescans the screen folder and appends newly
+  found `generated-assets/**/<assetId>.png` files to this manifest
+  automatically (screen-folder-relative paths), so manually generated PNGs do
+  not need hand registration.
 - If `imagegen-assets.json` is absent, files named
   `generated-assets/<assetId>.png` or `generated-assets/**/<assetId>.png` are
   auto-registered when the screen folder is loaded. The filename basename must

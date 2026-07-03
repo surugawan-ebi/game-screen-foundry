@@ -284,6 +284,45 @@ test("imagegen jobs carry layout context, canvas coverage rules, and agent-neutr
   assert.match(job.productBoundary.expectedProcessor, /Claude Code/u);
 });
 
+test("persistAutoRegistered appends scanned PNGs to imagegen-assets.json", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "gcgt-persist-assets-"));
+  const project = getBlankProject();
+  project.worldPreset.imagegenAssets = {};
+
+  try {
+    fs.mkdirSync(path.join(tempDir, "generated-assets"), { recursive: true });
+    fs.writeFileSync(path.join(tempDir, "screen-kv.json"), JSON.stringify(project.screenKv, null, 2));
+    fs.writeFileSync(path.join(tempDir, "material-spec.json"), JSON.stringify(project.materialSpecSheet, null, 2));
+    fs.writeFileSync(path.join(tempDir, "world-preset.json"), JSON.stringify(project.worldPreset, null, 2));
+    fs.writeFileSync(path.join(tempDir, "generated-assets", "btn_start.png"), "fake generated image");
+
+    const response = await dispatchApi("POST", "/api/load-from-folder", {
+      folderPath: tempDir,
+      persistAutoRegistered: true
+    });
+
+    assert.equal(response.statusCode, 200);
+    assert.ok(response.payload.autoRegisteredAssetIds.includes("btn_start"));
+    assert.equal(response.payload.persistedAssets.written, 1);
+
+    const manifest = JSON.parse(fs.readFileSync(path.join(tempDir, "imagegen-assets.json"), "utf8"));
+    assert.equal(manifest.assets.length, 1);
+    assert.equal(manifest.assets[0].assetId, "btn_start");
+    assert.equal(manifest.assets[0].path, "generated-assets/btn_start.png");
+
+    // A second scan does not duplicate the manifest entry.
+    const again = await dispatchApi("POST", "/api/load-from-folder", {
+      folderPath: tempDir,
+      persistAutoRegistered: true
+    });
+    assert.equal(again.statusCode, 200);
+    const manifestAgain = JSON.parse(fs.readFileSync(path.join(tempDir, "imagegen-assets.json"), "utf8"));
+    assert.equal(manifestAgain.assets.length, 1);
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
 test("loaded screen folders auto-register nested generated assets and resolve workflow paths", async () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "gcgt-nested-assets-"));
   const project = getBlankProject();
