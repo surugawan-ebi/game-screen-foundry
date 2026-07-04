@@ -138,6 +138,9 @@ Use these checks for UI asset groups:
 - Child decorative layers should leave visible breathing room with
   `inside_root` and `minInset`, unless the design intentionally crosses an
   edge.
+- Related controls that sit beside a root surface, rather than on top of it,
+  should use `sibling` with `minGap`; this checks separation without forcing a
+  parent/child containment relationship.
 - Edge badges, sockets, gems, and emblems should use `edge_attached` or
   `decorative_overlap` with explicit `allowedOverflow`.
 - Real content rows, buttons, and child widgets inside a panel should use

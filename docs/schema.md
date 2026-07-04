@@ -201,8 +201,9 @@ Recommended composition group fields:
   their normal `zIndex` order. These are visual layers or decorative accents;
   they are not checked against child-content inset rules.
 - `layerFitRules`: optional per-layer placement intent. Use it to distinguish
-  `same_canvas`, `inside_root`, `edge_attached`, and `decorative_overlap`
-  layers, and to declare `minInset` or `allowedOverflow`.
+  `same_canvas`, `inside_root`, `sibling`, `edge_attached`, and
+  `decorative_overlap` layers, and to declare `minInset`, `minGap`, or
+  `allowedOverflow`.
 - `childContentPlacementIds`: placements that must stay inside the root
   placement's usable content area.
 - `contentInset`: root-local inset object `{ "top", "right", "bottom", "left" }`

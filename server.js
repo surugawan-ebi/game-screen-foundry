@@ -138,6 +138,30 @@ function resolveRegenerationQueuePath(source = {}, screenKv = {}) {
   return resolvedQueuePath;
 }
 
+function resolveScreenContractFolder(source = {}) {
+  if (!source || source.kind !== "folder") {
+    return null;
+  }
+
+  const baseDir = source.screenFolderPath || source.folderPath || "";
+  if (!baseDir) {
+    return null;
+  }
+
+  const resolvedBase = path.resolve(baseDir);
+  if (!fs.existsSync(resolvedBase) || !fs.statSync(resolvedBase).isDirectory()) {
+    throw new Error(`画面フォルダが見つかりません: ${resolvedBase}`);
+  }
+  if (!isAllowedSourceFile(resolvedBase)) {
+    throw new Error("画面JSONを保存する前に、対象のプロジェクトフォルダを読み込んでください。");
+  }
+  return resolvedBase;
+}
+
+function writeJsonFile(filePath, value) {
+  fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
+}
+
 function normalizeRegenerationQueue(queue) {
   if (!Array.isArray(queue)) {
     return [];
@@ -972,6 +996,46 @@ function handleSaveRegenerationQueue(body) {
   };
 }
 
+function handleSaveScreenFiles(body) {
+  const screenFolder = resolveScreenContractFolder(body.source);
+  if (!screenFolder) {
+    return {
+      ok: true,
+      persisted: false,
+      message: "フォルダまたはプロジェクトを読み込むと、画面JSONを保存できます。"
+    };
+  }
+
+  const input = prepareInput({
+    screenKv: body.screenKv,
+    materialSpecSheet: body.materialSpecSheet,
+    worldPreset: body.worldPreset,
+    revisionMap: body.revisionMap || {}
+  });
+  const files = [
+    ["screen-kv.json", input.screenKv],
+    ["material-spec.json", input.materialSpecSheet],
+    ["world-preset.json", input.worldPreset]
+  ];
+
+  const savedFiles = files.map(([fileName, value]) => {
+    const filePath = path.resolve(screenFolder, fileName);
+    if (!isPathInside(screenFolder, filePath)) {
+      throw new Error("画面JSONの保存先が画面フォルダ外に解決されました。");
+    }
+    writeJsonFile(filePath, value);
+    return filePath;
+  });
+
+  return {
+    ok: true,
+    persisted: true,
+    screenFolder,
+    savedFiles,
+    savedAt: new Date().toISOString()
+  };
+}
+
 function handleLoadRegenerationQueue(body) {
   const queuePath = resolveRegenerationQueuePath(body.source, body.screenKv);
   if (!queuePath) {
@@ -1328,6 +1392,13 @@ async function dispatchApi(method, pathname, body = {}) {
     return {
       statusCode: 200,
       payload: handleSaveRegenerationQueue(body)
+    };
+  }
+
+  if (method === "POST" && pathname === "/api/save-screen-files") {
+    return {
+      statusCode: 200,
+      payload: handleSaveScreenFiles(body)
     };
   }
 

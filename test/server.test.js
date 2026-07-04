@@ -1040,6 +1040,50 @@ test("regeneration queue endpoints persist queue files per loaded folder screen"
   }
 });
 
+test("save-screen-files persists edited screen contract json for loaded folders", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "gcgt-screen-save-"));
+  const project = getDemoProject();
+  project.worldPreset.imagegenWorkflow = {};
+  fs.writeFileSync(path.join(tempDir, "screen-kv.json"), JSON.stringify(project.screenKv, null, 2));
+  fs.writeFileSync(path.join(tempDir, "material-spec.json"), JSON.stringify(project.materialSpecSheet, null, 2));
+  fs.writeFileSync(path.join(tempDir, "world-preset.json"), JSON.stringify(project.worldPreset, null, 2));
+
+  try {
+    const loadResponse = await dispatchApi("POST", "/api/load-from-folder", {
+      folderPath: tempDir
+    });
+    assert.equal(loadResponse.statusCode, 200);
+    assert.equal(loadResponse.payload.ok, true);
+
+    const bundle = loadResponse.payload.bundle;
+    bundle.materialSpecSheet.placements[0].x += 12;
+    bundle.materialSpecSheet.placements[0].width += 8;
+    bundle.worldPreset.designRules = {
+      ...(bundle.worldPreset.designRules || {}),
+      spacingUnit: 4
+    };
+
+    const saveResponse = await dispatchApi("POST", "/api/save-screen-files", {
+      source: loadResponse.payload.source,
+      screenKv: bundle.screenKv,
+      materialSpecSheet: bundle.materialSpecSheet,
+      worldPreset: bundle.worldPreset
+    });
+    assert.equal(saveResponse.statusCode, 200);
+    assert.equal(saveResponse.payload.ok, true);
+    assert.equal(saveResponse.payload.persisted, true);
+    assert.equal(saveResponse.payload.savedFiles.length, 3);
+
+    const savedSpec = JSON.parse(fs.readFileSync(path.join(tempDir, "material-spec.json"), "utf8"));
+    const savedPreset = JSON.parse(fs.readFileSync(path.join(tempDir, "world-preset.json"), "utf8"));
+    assert.equal(savedSpec.placements[0].x, bundle.materialSpecSheet.placements[0].x);
+    assert.equal(savedSpec.placements[0].width, bundle.materialSpecSheet.placements[0].width);
+    assert.equal(savedPreset.designRules.spacingUnit, 4);
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
 test("frontend exposes the image generation flow tracker", () => {
   const html = fs.readFileSync(path.join(__dirname, "..", "public", "index.html"), "utf8");
   const js = fs.readFileSync(path.join(__dirname, "..", "public", "app.js"), "utf8");

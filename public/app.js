@@ -427,8 +427,38 @@ function getPlacements() {
     : [];
 }
 
+function getContentOverlays() {
+  return state.materialSpecSheet && Array.isArray(state.materialSpecSheet.contentOverlays)
+    ? state.materialSpecSheet.contentOverlays
+    : [];
+}
+
 function getSelectedPlacement() {
   return getPlacements().find((item) => item.placementId === state.selectedPlacementId) || null;
+}
+
+function getSelectedOverlay() {
+  return getContentOverlays().find((item) => item.overlayId === state.selectedPlacementId) || null;
+}
+
+function getSelectedEditableItem() {
+  const placement = getSelectedPlacement();
+  if (placement) {
+    return {
+      kind: "placement",
+      item: placement,
+      id: placement.placementId
+    };
+  }
+  const overlay = getSelectedOverlay();
+  if (overlay) {
+    return {
+      kind: "overlay",
+      item: overlay,
+      id: overlay.overlayId
+    };
+  }
+  return null;
 }
 
 function getMaterialCompositionGroups() {
@@ -510,7 +540,7 @@ function syncPlacementEditorFields(placement) {
   elements.placementWidthInput.value = placement ? placement.width : "";
   elements.placementHeightInput.value = placement ? placement.height : "";
   elements.placementZInput.value = placement ? placement.zIndex : "";
-  elements.placementParentInput.value = placement ? placement.parentId || "" : "";
+  elements.placementParentInput.value = placement ? placement.parentId || placement.targetPlacementId || "" : "";
 }
 
 function getPlacementStep() {
@@ -532,9 +562,14 @@ function findLayerElementByPlacementId(placementId) {
     .find((element) => element.dataset.placementId === placementId) || null;
 }
 
-function updateLivePlacementDom(placement) {
-  const box = getPlacementBoxFromGeometry(placement);
-  const layerElement = findLayerElementByPlacementId(placement.placementId);
+function getEditableId(item) {
+  return item.placementId || item.overlayId;
+}
+
+function updateLiveEditableDom(item) {
+  const id = getEditableId(item);
+  const box = getPlacementBoxFromGeometry(item);
+  const layerElement = findLayerElementByPlacementId(id);
   if (layerElement) {
     layerElement.style.left = `${box.left}px`;
     layerElement.style.top = `${box.top}px`;
@@ -543,31 +578,39 @@ function updateLivePlacementDom(placement) {
   }
 
   const overlay = elements.screenCanvas.querySelector(".placement-edit-overlay");
-  if (overlay && overlay.dataset.placementId === placement.placementId) {
+  if (overlay && overlay.dataset.placementId === id) {
     overlay.style.left = `${box.left}px`;
     overlay.style.top = `${box.top}px`;
     overlay.style.width = `${box.width}px`;
     overlay.style.height = `${box.height}px`;
     const label = overlay.querySelector(".placement-edit-label");
     if (label) {
-      label.textContent = `${placement.placementId} ${placement.width}x${placement.height} @ ${placement.x},${placement.y}`;
+      label.textContent = `${id} ${item.width}x${item.height} @ ${item.x},${item.y}`;
     }
   }
 }
 
-function updateRenderLayerGeometry(placement) {
+function updateLivePlacementDom(placement) {
+  updateLiveEditableDom(placement);
+}
+
+function updateRenderLayerGeometryForItem(item) {
   if (!state.renderModel || !state.renderModel.screen) {
     return;
   }
-  const layer = state.renderModel.screen.layers.find((item) => item.placementId === placement.placementId);
+  const layer = state.renderModel.screen.layers.find((layerItem) => layerItem.placementId === getEditableId(item));
   if (!layer) {
     return;
   }
-  const box = getPlacementBoxFromGeometry(placement);
+  const box = getPlacementBoxFromGeometry(item);
   layer.left = box.left;
   layer.top = box.top;
   layer.width = box.width;
   layer.height = box.height;
+}
+
+function updateRenderLayerGeometry(placement) {
+  updateRenderLayerGeometryForItem(placement);
 }
 
 function applyPlacementGeometry(placement, geometry, { liveDom = true, syncFields = true } = {}) {
@@ -581,6 +624,44 @@ function applyPlacementGeometry(placement, geometry, { liveDom = true, syncField
   }
   if (liveDom) {
     updateLivePlacementDom(placement);
+  }
+}
+
+function updateOverlaySlotFromGeometry(overlay) {
+  if (!overlay || !overlay.targetPlacementId) {
+    return;
+  }
+  const target = getPlacements().find((placement) => placement.placementId === overlay.targetPlacementId);
+  if (!target) {
+    return;
+  }
+  const targetLeft = target.x - target.width / 2;
+  const targetTop = target.y - target.height / 2;
+  overlay.slot = {
+    ...(overlay.slot || {}),
+    x: Math.round((overlay.x - overlay.width / 2 - targetLeft) * 10) / 10,
+    y: Math.round((overlay.y - overlay.height / 2 - targetTop) * 10) / 10,
+    width: overlay.width,
+    height: overlay.height
+  };
+  delete overlay.slot.right;
+  delete overlay.slot.bottom;
+  delete overlay.slot.offsetX;
+  delete overlay.slot.offsetY;
+}
+
+function applyOverlayGeometry(overlay, geometry, { liveDom = true, syncFields = true } = {}) {
+  overlay.x = Math.round(geometry.x);
+  overlay.y = Math.round(geometry.y);
+  overlay.width = Math.max(1, Math.round(geometry.width));
+  overlay.height = Math.max(1, Math.round(geometry.height));
+  updateOverlaySlotFromGeometry(overlay);
+  updateRenderLayerGeometryForItem(overlay);
+  if (syncFields) {
+    syncPlacementEditorFields(overlay);
+  }
+  if (liveDom) {
+    updateLiveEditableDom(overlay);
   }
 }
 
@@ -611,6 +692,28 @@ function shiftDependentPlacements(dependents, dx, dy) {
   }
 }
 
+function collectDependentOverlays(rootPlacement, dependentPlacements = []) {
+  const targetIds = new Set([
+    rootPlacement.placementId,
+    ...dependentPlacements.map((placement) => placement.placementId)
+  ]);
+  return getContentOverlays().filter((overlay) => targetIds.has(overlay.targetPlacementId));
+}
+
+function shiftDependentOverlays(overlays, dx, dy) {
+  if (!dx && !dy) {
+    return;
+  }
+  for (const overlay of overlays) {
+    applyOverlayGeometry(overlay, {
+      x: overlay.x + dx,
+      y: overlay.y + dy,
+      width: overlay.width,
+      height: overlay.height
+    }, { syncFields: false });
+  }
+}
+
 // The renderer positions overlays from targetPlacementId + slot; the absolute
 // x/y/width/height mirror is recomputed after every structured edit so both
 // representations stay in agreement (overlay_xy_slot_mismatch stays quiet).
@@ -620,25 +723,38 @@ function syncOverlayAbsoluteGeometry() {
 
 function renderStructuredSpecEditor() {
   const placements = getPlacements();
+  const overlays = getContentOverlays();
   const groups = getMaterialCompositionGroups();
-  setSpecEditorDisabled(!placements.length);
+  const editableRows = [
+    ...placements.map((placement) => ({
+      id: placement.placementId,
+      label: `${placement.placementId} / ${placement.assetId}`,
+      kind: "placement"
+    })),
+    ...overlays.map((overlay) => ({
+      id: overlay.overlayId,
+      label: `${overlay.overlayId} / runtime text -> ${overlay.targetPlacementId || "no target"}`,
+      kind: "overlay"
+    }))
+  ];
+  setSpecEditorDisabled(!editableRows.length);
   elements.specEditorStatus.textContent = placements.length
-    ? `${placements.length} placements / ${groups.length} groups`
+    ? `${placements.length} placements / ${overlays.length} overlays / ${groups.length} groups`
     : "未読み込み";
 
   setOptions(
     elements.placementEditorSelect,
-    placements,
-    (placement) => placement.placementId,
-    (placement) => `${placement.placementId} / ${placement.assetId}`,
-    "placementなし"
+    editableRows,
+    (row) => row.id,
+    (row) => row.label,
+    "編集対象なし"
   );
-  if (placements.length && !placements.some((placement) => placement.placementId === state.selectedPlacementId)) {
-    state.selectedPlacementId = placements[0].placementId;
+  if (editableRows.length && !editableRows.some((row) => row.id === state.selectedPlacementId)) {
+    state.selectedPlacementId = editableRows[0].id;
   }
   elements.placementEditorSelect.value = state.selectedPlacementId || "";
-  const placement = getSelectedPlacement();
-  syncPlacementEditorFields(placement);
+  const editable = getSelectedEditableItem();
+  syncPlacementEditorFields(editable ? editable.item : null);
   elements.placementFollowToggle.checked = state.movePlacementDependents;
   elements.placementTuneToggle.textContent = state.placementTuneMode ? "微調整 ON" : "微調整 OFF";
   elements.placementTuneToggle.setAttribute("aria-pressed", state.placementTuneMode ? "true" : "false");
@@ -679,8 +795,106 @@ function readNumberField(input, label, { min = -Infinity } = {}) {
   return Math.round(value);
 }
 
-async function refreshAfterStructuredSpecEdit(message, button) {
+async function saveScreenFilesFromCurrentEditors() {
+  if (!state.source || state.source.kind !== "folder") {
+    return {
+      persisted: false,
+      message: "フォルダ読み込みではないため、画面JSONは保存されていません。"
+    };
+  }
+
+  const { payload, diagnostics } = getPayloadFromEditorsSafely();
+  if (diagnostics.length) {
+    throw new Error(diagnostics.map((diagnostic) => diagnostic.message).join(" / "));
+  }
+
+  const response = await fetch("/api/save-screen-files", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      source: state.source,
+      screenKv: payload.screenKv,
+      materialSpecSheet: payload.materialSpecSheet,
+      worldPreset: payload.worldPreset,
+      revisionMap: payload.revisionMap
+    })
+  });
+  const savePayload = await response.json();
+  if (!savePayload.ok) {
+    throw new Error(savePayload.error || "画面JSONの保存に失敗しました。");
+  }
+  return savePayload;
+}
+
+function findMaterialAsset(assetId) {
+  const assets = state.materialSpecSheet && Array.isArray(state.materialSpecSheet.assets)
+    ? state.materialSpecSheet.assets
+    : [];
+  return assets.find((asset) => asset.assetId === assetId) || null;
+}
+
+function collectResizedPlacementAssetIds(records) {
+  return [...new Set((records || [])
+    .filter((record) => {
+      if (!record || !record.placement || !record.before) {
+        return false;
+      }
+      return record.placement.width !== record.before.width
+        || record.placement.height !== record.before.height;
+    })
+    .map((record) => record.placement.assetId)
+    .filter(Boolean))];
+}
+
+function queueAssetsForStructuredLayoutChange(assetIds, reason) {
+  const ids = [...new Set(assetIds || [])];
+  if (!ids.length) {
+    return 0;
+  }
+
+  const now = new Date().toISOString();
+  let changed = 0;
+  ids.forEach((assetId) => {
+    const asset = findMaterialAsset(assetId);
+    if (!asset) {
+      return;
+    }
+    const current = findQueueItem(assetId);
+    const nextItem = {
+      queueId: current ? current.queueId : `regen_${assetId}_${Date.now()}`,
+      assetId,
+      userComment: reason,
+      aiReviewComment: current ? current.aiReviewComment : getSuggestedComment(assetId),
+      source: "structured_layout_editor",
+      status: "queued",
+      createdAt: current ? current.createdAt : now,
+      updatedAt: now
+    };
+    if (current) {
+      state.regenerationQueue = state.regenerationQueue.map((item) => (
+        item.assetId === assetId ? nextItem : item
+      ));
+    } else {
+      state.regenerationQueue = [...state.regenerationQueue, nextItem];
+    }
+    changed += 1;
+  });
+
+  if (changed) {
+    markRegenerationQueueDirty();
+    setRegenerationPrompt("");
+    renderRegenerationQueue();
+    renderAssets();
+    setFlowStep("queue");
+  }
+  return changed;
+}
+
+async function refreshAfterStructuredSpecEdit(message, button, options = {}) {
   const busyStartedAt = Date.now();
+  const shouldRestoreStructureView = state.viewMode === "structure";
   if (button) {
     setBusy(button, true, "反映中...");
   }
@@ -692,7 +906,21 @@ async function refreshAfterStructuredSpecEdit(message, button) {
     state.reviewSuggestionsByAsset = {};
     renderValidationReport(null);
     await renderDraftWorkspace(message);
-    setViewMode("draft");
+    const savePayload = await saveScreenFilesFromCurrentEditors();
+    const queuedCount = queueAssetsForStructuredLayoutChange(
+      options.affectedAssetIds || [],
+      options.regenerationComment || "構造プレビューで配置またはサイズを変更。新しい最終配置に合わせてPNGを再生成してください。"
+    );
+    if (shouldRestoreStructureView) {
+      setViewMode("structure");
+      renderScreen();
+    }
+    const saveLabel = savePayload.persisted ? "画面JSON保存済み" : "画面JSON未保存";
+    const queueLabel = queuedCount ? ` / 再生成キュー ${queuedCount} 件` : "";
+    const queueSkipLabel = !queuedCount && options.queueSkipMessage
+      ? ` / ${options.queueSkipMessage}`
+      : "";
+    setActivityStatus(`${message} / ${saveLabel}${queueLabel}${queueSkipLabel}`);
   } catch (error) {
     window.alert(error.message);
     setActivityStatus(`構造化編集失敗: ${error.message}`);
@@ -709,11 +937,31 @@ async function refreshAfterStructuredSpecEdit(message, button) {
 async function applyPlacementEditor() {
   try {
     const placement = getSelectedPlacement();
+    const overlay = getSelectedOverlay();
+    if (overlay) {
+      const targetPlacementId = elements.placementParentInput.value.trim();
+      if (targetPlacementId) {
+        overlay.targetPlacementId = targetPlacementId;
+      }
+      overlay.zIndex = readNumberField(elements.placementZInput, "z");
+      applyOverlayGeometry(overlay, {
+        x: readNumberField(elements.placementXInput, "x"),
+        y: readNumberField(elements.placementYInput, "y"),
+        width: readNumberField(elements.placementWidthInput, "w", { min: 1 }),
+        height: readNumberField(elements.placementHeightInput, "h", { min: 1 })
+      });
+      await refreshAfterStructuredSpecEdit(`${overlay.overlayId} のテキスト領域を反映しました ${nowLabel()}`, elements.applyPlacementEditButton);
+      return;
+    }
     if (!placement) {
       return;
     }
     const nextX = readNumberField(elements.placementXInput, "x");
     const nextY = readNumberField(elements.placementYInput, "y");
+    const before = {
+      width: placement.width,
+      height: placement.height
+    };
     const dependents = state.movePlacementDependents ? collectDependentPlacements(placement) : [];
     const dx = nextX - placement.x;
     const dy = nextY - placement.y;
@@ -731,7 +979,12 @@ async function applyPlacementEditor() {
     } else {
       delete placement.parentId;
     }
-    await refreshAfterStructuredSpecEdit(`${placement.placementId} の配置を反映しました ${nowLabel()}`, elements.applyPlacementEditButton);
+    const affectedAssetIds = collectResizedPlacementAssetIds([{ placement, before }]);
+    await refreshAfterStructuredSpecEdit(`${placement.placementId} の配置を反映しました ${nowLabel()}`, elements.applyPlacementEditButton, {
+      affectedAssetIds,
+      regenerationComment: `${placement.placementId} のサイズを変更。新しい最終サイズ ${placement.width}x${placement.height}px に合わせてPNGを作り直してください。`,
+      queueSkipMessage: "位置だけの変更なのでPNG再生成は不要です"
+    });
   } catch (error) {
     window.alert(error.message);
     setActivityStatus(`配置反映失敗: ${error.message}`);
@@ -741,10 +994,26 @@ async function applyPlacementEditor() {
 async function adjustSelectedPlacementGeometry(delta, label) {
   try {
     const placement = getSelectedPlacement();
+    const overlay = getSelectedOverlay();
+    if (overlay) {
+      applyOverlayGeometry(overlay, {
+        x: overlay.x + (delta.x || 0),
+        y: overlay.y + (delta.y || 0),
+        width: overlay.width + (delta.width || 0),
+        height: overlay.height + (delta.height || 0)
+      });
+      await refreshAfterStructuredSpecEdit(`${overlay.overlayId} を${label}しました ${nowLabel()}`, null);
+      return;
+    }
     if (!placement) {
       return;
     }
+    const before = {
+      width: placement.width,
+      height: placement.height
+    };
     const dependents = state.movePlacementDependents ? collectDependentPlacements(placement) : [];
+    const dependentOverlays = state.movePlacementDependents ? collectDependentOverlays(placement, dependents) : [];
     applyPlacementGeometry(placement, {
       x: placement.x + (delta.x || 0),
       y: placement.y + (delta.y || 0),
@@ -752,8 +1021,15 @@ async function adjustSelectedPlacementGeometry(delta, label) {
       height: placement.height + (delta.height || 0)
     });
     shiftDependentPlacements(dependents, delta.x || 0, delta.y || 0);
-    const followLabel = dependents.length && (delta.x || delta.y) ? `(載っている${dependents.length}件も追従)` : "";
-    await refreshAfterStructuredSpecEdit(`${placement.placementId} を${label}しました${followLabel} ${nowLabel()}`, null);
+    shiftDependentOverlays(dependentOverlays, delta.x || 0, delta.y || 0);
+    const followedCount = dependents.length + dependentOverlays.length;
+    const followLabel = followedCount && (delta.x || delta.y) ? `(載っている${followedCount}件も追従)` : "";
+    const affectedAssetIds = collectResizedPlacementAssetIds([{ placement, before }]);
+    await refreshAfterStructuredSpecEdit(`${placement.placementId} を${label}しました${followLabel} ${nowLabel()}`, null, {
+      affectedAssetIds,
+      regenerationComment: `${placement.placementId} を${label}。新しい最終サイズ ${placement.width}x${placement.height}px に合わせてPNGを再生成してください。`,
+      queueSkipMessage: "位置だけの変更なのでPNG再生成は不要です"
+    });
   } catch (error) {
     window.alert(error.message);
     setActivityStatus(`配置微調整失敗: ${error.message}`);
@@ -808,12 +1084,16 @@ function handlePlacementPointerMove(event) {
     return;
   }
   event.preventDefault();
-  const placement = getSelectedPlacement();
-  if (!placement) {
+  const editable = getSelectedEditableItem();
+  if (!editable) {
     return;
   }
   const geometry = getPointerEditGeometry(edit, getCanvasPoint(event));
-  applyPlacementGeometry(placement, geometry);
+  if (editable.kind === "overlay") {
+    applyOverlayGeometry(editable.item, geometry);
+    return;
+  }
+  applyPlacementGeometry(editable.item, geometry);
   if (edit.dependents && edit.mode !== "resize-se") {
     const dx = Math.round(geometry.x) - edit.startPlacement.x;
     const dy = Math.round(geometry.y) - edit.startPlacement.y;
@@ -823,6 +1103,14 @@ function handlePlacementPointerMove(event) {
         y: dependent.startY + dy,
         width: dependent.placement.width,
         height: dependent.placement.height
+      }, { syncFields: false });
+    }
+    for (const overlay of edit.dependentOverlays || []) {
+      applyOverlayGeometry(overlay.overlay, {
+        x: overlay.startX + dx,
+        y: overlay.startY + dy,
+        width: overlay.overlay.width,
+        height: overlay.overlay.height
       }, { syncFields: false });
     }
   }
@@ -839,51 +1127,72 @@ function finishPlacementPointerEdit(event) {
   window.removeEventListener("pointercancel", finishPlacementPointerEdit);
   state.placementPointerEdit = null;
 
-  const placement = getSelectedPlacement();
-  if (!placement) {
+  const editable = getSelectedEditableItem();
+  if (!editable) {
     return;
   }
-  const moved = placement.x !== edit.startPlacement.x
-    || placement.y !== edit.startPlacement.y
-    || placement.width !== edit.startPlacement.width
-    || placement.height !== edit.startPlacement.height;
+  const item = editable.item;
+  const moved = item.x !== edit.startPlacement.x
+    || item.y !== edit.startPlacement.y
+    || item.width !== edit.startPlacement.width
+    || item.height !== edit.startPlacement.height;
   if (!moved) {
     return;
   }
-  refreshAfterStructuredSpecEdit(`${placement.placementId} の微調整を反映しました ${nowLabel()}`, null);
+  const affectedAssetIds = editable.kind === "placement"
+    ? collectResizedPlacementAssetIds([{
+        placement: editable.item,
+        before: edit.startPlacement
+      }])
+    : [];
+  refreshAfterStructuredSpecEdit(`${editable.id} の微調整を反映しました ${nowLabel()}`, null, {
+    affectedAssetIds,
+    regenerationComment: `${editable.id} をドラッグでリサイズ。新しい最終サイズ ${item.width}x${item.height}px に合わせてPNGを再生成してください。`,
+    queueSkipMessage: "位置だけの変更なのでPNG再生成は不要です"
+  });
 }
 
 function startPlacementPointerEdit(event, mode) {
   if (!state.placementTuneMode || !state.renderModel) {
     return;
   }
-  const placement = getSelectedPlacement();
-  if (!placement) {
+  const editable = getSelectedEditableItem();
+  if (!editable) {
     return;
   }
   event.preventDefault();
   event.stopPropagation();
+  const placement = editable.kind === "placement" ? editable.item : null;
   const startPoint = getCanvasPoint(event);
-  const dependents = state.movePlacementDependents && mode !== "resize-se"
+  const dependents = placement && state.movePlacementDependents && mode !== "resize-se"
     ? collectDependentPlacements(placement).map((dependent) => ({
         placement: dependent,
         startX: dependent.x,
         startY: dependent.y
       }))
     : null;
+  const dependentOverlays = placement && state.movePlacementDependents && mode !== "resize-se"
+    ? collectDependentOverlays(placement, (dependents || []).map((dependent) => dependent.placement)).map((overlay) => ({
+        overlay,
+        startX: overlay.x,
+        startY: overlay.y
+      }))
+    : null;
+  const item = editable.item;
   state.placementPointerEdit = {
     pointerId: event.pointerId,
     mode,
     startPoint,
     dependents,
+    dependentOverlays,
     startPlacement: {
-      x: placement.x,
-      y: placement.y,
-      width: placement.width,
-      height: placement.height
+      x: item.x,
+      y: item.y,
+      width: item.width,
+      height: item.height
     },
-    startLeft: placement.x - placement.width / 2,
-    startTop: placement.y - placement.height / 2
+    startLeft: item.x - item.width / 2,
+    startTop: item.y - item.height / 2
   };
   if (event.currentTarget.setPointerCapture) {
     event.currentTarget.setPointerCapture(event.pointerId);
