@@ -118,6 +118,36 @@ test("blank project template loads through the project manifest", async () => {
   assert.equal(draftResponse.payload.renderModel.assets.length, 2);
 });
 
+test("startup-source uses configured default project without loading the demo", async () => {
+  const previousProject = process.env.GAME_SCREEN_FOUNDRY_PROJECT;
+  const previousScreen = process.env.GAME_SCREEN_FOUNDRY_SCREEN;
+  const templateRoot = path.join(__dirname, "..", "templates", "blank-project", "creative");
+  process.env.GAME_SCREEN_FOUNDRY_PROJECT = templateRoot;
+  process.env.GAME_SCREEN_FOUNDRY_SCREEN = "home";
+
+  try {
+    const response = await dispatchApi("GET", "/api/startup-source");
+
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.payload.ok, true);
+    assert.equal(response.payload.startupSource.defaultFolderPath, templateRoot);
+    assert.equal(response.payload.startupSource.defaultScreenId, "home");
+    assert.equal(response.payload.startupSource.source, "GAME_SCREEN_FOUNDRY_PROJECT");
+    assert.equal(response.payload.startupSource.exists, true);
+  } finally {
+    if (previousProject === undefined) {
+      delete process.env.GAME_SCREEN_FOUNDRY_PROJECT;
+    } else {
+      process.env.GAME_SCREEN_FOUNDRY_PROJECT = previousProject;
+    }
+    if (previousScreen === undefined) {
+      delete process.env.GAME_SCREEN_FOUNDRY_SCREEN;
+    } else {
+      process.env.GAME_SCREEN_FOUNDRY_SCREEN = previousScreen;
+    }
+  }
+});
+
 test("project onboarding cli creates projects, adds screens, and validates them", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "gcgt-cli-"));
   const creativeDir = path.join(tempRoot, "creative");
@@ -1031,8 +1061,10 @@ test("frontend exposes the image generation flow tracker", () => {
   assert.match(html, /id="applyPlacementEditButton"/u);
   assert.match(html, /id="placementTuneToggle"/u);
   assert.match(html, /id="placementStepInput"/u);
+  assert.match(html, /id="placementFollowToggle"/u);
   assert.match(html, /id="placementNudgeUp"/u);
   assert.match(html, /id="placementGrowWidth"/u);
+  assert.match(html, /placement-edit-logic\.js/u);
   assert.match(html, /構成グループ/u);
   assert.match(html, /id="compositionSummary"/u);
   assert.match(html, /id="compositionGroupList"/u);
@@ -1066,6 +1098,10 @@ test("frontend exposes the image generation flow tracker", () => {
   assert.match(js, /function adjustSelectedPlacementGeometry/u);
   assert.match(js, /function startPlacementPointerEdit/u);
   assert.match(js, /function renderPlacementEditOverlay/u);
+  assert.match(js, /readStartupFolderSourceFromUrl/u);
+  assert.match(js, /\/api\/startup-source/u);
+  assert.match(js, /showEmptyStartupWorkspace/u);
+  assert.match(js, /placementFollowToggle/u);
   assert.match(js, /function applyCompositionInsetEditor/u);
   assert.match(js, /function renderValidationReport/u);
   assert.match(js, /function renderCompositionGroups/u);
@@ -1096,6 +1132,9 @@ test("frontend exposes the image generation flow tracker", () => {
   assert.match(css, /\.reference-quality-panel/u);
   assert.match(css, /\.reference-diagnostic/u);
   assert.match(css, /repeat\(2, minmax\(0, 1fr\)\)/u);
+
+  const bootBlock = js.slice(js.indexOf("async function bootWorkspace"), js.indexOf("setFlowStep(\"load\")"));
+  assert.doesNotMatch(bootBlock, /loadDemo/u);
 });
 
 test("ai review returns findings and suggestions", async () => {

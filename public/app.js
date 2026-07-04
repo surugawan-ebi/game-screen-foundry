@@ -26,12 +26,14 @@ const state = {
   selectedPlacementId: "",
   placementPointerEdit: null,
   placementTuneMode: false,
+  movePlacementDependents: true,
   source: {
-    kind: "demo"
+    kind: "none"
   }
 };
 
 const MIN_BUSY_MS = 650;
+const placementEditLogic = window.GameScreenFoundryPlacementEditLogic;
 
 const elements = {
   activityOverlay: document.getElementById("activityOverlay"),
@@ -87,6 +89,7 @@ const elements = {
   placementShrinkHeight: document.getElementById("placementShrinkHeight"),
   placementShrinkWidth: document.getElementById("placementShrinkWidth"),
   placementStepInput: document.getElementById("placementStepInput"),
+  placementFollowToggle: document.getElementById("placementFollowToggle"),
   placementTuneToggle: document.getElementById("placementTuneToggle"),
   placementWidthInput: document.getElementById("placementWidthInput"),
   placementXInput: document.getElementById("placementXInput"),
@@ -364,7 +367,13 @@ function renderSourceStatus() {
     return;
   }
 
-  elements.sourceStatus.textContent = "読み込み元: デモバンドル";
+  if (state.source.kind === "demo") {
+    elements.sourceStatus.textContent = "読み込み元: デモバンドル";
+    renderProjectNavigator();
+    return;
+  }
+
+  elements.sourceStatus.textContent = "読み込み元: 未読み込み";
   renderProjectNavigator();
 }
 
@@ -455,6 +464,7 @@ function setSpecEditorDisabled(disabled) {
     elements.placementZInput,
     elements.placementParentInput,
     elements.placementStepInput,
+    elements.placementFollowToggle,
     elements.placementTuneToggle,
     elements.placementNudgeUp,
     elements.placementNudgeLeft,
@@ -560,16 +570,52 @@ function updateRenderLayerGeometry(placement) {
   layer.height = box.height;
 }
 
-function applyPlacementGeometry(placement, geometry, { liveDom = true } = {}) {
+function applyPlacementGeometry(placement, geometry, { liveDom = true, syncFields = true } = {}) {
   placement.x = Math.round(geometry.x);
   placement.y = Math.round(geometry.y);
   placement.width = Math.max(1, Math.round(geometry.width));
   placement.height = Math.max(1, Math.round(geometry.height));
   updateRenderLayerGeometry(placement);
-  syncPlacementEditorFields(placement);
+  if (syncFields) {
+    syncPlacementEditorFields(placement);
+  }
   if (liveDom) {
     updateLivePlacementDom(placement);
   }
+}
+
+// Placements riding on the given one: parentId descendants, layers/children
+// of composition groups rooted at it, and higher-z placements sitting fully
+// inside its box. Used to move a base together with everything on top.
+function collectDependentPlacements(rootPlacement) {
+  const placements = getPlacements();
+  const byId = new Map(placements.map((placement) => [placement.placementId, placement]));
+  return placementEditLogic.collectDependentPlacementIds({
+    placements,
+    compositionGroups: getMaterialCompositionGroups(),
+    rootPlacementId: rootPlacement.placementId
+  }).map((placementId) => byId.get(placementId)).filter(Boolean);
+}
+
+function shiftDependentPlacements(dependents, dx, dy) {
+  if (!dx && !dy) {
+    return;
+  }
+  for (const placement of dependents) {
+    applyPlacementGeometry(placement, {
+      x: placement.x + dx,
+      y: placement.y + dy,
+      width: placement.width,
+      height: placement.height
+    }, { syncFields: false });
+  }
+}
+
+// The renderer positions overlays from targetPlacementId + slot; the absolute
+// x/y/width/height mirror is recomputed after every structured edit so both
+// representations stay in agreement (overlay_xy_slot_mismatch stays quiet).
+function syncOverlayAbsoluteGeometry() {
+  placementEditLogic.syncOverlayAbsoluteGeometryForSpec(state.materialSpecSheet);
 }
 
 function renderStructuredSpecEditor() {
@@ -593,6 +639,7 @@ function renderStructuredSpecEditor() {
   elements.placementEditorSelect.value = state.selectedPlacementId || "";
   const placement = getSelectedPlacement();
   syncPlacementEditorFields(placement);
+  elements.placementFollowToggle.checked = state.movePlacementDependents;
   elements.placementTuneToggle.textContent = state.placementTuneMode ? "微調整 ON" : "微調整 OFF";
   elements.placementTuneToggle.setAttribute("aria-pressed", state.placementTuneMode ? "true" : "false");
 
@@ -639,6 +686,7 @@ async function refreshAfterStructuredSpecEdit(message, button) {
   }
   setWorkspaceBusy(true, "構造化編集を反映しています...");
   try {
+    syncOverlayAbsoluteGeometry();
     elements.specInput.value = JSON.stringify(state.materialSpecSheet, null, 2);
     state.review = null;
     state.reviewSuggestionsByAsset = {};
@@ -664,12 +712,18 @@ async function applyPlacementEditor() {
     if (!placement) {
       return;
     }
+    const nextX = readNumberField(elements.placementXInput, "x");
+    const nextY = readNumberField(elements.placementYInput, "y");
+    const dependents = state.movePlacementDependents ? collectDependentPlacements(placement) : [];
+    const dx = nextX - placement.x;
+    const dy = nextY - placement.y;
     applyPlacementGeometry(placement, {
-      x: readNumberField(elements.placementXInput, "x"),
-      y: readNumberField(elements.placementYInput, "y"),
+      x: nextX,
+      y: nextY,
       width: readNumberField(elements.placementWidthInput, "w", { min: 1 }),
       height: readNumberField(elements.placementHeightInput, "h", { min: 1 })
     });
+    shiftDependentPlacements(dependents, dx, dy);
     placement.zIndex = readNumberField(elements.placementZInput, "z");
     const parentId = elements.placementParentInput.value.trim();
     if (parentId) {
@@ -690,13 +744,16 @@ async function adjustSelectedPlacementGeometry(delta, label) {
     if (!placement) {
       return;
     }
+    const dependents = state.movePlacementDependents ? collectDependentPlacements(placement) : [];
     applyPlacementGeometry(placement, {
       x: placement.x + (delta.x || 0),
       y: placement.y + (delta.y || 0),
       width: placement.width + (delta.width || 0),
       height: placement.height + (delta.height || 0)
     });
-    await refreshAfterStructuredSpecEdit(`${placement.placementId} を${label}しました ${nowLabel()}`, null);
+    shiftDependentPlacements(dependents, delta.x || 0, delta.y || 0);
+    const followLabel = dependents.length && (delta.x || delta.y) ? `(載っている${dependents.length}件も追従)` : "";
+    await refreshAfterStructuredSpecEdit(`${placement.placementId} を${label}しました${followLabel} ${nowLabel()}`, null);
   } catch (error) {
     window.alert(error.message);
     setActivityStatus(`配置微調整失敗: ${error.message}`);
@@ -755,7 +812,20 @@ function handlePlacementPointerMove(event) {
   if (!placement) {
     return;
   }
-  applyPlacementGeometry(placement, getPointerEditGeometry(edit, getCanvasPoint(event)));
+  const geometry = getPointerEditGeometry(edit, getCanvasPoint(event));
+  applyPlacementGeometry(placement, geometry);
+  if (edit.dependents && edit.mode !== "resize-se") {
+    const dx = Math.round(geometry.x) - edit.startPlacement.x;
+    const dy = Math.round(geometry.y) - edit.startPlacement.y;
+    for (const dependent of edit.dependents) {
+      applyPlacementGeometry(dependent.placement, {
+        x: dependent.startX + dx,
+        y: dependent.startY + dy,
+        width: dependent.placement.width,
+        height: dependent.placement.height
+      }, { syncFields: false });
+    }
+  }
 }
 
 function finishPlacementPointerEdit(event) {
@@ -794,10 +864,18 @@ function startPlacementPointerEdit(event, mode) {
   event.preventDefault();
   event.stopPropagation();
   const startPoint = getCanvasPoint(event);
+  const dependents = state.movePlacementDependents && mode !== "resize-se"
+    ? collectDependentPlacements(placement).map((dependent) => ({
+        placement: dependent,
+        startX: dependent.x,
+        startY: dependent.y
+      }))
+    : null;
   state.placementPointerEdit = {
     pointerId: event.pointerId,
     mode,
     startPoint,
+    dependents,
     startPlacement: {
       x: placement.x,
       y: placement.y,
@@ -2693,6 +2771,19 @@ async function loadBundleObject(bundle, source) {
 
 const LAST_SOURCE_STORAGE_KEY = "gsf.lastFolderSource";
 
+function readStartupFolderSourceFromUrl() {
+  const params = new URLSearchParams(window.location.search || "");
+  const folderPath = params.get("folder") || params.get("project") || "";
+  const screenId = params.get("screen") || params.get("screenId") || "";
+  return folderPath.trim()
+    ? {
+        folderPath: folderPath.trim(),
+        screenId: screenId.trim(),
+        sourceLabel: "URL"
+      }
+    : null;
+}
+
 function saveLastFolderSource(folderPath, screenId) {
   try {
     localStorage.setItem(LAST_SOURCE_STORAGE_KEY, JSON.stringify({ folderPath, screenId: screenId || "" }));
@@ -2717,6 +2808,42 @@ function clearLastFolderSource() {
   } catch (error) {
     // Ignore.
   }
+}
+
+async function readDefaultStartupSource() {
+  const response = await fetch("/api/startup-source");
+  const payload = await response.json();
+  if (!payload.ok) {
+    throw new Error(payload.error || "起動時フォルダ設定を取得できませんでした。");
+  }
+  const source = payload.startupSource || {};
+  return source.defaultFolderPath
+    ? {
+        folderPath: source.defaultFolderPath,
+        screenId: source.defaultScreenId || "",
+        sourceLabel: source.source || "default",
+        exists: source.exists,
+        env: source.env || {}
+      }
+    : null;
+}
+
+function showEmptyStartupWorkspace(message, folderPath = "") {
+  state.source = {
+    kind: "none"
+  };
+  elements.sourceStatus.textContent = "読み込み元: 未読み込み";
+  elements.imagegenStatus.textContent = "imagegen: 未実行";
+  elements.imagegenStatus.title = "";
+  elements.aiModeLabel.textContent = "未読み込み";
+  if (folderPath) {
+    elements.folderPathInput.value = folderPath;
+  }
+  setSpecEditorDisabled(true);
+  renderProjectNavigator();
+  renderHandoffPanel();
+  setFlowStep("load");
+  setActivityStatus(message);
 }
 
 async function loadFolder(options = {}) {
@@ -2838,6 +2965,10 @@ elements.validateButton.addEventListener("click", validateWorkspaceSpec);
 elements.exportReportButton.addEventListener("click", buildImplementationReport);
 elements.applyPlacementEditButton.addEventListener("click", applyPlacementEditor);
 elements.placementTuneToggle.addEventListener("click", togglePlacementTuneMode);
+elements.placementFollowToggle.addEventListener("change", () => {
+  state.movePlacementDependents = elements.placementFollowToggle.checked;
+  setActivityStatus(`載っている素材の追従 ${state.movePlacementDependents ? "ON" : "OFF"} ${nowLabel()}`);
+});
 elements.placementNudgeUp.addEventListener("click", () => {
   adjustSelectedPlacementGeometry({ y: -getPlacementStep() }, "上へ移動");
 });
@@ -2897,6 +3028,14 @@ function setBootBusy(busy) {
 async function bootWorkspace() {
   setBootBusy(true);
   try {
+    const requested = readStartupFolderSourceFromUrl();
+    if (requested) {
+      elements.folderPathInput.value = requested.folderPath;
+      await loadFolder({ folderPath: requested.folderPath, screenId: requested.screenId, silent: true });
+      setActivityStatus(`URL指定のフォルダを読み込みました: ${requested.folderPath}${requested.screenId ? `#${requested.screenId}` : ""} ${nowLabel()}`);
+      return;
+    }
+
     const last = readLastFolderSource();
     if (last) {
       elements.folderPathInput.value = last.folderPath;
@@ -2906,12 +3045,30 @@ async function bootWorkspace() {
         return;
       } catch (error) {
         clearLastFolderSource();
-        setActivityStatus(`前回フォルダの復元に失敗したためデモを読み込みます: ${error.message}`);
+        setActivityStatus(`前回フォルダの復元に失敗しました。デフォルトフォルダを確認します: ${error.message}`);
       }
     }
-    await loadDemo();
+
+    const defaultSource = await readDefaultStartupSource();
+    if (defaultSource) {
+      elements.folderPathInput.value = defaultSource.folderPath;
+      try {
+        await loadFolder({ folderPath: defaultSource.folderPath, screenId: defaultSource.screenId, silent: true });
+        setActivityStatus(`デフォルトフォルダを読み込みました: ${defaultSource.folderPath}${defaultSource.screenId ? `#${defaultSource.screenId}` : ""} ${nowLabel()}`);
+        return;
+      } catch (error) {
+        const envName = defaultSource.env && defaultSource.env.project ? defaultSource.env.project : "GAME_SCREEN_FOUNDRY_PROJECT";
+        showEmptyStartupWorkspace(
+          `デフォルトフォルダを読み込めませんでした。${envName} かフォルダ入力を設定してください: ${error.message}`,
+          defaultSource.folderPath
+        );
+        return;
+      }
+    }
+
+    showEmptyStartupWorkspace("フォルダを指定してください。デモは「デモを読み込む」を押した時だけ表示します。");
   } catch (error) {
-    window.alert(error.message);
+    showEmptyStartupWorkspace(`起動時の読み込みに失敗しました: ${error.message}`);
   } finally {
     setBootBusy(false);
   }

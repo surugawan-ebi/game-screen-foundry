@@ -37,8 +37,8 @@ The project is currently beta-quality. It is useful for validating a production 
   Batch-trims transparent gutters and normalizes generated PNGs to their final pixel size via `npm run postprocess:assets`.
 - `designRules.craftStyle`(`outlined_cel` / `flat_minimal` / `painterly`)を宣言すると、市販素材パック水準のクラフト仕様(シルエットの一貫アウトライン、セル調シェーディング段数、パレット節度、ファミリー統一)をプロンプトへ注入し、生成PNGを実測監査します。フラットなプレースホルダー出力(imagegen不使用の疑い)やマッディな軟階調も検出します。
   Declaring `designRules.craftStyle` injects a commercial-asset-pack craft spec into prompts and audits each generated PNG for weak outlines, flat placeholder fills (suspected non-imagegen output), muddy gradients, and busy interiors.
-- placement と composition inset をフォームやプレビュー上の微調整で編集し、JSON と仮組みプレビューへ反映できます。
-  Edits placements and composition insets through structured controls and preview fine-tuning, then syncs JSON and draft preview.
+- placement と composition inset をフォームやプレビュー上の微調整で編集し、JSON と仮組みプレビューへ反映できます。土台を移動する際は「載っている素材も一緒に動かす」トグル(既定ON)で、子・構成グループのレイヤー・上に載っている素材をまとめて追従させられます(リサイズは対象のみ)。移動後は overlay の絶対座標も slot から自動再同期されます。
+  Edits placements and composition insets through structured controls and preview fine-tuning, then syncs JSON and draft preview. When moving a base, the "move riders together" toggle (default on) carries its children, composition-group layers, and stacked higher-z placements along (resize affects only the target), and overlay absolute geometry is re-synced from slots after every edit.
 - 素材ごとのコメント、固定、履歴、再生成キューを扱います。  
   Tracks per-asset comments, locks, history, and regeneration queues.
 - 選択した素材の Codex/imagegen 向け依頼文を作ります。  
@@ -82,8 +82,22 @@ Open:
 http://127.0.0.1:4311
 ```
 
-起動すると同梱デモが自動で読み込まれます。  
-The bundled demo loads automatically.
+起動時は、サンプルではなく作業プロジェクトを読み込みます。読み込み順は次の通りです。
+On startup, the app loads a working project, not the sample demo. Startup source order:
+
+1. URL query: `http://127.0.0.1:4311?folder=/path/to/game-repo/creative&screen=home`
+2. 前回読み込んだフォルダ。
+   The last loaded folder.
+3. デフォルトフォルダ。`GAME_SCREEN_FOUNDRY_PROJECT` を設定すると最優先されます。未設定時は `creative/`, `../creative/`, `../../creative/` を探します。
+   Default folder. Set `GAME_SCREEN_FOUNDRY_PROJECT` to make this explicit; otherwise the app probes `creative/`, `../creative/`, and `../../creative/`.
+
+```sh
+GAME_SCREEN_FOUNDRY_PROJECT=/path/to/game-repo/creative npm run dev
+GAME_SCREEN_FOUNDRY_PROJECT=/path/to/game-repo/creative GAME_SCREEN_FOUNDRY_SCREEN=home npm run dev
+```
+
+同梱デモは `デモを読み込む` を押した時だけ表示されます。
+The bundled demo appears only when you click `デモを読み込む`.
 
 ## プロジェクト作成CLI / Project CLI
 

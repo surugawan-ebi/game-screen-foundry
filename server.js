@@ -26,6 +26,8 @@ const PORT = Number(process.env.PORT || 4311);
 const HOST = process.env.HOST || "127.0.0.1";
 const publicDir = path.join(__dirname, "public");
 const allowedSourceRoots = new Set([__dirname]);
+const DEFAULT_PROJECT_ENV = "GAME_SCREEN_FOUNDRY_PROJECT";
+const DEFAULT_SCREEN_ENV = "GAME_SCREEN_FOUNDRY_SCREEN";
 
 function isPathInside(parentPath, childPath) {
   const parent = path.resolve(parentPath);
@@ -39,6 +41,56 @@ function allowSourceRoot(rootPath) {
     return;
   }
   allowedSourceRoots.add(path.resolve(rootPath));
+}
+
+function getDefaultProjectCandidates() {
+  const envPath = process.env[DEFAULT_PROJECT_ENV];
+  const cwd = process.cwd();
+  return [
+    envPath
+      ? {
+          source: DEFAULT_PROJECT_ENV,
+          path: envPath
+        }
+      : null,
+    {
+      source: "cwd/creative",
+      path: path.join(cwd, "creative")
+    },
+    {
+      source: "cwd/../creative",
+      path: path.join(cwd, "..", "creative")
+    },
+    {
+      source: "cwd/../../creative",
+      path: path.join(cwd, "..", "..", "creative")
+    }
+  ].filter(Boolean).map((candidate) => {
+    const resolved = path.resolve(candidate.path);
+    return {
+      ...candidate,
+      path: resolved,
+      exists: fs.existsSync(resolved) && fs.statSync(resolved).isDirectory()
+    };
+  });
+}
+
+function resolveStartupSource() {
+  const candidates = getDefaultProjectCandidates();
+  const envCandidate = candidates.find((candidate) => candidate.source === DEFAULT_PROJECT_ENV);
+  const existing = candidates.find((candidate) => candidate.exists);
+  const selected = envCandidate || existing || candidates[candidates.length - 1] || null;
+  return {
+    defaultFolderPath: selected ? selected.path : "",
+    defaultScreenId: process.env[DEFAULT_SCREEN_ENV] || "",
+    source: selected ? selected.source : "",
+    exists: selected ? selected.exists : false,
+    env: {
+      project: DEFAULT_PROJECT_ENV,
+      screen: DEFAULT_SCREEN_ENV
+    },
+    candidates
+  };
 }
 
 function isAllowedSourceFile(filePath) {
@@ -1129,6 +1181,16 @@ async function dispatchApi(method, pathname, body = {}) {
     return {
       statusCode: 200,
       payload: { ok: true, aiMode: getAiMode() }
+    };
+  }
+
+  if (method === "GET" && pathname === "/api/startup-source") {
+    return {
+      statusCode: 200,
+      payload: {
+        ok: true,
+        startupSource: resolveStartupSource()
+      }
     };
   }
 
