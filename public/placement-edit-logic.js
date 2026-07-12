@@ -5,6 +5,31 @@
   }
   root.GameScreenFoundryPlacementEditLogic = factory();
 })(typeof globalThis !== "undefined" ? globalThis : window, function createPlacementEditLogic() {
+  function cloneValue(value) {
+    return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
+  }
+
+  function captureStructuredEditSnapshot(workspaceState) {
+    return {
+      screenKv: cloneValue(workspaceState.screenKv),
+      materialSpecSheet: cloneValue(workspaceState.materialSpecSheet),
+      worldPreset: cloneValue(workspaceState.worldPreset),
+      revisionMap: cloneValue(workspaceState.revisionMap || {}),
+      regenerationQueue: cloneValue(workspaceState.regenerationQueue || []),
+      regenerationQueueDirty: Boolean(workspaceState.regenerationQueueDirty),
+      regenerationPrompt: String(workspaceState.regenerationPrompt || "")
+    };
+  }
+
+  function getStructuredContractSnapshotKey(snapshot) {
+    return JSON.stringify({
+      screenKv: snapshot.screenKv,
+      materialSpecSheet: snapshot.materialSpecSheet,
+      worldPreset: snapshot.worldPreset,
+      revisionMap: snapshot.revisionMap || {}
+    });
+  }
+
   function placementBox(placement) {
     return {
       left: placement.x - placement.width / 2,
@@ -129,7 +154,9 @@
   }
 
   return {
+    captureStructuredEditSnapshot,
     collectDependentPlacementIds,
+    getStructuredContractSnapshotKey,
     syncOverlayAbsoluteGeometryForSpec
   };
 });

@@ -28,6 +28,15 @@ const publicDir = path.join(__dirname, "public");
 const allowedSourceRoots = new Set([__dirname]);
 const DEFAULT_PROJECT_ENV = "GAME_SCREEN_FOUNDRY_PROJECT";
 const DEFAULT_SCREEN_ENV = "GAME_SCREEN_FOUNDRY_SCREEN";
+const MAX_JSON_BODY_BYTES = 5 * 1024 * 1024;
+
+class HttpError extends Error {
+  constructor(statusCode, message) {
+    super(message);
+    this.name = "HttpError";
+    this.statusCode = statusCode;
+  }
+}
 
 function isPathInside(parentPath, childPath) {
   const parent = path.resolve(parentPath);
@@ -158,8 +167,91 @@ function resolveScreenContractFolder(source = {}) {
   return resolvedBase;
 }
 
-function writeJsonFile(filePath, value) {
-  fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
+function writeFileDurably(fileSystem, filePath, content) {
+  const fileDescriptor = fileSystem.openSync(filePath, "wx", 0o600);
+  try {
+    fileSystem.writeFileSync(fileDescriptor, content, "utf8");
+    fileSystem.fsyncSync(fileDescriptor);
+  } finally {
+    fileSystem.closeSync(fileDescriptor);
+  }
+}
+
+function removeFileIfPresent(fileSystem, filePath) {
+  if (fileSystem.existsSync(filePath)) {
+    fileSystem.unlinkSync(filePath);
+  }
+}
+
+function writeJsonFilesAtomically(files, options = {}) {
+  const fileSystem = options.fileSystem || fs;
+  const transactionId = String(
+    options.transactionId || `${Date.now()}-${Math.random().toString(16).slice(2)}`
+  ).replace(/[^a-zA-Z0-9_-]+/gu, "_");
+  const entries = files.map(([filePath, value]) => {
+    const resolvedPath = path.resolve(filePath);
+    const directory = path.dirname(resolvedPath);
+    const basename = path.basename(resolvedPath);
+    return {
+      finalPath: resolvedPath,
+      tempPath: path.join(directory, `.${basename}.${transactionId}.tmp`),
+      backupPath: path.join(directory, `.${basename}.${transactionId}.bak`),
+      content: `${JSON.stringify(value, null, 2)}\n`,
+      backedUp: false,
+      promoted: false
+    };
+  });
+
+  try {
+    for (const entry of entries) {
+      writeFileDurably(fileSystem, entry.tempPath, entry.content);
+    }
+
+    for (const entry of entries) {
+      if (fileSystem.existsSync(entry.finalPath)) {
+        fileSystem.renameSync(entry.finalPath, entry.backupPath);
+        entry.backedUp = true;
+      }
+      fileSystem.renameSync(entry.tempPath, entry.finalPath);
+      entry.promoted = true;
+    }
+
+    for (const entry of entries) {
+      try {
+        removeFileIfPresent(fileSystem, entry.backupPath);
+      } catch (cleanupError) {
+        // The new contract is already committed. A stale hidden backup is safer
+        // than rolling back after other backups may already be gone.
+      }
+    }
+  } catch (error) {
+    const rollbackErrors = [];
+    for (const entry of [...entries].reverse()) {
+      try {
+        if (entry.promoted) {
+          removeFileIfPresent(fileSystem, entry.finalPath);
+        }
+        if (entry.backedUp && fileSystem.existsSync(entry.backupPath)) {
+          fileSystem.renameSync(entry.backupPath, entry.finalPath);
+        }
+      } catch (rollbackError) {
+        rollbackErrors.push(rollbackError.message);
+      }
+    }
+    for (const entry of entries) {
+      try {
+        removeFileIfPresent(fileSystem, entry.tempPath);
+      } catch (cleanupError) {
+        rollbackErrors.push(cleanupError.message);
+      }
+    }
+    if (rollbackErrors.length) {
+      error.message = `${error.message} / rollback failed: ${rollbackErrors.join(" / ")}`;
+    }
+    throw error;
+  }
+
+  return entries.map((entry) => entry.finalPath);
 }
 
 function normalizeRegenerationQueue(queue) {
@@ -256,11 +348,37 @@ function sendFile(response, filePath) {
   response.end(content);
 }
 
-function readJsonBody(request) {
+function readJsonBody(request, { maxBytes = MAX_JSON_BODY_BYTES } = {}) {
   return new Promise((resolve, reject) => {
     const chunks = [];
-    request.on("data", (chunk) => chunks.push(chunk));
+    let byteLength = 0;
+    let settled = false;
+    const declaredLength = Number(request.headers["content-length"] || 0);
+
+    if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
+      request.resume();
+      reject(new HttpError(413, `JSON request body exceeds ${maxBytes} bytes`));
+      return;
+    }
+
+    request.on("data", (chunk) => {
+      if (settled) {
+        return;
+      }
+      byteLength += chunk.length;
+      if (byteLength > maxBytes) {
+        settled = true;
+        chunks.length = 0;
+        reject(new HttpError(413, `JSON request body exceeds ${maxBytes} bytes`));
+        return;
+      }
+      chunks.push(chunk);
+    });
     request.on("end", () => {
+      if (settled) {
+        return;
+      }
+      settled = true;
       try {
         if (!chunks.length) {
           resolve({});
@@ -269,10 +387,21 @@ function readJsonBody(request) {
         const raw = Buffer.concat(chunks).toString("utf8");
         resolve(JSON.parse(raw));
       } catch (error) {
+        reject(new HttpError(400, `Invalid JSON request body: ${error.message}`));
+      }
+    });
+    request.on("aborted", () => {
+      if (!settled) {
+        settled = true;
+        reject(new HttpError(400, "Request body was aborted"));
+      }
+    });
+    request.on("error", (error) => {
+      if (!settled) {
+        settled = true;
         reject(error);
       }
     });
-    request.on("error", reject);
   });
 }
 
@@ -1018,14 +1147,14 @@ function handleSaveScreenFiles(body) {
     ["world-preset.json", input.worldPreset]
   ];
 
-  const savedFiles = files.map(([fileName, value]) => {
+  const pendingFiles = files.map(([fileName, value]) => {
     const filePath = path.resolve(screenFolder, fileName);
     if (!isPathInside(screenFolder, filePath)) {
       throw new Error("画面JSONの保存先が画面フォルダ外に解決されました。");
     }
-    writeJsonFile(filePath, value);
-    return filePath;
+    return [filePath, value];
   });
+  const savedFiles = writeJsonFilesAtomically(pendingFiles);
 
   return {
     ok: true,
@@ -1499,15 +1628,23 @@ function handleStatic(response, pathname) {
 
 function createServer() {
   return http.createServer(async (request, response) => {
-    const url = new URL(request.url, `http://${request.headers.host}`);
     try {
+      const url = new URL(request.url, `http://${request.headers.host || HOST}`);
       if (request.method === "GET" && url.pathname === "/api/source-file") {
         sendSourceFile(response, url.searchParams.get("path"));
         return;
       }
 
       if (url.pathname.startsWith("/api/")) {
-        const body = request.method === "GET" ? {} : await readJsonBody(request);
+        const hasBody = request.method !== "GET" && request.method !== "HEAD";
+        if (hasBody) {
+          const contentType = String(request.headers["content-type"] || "").toLowerCase();
+          if (!contentType.startsWith("application/json")) {
+            request.resume();
+            throw new HttpError(415, "API requests with a body must use application/json");
+          }
+        }
+        const body = hasBody ? await readJsonBody(request) : {};
         const result = await dispatchApi(request.method, url.pathname, body);
         sendJson(response, result.statusCode, result.payload);
         return;
@@ -1515,7 +1652,8 @@ function createServer() {
 
       handleStatic(response, url.pathname);
     } catch (error) {
-      sendJson(response, 500, {
+      const statusCode = Number.isInteger(error.statusCode) ? error.statusCode : 500;
+      sendJson(response, statusCode, {
         ok: false,
         error: error.message
       });
@@ -1530,7 +1668,9 @@ if (require.main === module) {
 }
 
 module.exports = {
+  MAX_JSON_BODY_BYTES,
   createServer,
   dispatchApi,
-  resolveSourceFileRequest
+  resolveSourceFileRequest,
+  writeJsonFilesAtomically
 };

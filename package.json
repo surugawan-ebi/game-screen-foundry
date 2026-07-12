@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "Spec-driven local workbench for generating and assembling game screen assets.",
   "license": "MIT",
+  "main": "electron/main.js",
   "type": "commonjs",
   "repository": {
     "type": "git",
@@ -22,6 +23,8 @@
   "scripts": {
     "check": "npm run lint && npm run validate && npm test",
     "add-screen": "node scripts/add-screen.js",
+    "desktop": "node scripts/start-electron.js",
+    "desktop:dev": "node scripts/start-electron.js --devtools",
     "dev": "node server.js",
     "init-project": "node scripts/init-project.js",
     "lint": "node scripts/check-js-syntax.js",
@@ -34,6 +37,9 @@
     "validate": "node scripts/check-json.js && node scripts/check-skills.js && node scripts/validate-project-files.js",
     "validate:project": "node scripts/validate-project.js",
     "test": "node --test"
+  },
+  "devDependencies": {
+    "electron": "^43.0.0"
   },
   "engines": {
     "node": ">=20"

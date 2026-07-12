@@ -27,6 +27,13 @@ const state = {
   placementPointerEdit: null,
   placementTuneMode: false,
   movePlacementDependents: true,
+  structuredEditHistory: [],
+  structuredEditUndoStack: [],
+  structuredEditDirty: false,
+  structuredLastSavedAt: "",
+  structuredSavedSnapshotKey: "",
+  structuredHistoryLimit: 30,
+  activeWorkspaceTab: "preview",
   source: {
     kind: "none"
   }
@@ -114,10 +121,12 @@ const elements = {
   reviewButton: document.getElementById("reviewButton"),
   reviewOutput: document.getElementById("reviewOutput"),
   saveRegenQueueButton: document.getElementById("saveRegenQueueButton"),
+  saveStructuredEditButton: document.getElementById("saveStructuredEditButton"),
   screenCanvas: document.getElementById("screenCanvas"),
   screenCanvasWrap: document.getElementById("screenCanvasWrap"),
   screenKvInput: document.getElementById("screenKvInput"),
   screenMeta: document.getElementById("screenMeta"),
+  sidebar: document.querySelector(".sidebar"),
   specInput: document.getElementById("specInput"),
   assetCardTemplate: document.getElementById("assetCardTemplate"),
   assetCountLabel: document.getElementById("assetCountLabel"),
@@ -125,11 +134,22 @@ const elements = {
   sourceStatus: document.getElementById("sourceStatus"),
   specEditorPanel: document.getElementById("specEditorPanel"),
   specEditorStatus: document.getElementById("specEditorStatus"),
+  structuredEditHistory: document.getElementById("structuredEditHistory"),
+  structuredEditStatus: document.getElementById("structuredEditStatus"),
+  undoStructuredEditButton: document.getElementById("undoStructuredEditButton"),
   validateButton: document.getElementById("validateButton"),
   validationOutput: document.getElementById("validationOutput"),
   validationPanel: document.getElementById("validationPanel"),
-  validationStatus: document.getElementById("validationStatus")
+  validationStatus: document.getElementById("validationStatus"),
+  workspace: document.querySelector(".workspace"),
+  workspaceLayout: document.getElementById("workspaceLayout"),
+  workspaceTabButtons: [...document.querySelectorAll("[data-workspace-tab-button]")],
+  workspaceTabPanels: [...document.querySelectorAll("[data-workspace-tab-panel]")],
+  workspaceTabs: document.getElementById("workspaceTabs")
 };
+
+const WORKSPACE_TAB_STORAGE_KEY = "gsf.activeWorkspaceTab";
+const WORKSPACE_TAB_IDS = ["preview", "json", "assets", "review", "generate"];
 
 const FLOW_STEPS = [
   {
@@ -138,7 +158,7 @@ const FLOW_STEPS = [
   },
   {
     id: "draft",
-    label: "仮組み確認"
+    label: "ワイヤーフレーム作成"
   },
   {
     id: "show",
@@ -246,6 +266,80 @@ function setActivityStatus(message, { busy = false } = {}) {
   elements.activityStatus.classList.toggle("is-success", !busy && /生成しました|読み込みました|保存しました|更新しました|再採用しました|完了/.test(message));
 }
 
+function hasUnsavedWorkspaceChanges() {
+  return Boolean(state.structuredEditDirty || state.regenerationQueueDirty);
+}
+
+function describeUnsavedWorkspaceChanges() {
+  return [
+    state.structuredEditDirty ? "未保存のワイヤーフレーム編集" : "",
+    state.regenerationQueueDirty ? "未保存の再生成キュー" : ""
+  ].filter(Boolean).join("と");
+}
+
+function confirmDiscardUnsavedChanges(actionLabel) {
+  if (!hasUnsavedWorkspaceChanges()) {
+    return true;
+  }
+  const detail = describeUnsavedWorkspaceChanges();
+  return window.confirm(`${detail}があります。${actionLabel}すると変更は破棄されます。続けますか？`);
+}
+
+function readSavedWorkspaceTab() {
+  try {
+    const value = localStorage.getItem(WORKSPACE_TAB_STORAGE_KEY);
+    return WORKSPACE_TAB_IDS.includes(value) ? value : "preview";
+  } catch (error) {
+    return "preview";
+  }
+}
+
+function saveWorkspaceTab(tabId) {
+  try {
+    localStorage.setItem(WORKSPACE_TAB_STORAGE_KEY, tabId);
+  } catch (error) {
+    // Tab persistence is best-effort.
+  }
+}
+
+function panelBelongsToTab(panel, tabId) {
+  return String(panel.dataset.workspaceTabPanel || "")
+    .split(/\s+/u)
+    .filter(Boolean)
+    .includes(tabId);
+}
+
+function setWorkspaceTab(tabId, { persist = true } = {}) {
+  const nextTabId = WORKSPACE_TAB_IDS.includes(tabId) ? tabId : "preview";
+  state.activeWorkspaceTab = nextTabId;
+
+  elements.workspaceTabButtons.forEach((button) => {
+    const active = button.dataset.workspaceTabButton === nextTabId;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", active ? "true" : "false");
+  });
+
+  elements.workspaceTabPanels.forEach((panel) => {
+    panel.hidden = !panelBelongsToTab(panel, nextTabId);
+  });
+
+  const sidebarVisible = elements.workspaceTabPanels.some((panel) => (
+    panel.closest(".sidebar") && panelBelongsToTab(panel, nextTabId)
+  ));
+  const workspaceVisible = elements.workspaceTabPanels.some((panel) => (
+    panel.closest(".workspace") && panelBelongsToTab(panel, nextTabId)
+  ));
+  elements.sidebar.hidden = !sidebarVisible;
+  elements.workspace.hidden = !workspaceVisible;
+  elements.workspaceLayout.dataset.activeTab = nextTabId;
+  elements.workspaceLayout.classList.toggle("is-single-column", !sidebarVisible && workspaceVisible);
+  elements.workspaceLayout.classList.toggle("is-sidebar-only", sidebarVisible && !workspaceVisible);
+
+  if (persist) {
+    saveWorkspaceTab(nextTabId);
+  }
+}
+
 function setWorkspaceBusy(busy, label) {
   elements.activityOverlay.classList.toggle("hidden", !busy);
   elements.activityOverlayLabel.textContent = label;
@@ -341,6 +435,155 @@ function syncStateFromPayload(payload) {
       state.referenceQualityProfile = referenceDerived;
     }
   }
+}
+
+function cloneJson(value) {
+  return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
+}
+
+function captureStructuredSnapshot() {
+  return placementEditLogic.captureStructuredEditSnapshot(state);
+}
+
+function getStructuredSnapshotKey(snapshot = captureStructuredSnapshot()) {
+  return placementEditLogic.getStructuredContractSnapshotKey(snapshot);
+}
+
+function updateStructuredEditDirtyFromSnapshot(snapshot = captureStructuredSnapshot()) {
+  state.structuredEditDirty = Boolean(state.structuredSavedSnapshotKey)
+    && getStructuredSnapshotKey(snapshot) !== state.structuredSavedSnapshotKey;
+}
+
+function formatStructuredHistoryTime(timestamp) {
+  try {
+    return new Date(timestamp).toLocaleTimeString("ja-JP", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit"
+    });
+  } catch (error) {
+    return "--:--:--";
+  }
+}
+
+function renderStructuredEditHistory() {
+  const loaded = Boolean(state.screenKv && state.materialSpecSheet && state.worldPreset);
+  const canPersist = state.source && state.source.kind === "folder";
+  const pendingCount = state.structuredEditUndoStack.length;
+
+  elements.saveStructuredEditButton.disabled = !loaded || !canPersist || !state.structuredEditDirty;
+  elements.saveStructuredEditButton.title = canPersist
+    ? "保存前プレビュー中のJSONを画面フォルダへ保存します。"
+    : "フォルダ読み込み時だけ画面JSONを保存できます。";
+  elements.undoStructuredEditButton.disabled = !loaded || !pendingCount;
+
+  elements.structuredEditStatus.classList.toggle("is-dirty", state.structuredEditDirty);
+  if (!loaded) {
+    elements.structuredEditStatus.textContent = "未読み込み";
+  } else if (state.structuredEditDirty) {
+    const persistLabel = canPersist ? "保存できます" : "ファイル保存不可";
+    const pendingLabel = pendingCount ? `未保存の変更 ${pendingCount} 件` : "未保存の変更あり";
+    elements.structuredEditStatus.textContent = `保存前プレビュー中: ${pendingLabel} / ${persistLabel}`;
+  } else if (state.structuredLastSavedAt) {
+    elements.structuredEditStatus.textContent = `保存済み / 最終保存 ${formatStructuredHistoryTime(state.structuredLastSavedAt)}`;
+  } else if (!canPersist) {
+    elements.structuredEditStatus.textContent = "プレビュー専用 / ファイル保存不可";
+  } else {
+    elements.structuredEditStatus.textContent = "保存済み";
+  }
+
+  elements.structuredEditHistory.innerHTML = "";
+  if (!state.structuredEditHistory.length) {
+    elements.structuredEditHistory.className = "structured-edit-history empty";
+    elements.structuredEditHistory.textContent = "保存前プレビューの操作履歴はまだありません。";
+    return;
+  }
+
+  elements.structuredEditHistory.className = "structured-edit-history";
+  const fragment = document.createDocumentFragment();
+  state.structuredEditHistory.slice(-8).reverse().forEach((entry) => {
+    const item = document.createElement("div");
+    item.className = `structured-history-item is-${entry.type}`;
+
+    const time = document.createElement("div");
+    time.className = "structured-history-time";
+    time.textContent = formatStructuredHistoryTime(entry.timestamp);
+
+    const label = document.createElement("div");
+    label.className = "structured-history-label";
+    label.textContent = entry.summary ? `${entry.label} / ${entry.summary}` : entry.label;
+
+    item.appendChild(time);
+    item.appendChild(label);
+    fragment.appendChild(item);
+  });
+  elements.structuredEditHistory.appendChild(fragment);
+}
+
+function resetStructuredEditSession() {
+  state.structuredEditHistory = [];
+  state.structuredEditUndoStack = [];
+  state.structuredLastSavedAt = "";
+  state.structuredSavedSnapshotKey = getStructuredSnapshotKey();
+  updateStructuredEditDirtyFromSnapshot();
+  renderStructuredEditHistory();
+}
+
+function restoreStructuredSnapshot(snapshot) {
+  syncStateFromPayload(cloneJson(snapshot));
+  state.regenerationQueue = cloneJson(snapshot.regenerationQueue || []);
+  state.regenerationQueueDirty = Boolean(snapshot.regenerationQueueDirty);
+  setRegenerationPrompt(snapshot.regenerationPrompt || "");
+  updateEditors();
+}
+
+function appendStructuredEditHistory(entry) {
+  state.structuredEditHistory = [
+    ...state.structuredEditHistory,
+    entry
+  ].slice(-state.structuredHistoryLimit);
+}
+
+function recordStructuredEdit({
+  label,
+  beforeSnapshot,
+  affectedAssetIds = [],
+  queuedCount = 0
+}) {
+  const afterSnapshot = captureStructuredSnapshot();
+  if (beforeSnapshot && getStructuredSnapshotKey(beforeSnapshot) === getStructuredSnapshotKey(afterSnapshot)) {
+    updateStructuredEditDirtyFromSnapshot(afterSnapshot);
+    renderStructuredEditHistory();
+    return false;
+  }
+
+  const timestamp = new Date().toISOString();
+  const entry = {
+    id: `structured_edit_${Date.now()}`,
+    type: "edit",
+    label,
+    timestamp,
+    beforeSnapshot: beforeSnapshot ? cloneJson(beforeSnapshot) : null,
+    afterSnapshot,
+    affectedAssetIds,
+    queuedCount,
+    summary: queuedCount
+      ? `再生成キュー ${queuedCount} 件`
+      : affectedAssetIds.length
+        ? `サイズ変更 ${affectedAssetIds.length} 件`
+        : ""
+  };
+
+  if (entry.beforeSnapshot) {
+    state.structuredEditUndoStack = [
+      ...state.structuredEditUndoStack,
+      entry
+    ].slice(-state.structuredHistoryLimit);
+  }
+  updateStructuredEditDirtyFromSnapshot(afterSnapshot);
+  appendStructuredEditHistory(entry);
+  renderStructuredEditHistory();
+  return true;
 }
 
 function renderSourceStatus() {
@@ -782,6 +1025,7 @@ function renderStructuredSpecEditor() {
   elements.contentInsetRightInput.value = group ? inset.right : "";
   elements.contentInsetBottomInput.value = group ? inset.bottom : "";
   elements.contentInsetLeftInput.value = group ? inset.left : "";
+  renderStructuredEditHistory();
 }
 
 function readNumberField(input, label, { min = -Infinity } = {}) {
@@ -826,6 +1070,77 @@ async function saveScreenFilesFromCurrentEditors() {
     throw new Error(savePayload.error || "画面JSONの保存に失敗しました。");
   }
   return savePayload;
+}
+
+async function saveStructuredEdits() {
+  const busyStartedAt = Date.now();
+  setBusy(elements.saveStructuredEditButton, true, "保存中...");
+  setWorkspaceBusy(true, "画面JSONを保存しています...");
+  try {
+    const savePayload = await saveScreenFilesFromCurrentEditors();
+    const timestamp = new Date().toISOString();
+    if (savePayload.persisted) {
+      state.structuredLastSavedAt = timestamp;
+      state.structuredSavedSnapshotKey = getStructuredSnapshotKey();
+      updateStructuredEditDirtyFromSnapshot();
+    }
+    appendStructuredEditHistory({
+      id: `structured_save_${Date.now()}`,
+      type: "save",
+      label: savePayload.persisted ? "画面JSONを保存しました" : "画面JSONは保存されていません",
+      timestamp,
+      summary: savePayload.persisted ? "" : savePayload.message
+    });
+    renderStructuredEditHistory();
+    setActivityStatus(savePayload.persisted
+      ? `画面JSONを保存しました ${nowLabel()}`
+      : `${savePayload.message} ${nowLabel()}`);
+  } catch (error) {
+    window.alert(error.message);
+    setActivityStatus(`画面JSON保存失敗: ${error.message}`);
+  } finally {
+    await ensureMinimumBusy(busyStartedAt);
+    setWorkspaceBusy(false, "待機中");
+    setBusy(elements.saveStructuredEditButton, false);
+    renderStructuredEditHistory();
+  }
+}
+
+async function undoLastStructuredEdit() {
+  const lastEdit = state.structuredEditUndoStack[state.structuredEditUndoStack.length - 1];
+  if (!lastEdit || !lastEdit.beforeSnapshot) {
+    return;
+  }
+
+  const busyStartedAt = Date.now();
+  setBusy(elements.undoStructuredEditButton, true, "戻し中...");
+  setWorkspaceBusy(true, "直前状態へ戻しています...");
+  try {
+    state.structuredEditUndoStack = state.structuredEditUndoStack.slice(0, -1);
+    restoreStructuredSnapshot(lastEdit.beforeSnapshot);
+    state.review = null;
+    state.reviewSuggestionsByAsset = {};
+    renderValidationReport(null);
+    await renderDraftWorkspace(`直前状態へ戻しました ${nowLabel()}`);
+    updateStructuredEditDirtyFromSnapshot();
+    appendStructuredEditHistory({
+      id: `structured_undo_${Date.now()}`,
+      type: "undo",
+      label: "直前状態へ戻しました",
+      timestamp: new Date().toISOString(),
+      summary: lastEdit.label
+    });
+    renderStructuredEditHistory();
+    setActivityStatus(`直前状態へ戻しました / ${state.structuredEditDirty ? "未保存の変更あり" : "保存済み"} ${nowLabel()}`);
+  } catch (error) {
+    window.alert(error.message);
+    setActivityStatus(`直前状態への復帰失敗: ${error.message}`);
+  } finally {
+    await ensureMinimumBusy(busyStartedAt);
+    setWorkspaceBusy(false, "待機中");
+    setBusy(elements.undoStructuredEditButton, false);
+    renderStructuredEditHistory();
+  }
 }
 
 function findMaterialAsset(assetId) {
@@ -895,10 +1210,11 @@ function queueAssetsForStructuredLayoutChange(assetIds, reason) {
 async function refreshAfterStructuredSpecEdit(message, button, options = {}) {
   const busyStartedAt = Date.now();
   const shouldRestoreStructureView = state.viewMode === "structure";
+  const beforeSnapshot = options.beforeSnapshot || null;
   if (button) {
     setBusy(button, true, "反映中...");
   }
-  setWorkspaceBusy(true, "構造化編集を反映しています...");
+  setWorkspaceBusy(true, "ワイヤーフレーム編集を反映しています...");
   try {
     syncOverlayAbsoluteGeometry();
     elements.specInput.value = JSON.stringify(state.materialSpecSheet, null, 2);
@@ -906,24 +1222,32 @@ async function refreshAfterStructuredSpecEdit(message, button, options = {}) {
     state.reviewSuggestionsByAsset = {};
     renderValidationReport(null);
     await renderDraftWorkspace(message);
-    const savePayload = await saveScreenFilesFromCurrentEditors();
     const queuedCount = queueAssetsForStructuredLayoutChange(
       options.affectedAssetIds || [],
-      options.regenerationComment || "構造プレビューで配置またはサイズを変更。新しい最終配置に合わせてPNGを再生成してください。"
+      options.regenerationComment || "ワイヤーフレームで配置またはサイズを変更。新しい最終配置に合わせてPNGを再生成してください。"
     );
+    recordStructuredEdit({
+      label: message,
+      beforeSnapshot,
+      affectedAssetIds: options.affectedAssetIds || [],
+      queuedCount
+    });
     if (shouldRestoreStructureView) {
       setViewMode("structure");
       renderScreen();
     }
-    const saveLabel = savePayload.persisted ? "画面JSON保存済み" : "画面JSON未保存";
+    const saveLabel = state.structuredEditDirty ? "保存前プレビュー中" : "保存済み";
     const queueLabel = queuedCount ? ` / 再生成キュー ${queuedCount} 件` : "";
     const queueSkipLabel = !queuedCount && options.queueSkipMessage
       ? ` / ${options.queueSkipMessage}`
       : "";
     setActivityStatus(`${message} / ${saveLabel}${queueLabel}${queueSkipLabel}`);
   } catch (error) {
+    if (beforeSnapshot) {
+      restoreStructuredSnapshot(beforeSnapshot);
+    }
     window.alert(error.message);
-    setActivityStatus(`構造化編集失敗: ${error.message}`);
+    setActivityStatus(`ワイヤーフレーム編集失敗: ${error.message}`);
   } finally {
     await ensureMinimumBusy(busyStartedAt);
     setWorkspaceBusy(false, "待機中");
@@ -938,6 +1262,7 @@ async function applyPlacementEditor() {
   try {
     const placement = getSelectedPlacement();
     const overlay = getSelectedOverlay();
+    const beforeSnapshot = placement || overlay ? captureStructuredSnapshot() : null;
     if (overlay) {
       const targetPlacementId = elements.placementParentInput.value.trim();
       if (targetPlacementId) {
@@ -950,7 +1275,9 @@ async function applyPlacementEditor() {
         width: readNumberField(elements.placementWidthInput, "w", { min: 1 }),
         height: readNumberField(elements.placementHeightInput, "h", { min: 1 })
       });
-      await refreshAfterStructuredSpecEdit(`${overlay.overlayId} のテキスト領域を反映しました ${nowLabel()}`, elements.applyPlacementEditButton);
+      await refreshAfterStructuredSpecEdit(`${overlay.overlayId} のテキスト領域を反映しました ${nowLabel()}`, elements.applyPlacementEditButton, {
+        beforeSnapshot
+      });
       return;
     }
     if (!placement) {
@@ -958,7 +1285,7 @@ async function applyPlacementEditor() {
     }
     const nextX = readNumberField(elements.placementXInput, "x");
     const nextY = readNumberField(elements.placementYInput, "y");
-    const before = {
+    const beforeSize = {
       width: placement.width,
       height: placement.height
     };
@@ -979,8 +1306,9 @@ async function applyPlacementEditor() {
     } else {
       delete placement.parentId;
     }
-    const affectedAssetIds = collectResizedPlacementAssetIds([{ placement, before }]);
+    const affectedAssetIds = collectResizedPlacementAssetIds([{ placement, before: beforeSize }]);
     await refreshAfterStructuredSpecEdit(`${placement.placementId} の配置を反映しました ${nowLabel()}`, elements.applyPlacementEditButton, {
+      beforeSnapshot,
       affectedAssetIds,
       regenerationComment: `${placement.placementId} のサイズを変更。新しい最終サイズ ${placement.width}x${placement.height}px に合わせてPNGを作り直してください。`,
       queueSkipMessage: "位置だけの変更なのでPNG再生成は不要です"
@@ -995,6 +1323,7 @@ async function adjustSelectedPlacementGeometry(delta, label) {
   try {
     const placement = getSelectedPlacement();
     const overlay = getSelectedOverlay();
+    const beforeSnapshot = placement || overlay ? captureStructuredSnapshot() : null;
     if (overlay) {
       applyOverlayGeometry(overlay, {
         x: overlay.x + (delta.x || 0),
@@ -1002,13 +1331,15 @@ async function adjustSelectedPlacementGeometry(delta, label) {
         width: overlay.width + (delta.width || 0),
         height: overlay.height + (delta.height || 0)
       });
-      await refreshAfterStructuredSpecEdit(`${overlay.overlayId} を${label}しました ${nowLabel()}`, null);
+      await refreshAfterStructuredSpecEdit(`${overlay.overlayId} を${label}しました ${nowLabel()}`, null, {
+        beforeSnapshot
+      });
       return;
     }
     if (!placement) {
       return;
     }
-    const before = {
+    const beforeSize = {
       width: placement.width,
       height: placement.height
     };
@@ -1024,8 +1355,9 @@ async function adjustSelectedPlacementGeometry(delta, label) {
     shiftDependentOverlays(dependentOverlays, delta.x || 0, delta.y || 0);
     const followedCount = dependents.length + dependentOverlays.length;
     const followLabel = followedCount && (delta.x || delta.y) ? `(載っている${followedCount}件も追従)` : "";
-    const affectedAssetIds = collectResizedPlacementAssetIds([{ placement, before }]);
+    const affectedAssetIds = collectResizedPlacementAssetIds([{ placement, before: beforeSize }]);
     await refreshAfterStructuredSpecEdit(`${placement.placementId} を${label}しました${followLabel} ${nowLabel()}`, null, {
+      beforeSnapshot,
       affectedAssetIds,
       regenerationComment: `${placement.placementId} を${label}。新しい最終サイズ ${placement.width}x${placement.height}px に合わせてPNGを再生成してください。`,
       queueSkipMessage: "位置だけの変更なのでPNG再生成は不要です"
@@ -1146,6 +1478,7 @@ function finishPlacementPointerEdit(event) {
       }])
     : [];
   refreshAfterStructuredSpecEdit(`${editable.id} の微調整を反映しました ${nowLabel()}`, null, {
+    beforeSnapshot: edit.beforeSnapshot,
     affectedAssetIds,
     regenerationComment: `${editable.id} をドラッグでリサイズ。新しい最終サイズ ${item.width}x${item.height}px に合わせてPNGを再生成してください。`,
     queueSkipMessage: "位置だけの変更なのでPNG再生成は不要です"
@@ -1182,6 +1515,7 @@ function startPlacementPointerEdit(event, mode) {
   state.placementPointerEdit = {
     pointerId: event.pointerId,
     mode,
+    beforeSnapshot: captureStructuredSnapshot(),
     startPoint,
     dependents,
     dependentOverlays,
@@ -1208,6 +1542,7 @@ async function applyCompositionInsetEditor() {
     if (!group) {
       return;
     }
+    const beforeSnapshot = captureStructuredSnapshot();
     group.contentInset = {
       top: readNumberField(elements.contentInsetTopInput, "top", { min: 0 }),
       right: readNumberField(elements.contentInsetRightInput, "right", { min: 0 }),
@@ -1215,7 +1550,9 @@ async function applyCompositionInsetEditor() {
       left: readNumberField(elements.contentInsetLeftInput, "left", { min: 0 })
     };
     state.selectedCompositionGroupId = group.groupId;
-    await refreshAfterStructuredSpecEdit(`${group.groupId} の contentInset を反映しました ${nowLabel()}`, elements.applyCompositionInsetButton);
+    await refreshAfterStructuredSpecEdit(`${group.groupId} の contentInset を反映しました ${nowLabel()}`, elements.applyCompositionInsetButton, {
+      beforeSnapshot
+    });
   } catch (error) {
     window.alert(error.message);
     setActivityStatus(`Inset反映失敗: ${error.message}`);
@@ -2007,6 +2344,7 @@ async function buildReferenceQualityProfileFromPath() {
     state.referenceQualityCompactProfile = payload.compactProfile;
     state.assetQualityAudit = null;
     renderReferenceQualityPanel();
+    setWorkspaceTab("generate");
     setActivityStatus(`参照品質プロファイルを作成しました。${payload.profile.source.analyzed} samples ${nowLabel()}`);
   } catch (error) {
     window.alert(error.message);
@@ -2038,6 +2376,7 @@ function applyReferenceQualityProfileToPreset() {
   };
   updateEditors();
   renderReferenceQualityPanel();
+  setWorkspaceTab("generate");
   setActivityStatus(`参照品質プロファイルを世界観プリセットへ反映しました ${nowLabel()}`);
 }
 
@@ -2071,6 +2410,7 @@ async function auditGeneratedAssetsWithReferenceProfile() {
     }
     state.assetQualityAudit = payload.audit;
     renderReferenceQualityPanel();
+    setWorkspaceTab("generate");
     setActivityStatus(`生成PNG監査 ${payload.audit.status} / score ${payload.audit.score} / warn ${payload.audit.summary.warningCount} ${nowLabel()}`);
   } catch (error) {
     window.alert(error.message);
@@ -2090,6 +2430,7 @@ async function validateWorkspaceSpec() {
       summary: null,
       diagnostics
     });
+    setWorkspaceTab("review");
     setActivityStatus(`仕様チェック失敗: JSON parse error ${nowLabel()}`);
     return;
   }
@@ -2110,6 +2451,7 @@ async function validateWorkspaceSpec() {
       throw new Error(result.error || "仕様チェックに失敗しました。");
     }
     renderValidationReport(result);
+    setWorkspaceTab("review");
     setActivityStatus(result.valid
       ? `仕様チェックOK ${nowLabel()}`
       : `仕様チェックで要修正 ${nowLabel()}`);
@@ -2154,6 +2496,7 @@ async function buildImplementationReport() {
     }
     elements.aiModeLabel.textContent = payload.ai.mode;
     setImplementationReport(payload.markdown || "");
+    setWorkspaceTab("review");
     elements.implementationReportPanel.classList.remove("flash-once");
     void elements.implementationReportPanel.offsetWidth;
     elements.implementationReportPanel.classList.add("flash-once");
@@ -2267,6 +2610,7 @@ function addAssetToRegenerationQueue(asset, userComment) {
   renderRegenerationQueue();
   renderAssets();
   setFlowStep("queue");
+  setWorkspaceTab("generate");
   setActivityStatus(`${asset.assetId} を再生成キューに${current ? "更新" : "追加"}しました ${nowLabel()}`);
 }
 
@@ -2296,6 +2640,7 @@ async function buildRegenerationPrompt() {
     }
     elements.aiModeLabel.textContent = payload.ai.mode;
     setRegenerationPrompt(payload.markdown);
+    setWorkspaceTab("generate");
     setActivityStatus(`${payload.itemCount} 件のCodex依頼文を作成しました ${nowLabel()}`);
     elements.regenQueuePanel.classList.remove("flash-once");
     void elements.regenQueuePanel.offsetWidth;
@@ -2349,6 +2694,7 @@ async function saveRegenerationQueue() {
     state.regenerationQueuePath = payload.queuePath || "";
     state.regenerationQueueDirty = false;
     renderRegenerationQueue();
+    setWorkspaceTab("generate");
     setActivityStatus(`再生成キューを保存しました。${payload.itemCount} 件 ${nowLabel()}`);
   } catch (error) {
     window.alert(error.message);
@@ -2390,6 +2736,7 @@ async function loadSavedRegenerationQueue() {
     renderRegenerationQueue();
     renderAssets();
     setFlowStep("queue");
+    setWorkspaceTab("generate");
     setActivityStatus(`保存済み再生成キューを読み込みました。${state.regenerationQueue.length} 件 ${nowLabel()}`);
   } catch (error) {
     window.alert(error.message);
@@ -2408,6 +2755,7 @@ function clearRegenerationQueue() {
   renderRegenerationQueue();
   renderAssets();
   setFlowStep(state.review ? "review" : state.renderModel ? "show" : "load");
+  setWorkspaceTab("generate");
   setActivityStatus(`再生成キューを空にしました ${nowLabel()}`);
 }
 
@@ -2664,7 +3012,10 @@ function renderAssets() {
   });
 }
 
-async function loadDemo() {
+async function loadDemo({ confirmDiscard = false } = {}) {
+  if (confirmDiscard && !confirmDiscardUnsavedChanges("デモを読み込む")) {
+    return false;
+  }
   const busyStartedAt = Date.now();
   setBusy(elements.loadDemoButton, true, "読込中...");
   setWorkspaceBusy(true, "デモを読み込んでいます...");
@@ -2692,12 +3043,14 @@ async function loadDemo() {
     renderValidationReport(null);
     renderReferenceQualityPanel();
     state.source = payload.source || { kind: "demo" };
+    resetStructuredEditSession();
     elements.aiModeLabel.textContent = payload.ai.mode;
     updateEditors();
     await renderGeneratedWorkspace(`デモを読み込み、生成後画面を表示しました ${nowLabel()}`, {
       resetReview: true,
       resetComments: true
     });
+    return true;
   } finally {
     await ensureMinimumBusy(busyStartedAt);
     setWorkspaceBusy(false, "待機中");
@@ -2756,6 +3109,7 @@ async function renderGeneratedWorkspace(message, {
     ? state.imagegenReport.adoptedAssetIds.length
     : 0;
   setActivityStatus(message || `${displayedCount} 素材の生成後状態を表示しました。事前生成PNG採用 ${imagegenCount} / 表示ジョブ ${jobCount} / 固定スキップ ${skippedCount} ${nowLabel()}`);
+  setWorkspaceTab(scrollToAssets ? "assets" : "preview");
   elements.assetPanel.classList.remove("flash-once");
   void elements.assetPanel.offsetWidth;
   elements.assetPanel.classList.add("flash-once");
@@ -2830,6 +3184,7 @@ async function prepareImagegenJob() {
       ? `imagegen runner ${runner.ok ? "完了" : "失敗"}。採用 ${adopted} / 未生成 ${missing} ${nowLabel()}`
       : `imagegenジョブを作成しました。採用 ${adopted} / 未生成 ${missing}。生成後に「生成後を表示」を押してください ${nowLabel()}`;
     setFlowStep(runner.ran ? "import" : "dialogue");
+    setWorkspaceTab("generate");
     setActivityStatus(message);
   } catch (error) {
     window.alert(error.message);
@@ -2909,6 +3264,7 @@ async function refreshImagegenOutputs() {
     setFlowStep("import");
     setViewMode("generated");
     const autoLabel = autoRegisteredCount ? ` / manifest自動追記 ${autoRegisteredCount}` : "";
+    setWorkspaceTab("assets");
     setActivityStatus(`生成済みPNGを再取り込みしました。採用 ${adopted} / 未生成 ${missing}${autoLabel} ${nowLabel()}`);
   } catch (error) {
     window.alert(error.message);
@@ -2950,6 +3306,7 @@ async function runReview() {
     renderRegenerationQueue();
     renderAssets();
     setFlowStep("review");
+    setWorkspaceTab("review");
     setActivityStatus(`AI レビュー完了 ${nowLabel()}`);
   } catch (error) {
     window.alert(error.message);
@@ -3015,6 +3372,7 @@ async function showDraftWorkspace() {
   setWorkspaceBusy(true, "仮組み画面を表示しています...");
   try {
     await renderDraftWorkspace(`仮組み確認を表示しました ${nowLabel()}`);
+    setWorkspaceTab("preview");
   } catch (error) {
     window.alert(error.message);
     setActivityStatus(`仮組み表示失敗: ${error.message}`);
@@ -3028,17 +3386,18 @@ async function showDraftWorkspace() {
 async function showStructureWorkspace() {
   const busyStartedAt = Date.now();
   setBusy(elements.structureButton, true, "表示中...");
-  setWorkspaceBusy(true, "構造プレビューを表示しています...");
+  setWorkspaceBusy(true, "ワイヤーフレームを表示しています...");
   try {
     if (!state.renderModel) {
-      await renderDraftWorkspace(`構造プレビューを表示しました ${nowLabel()}`);
+      await renderDraftWorkspace(`ワイヤーフレームを表示しました ${nowLabel()}`);
     }
     setViewMode("structure");
     renderScreen();
-    setActivityStatus(`構造プレビューを表示しました ${nowLabel()}`);
+    setWorkspaceTab("preview");
+    setActivityStatus(`ワイヤーフレームを表示しました ${nowLabel()}`);
   } catch (error) {
     window.alert(error.message);
-    setActivityStatus(`構造プレビュー表示失敗: ${error.message}`);
+    setActivityStatus(`ワイヤーフレーム表示失敗: ${error.message}`);
   } finally {
     await ensureMinimumBusy(busyStartedAt);
     setWorkspaceBusy(false, "待機中");
@@ -3071,6 +3430,7 @@ async function loadBundleObject(bundle, source) {
   setImplementationReport("");
   renderValidationReport(null);
   renderReferenceQualityPanel();
+  resetStructuredEditSession();
   updateEditors();
   await renderGeneratedWorkspace(`読み込み完了。生成後画面を表示しました ${nowLabel()}`, {
     resetReview: true,
@@ -3148,6 +3508,7 @@ function showEmptyStartupWorkspace(message, folderPath = "") {
   if (folderPath) {
     elements.folderPathInput.value = folderPath;
   }
+  resetStructuredEditSession();
   setSpecEditorDisabled(true);
   renderProjectNavigator();
   renderHandoffPanel();
@@ -3165,7 +3526,10 @@ async function loadFolder(options = {}) {
   const { folderPath, screenId } = parsed;
   if (!folderPath) {
     window.alert("フォルダパスを入れてください。");
-    return;
+    return false;
+  }
+  if (options.confirmDiscard && !confirmDiscardUnsavedChanges("別のプロジェクトを読み込む")) {
+    return false;
   }
 
   const busyStartedAt = Date.now();
@@ -3192,12 +3556,14 @@ async function loadFolder(options = {}) {
       payload.source && payload.source.projectRoot ? payload.source.projectRoot : folderPath,
       payload.source ? payload.source.screenId : screenId
     );
+    return true;
   } catch (error) {
     if (options.silent) {
       throw error;
     }
     window.alert(error.message);
     setActivityStatus(`読込失敗: ${error.message}`);
+    return false;
   } finally {
     await ensureMinimumBusy(busyStartedAt);
     setWorkspaceBusy(false, "待機中");
@@ -3216,25 +3582,39 @@ async function switchProjectScreen() {
     window.alert("先にプロジェクトフォルダを読み込んでください。");
     return;
   }
-  await loadFolder({
+  const previousScreenId = state.source && state.source.screenId ? state.source.screenId : "";
+  if (!confirmDiscardUnsavedChanges("別の画面へ切り替える")) {
+    elements.projectScreenSelect.value = previousScreenId;
+    return;
+  }
+  const loaded = await loadFolder({
     folderPath: projectRoot,
     screenId: elements.projectScreenSelect.value
   });
+  if (!loaded) {
+    elements.projectScreenSelect.value = previousScreenId;
+  }
 }
 
-async function importBundleFile(file) {
+async function importBundleFile(file, { confirmDiscard = false } = {}) {
+  if (confirmDiscard && !confirmDiscardUnsavedChanges("Bundleを読み込む")) {
+    return false;
+  }
   const text = await file.text();
   const bundle = JSON.parse(text);
   await loadBundleObject(bundle, {
     kind: "bundle-file",
     fileName: file.name
   });
+  return true;
 }
 
 elements.loadDemoButton.addEventListener("click", async () => {
-  await loadDemo();
+  await loadDemo({ confirmDiscard: true });
 });
-elements.loadFolderButton.addEventListener("click", loadFolder);
+elements.loadFolderButton.addEventListener("click", async () => {
+  await loadFolder({ confirmDiscard: true });
+});
 elements.projectScreenSelect.addEventListener("change", switchProjectScreen);
 elements.placementEditorSelect.addEventListener("change", () => {
   state.selectedPlacementId = elements.placementEditorSelect.value;
@@ -3258,7 +3638,7 @@ elements.bundleFileInput.addEventListener("change", async (event) => {
     return;
   }
   try {
-    await importBundleFile(file);
+    await importBundleFile(file, { confirmDiscard: true });
   } catch (error) {
     window.alert(error.message);
   } finally {
@@ -3273,6 +3653,8 @@ elements.generateButton.addEventListener("click", showGeneratedResults);
 elements.validateButton.addEventListener("click", validateWorkspaceSpec);
 elements.exportReportButton.addEventListener("click", buildImplementationReport);
 elements.applyPlacementEditButton.addEventListener("click", applyPlacementEditor);
+elements.saveStructuredEditButton.addEventListener("click", saveStructuredEdits);
+elements.undoStructuredEditButton.addEventListener("click", undoLastStructuredEdit);
 elements.placementTuneToggle.addEventListener("click", togglePlacementTuneMode);
 elements.placementFollowToggle.addEventListener("change", () => {
   state.movePlacementDependents = elements.placementFollowToggle.checked;
@@ -3312,6 +3694,19 @@ elements.loadRegenQueueButton.addEventListener("click", loadSavedRegenerationQue
 elements.clearRegenQueueButton.addEventListener("click", clearRegenerationQueue);
 elements.reviewButton.addEventListener("click", runReview);
 elements.applyLocksButton.addEventListener("click", applyLockSuggestions);
+elements.workspaceTabButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    setWorkspaceTab(button.dataset.workspaceTabButton);
+  });
+});
+
+window.addEventListener("beforeunload", (event) => {
+  if (!hasUnsavedWorkspaceChanges()) {
+    return;
+  }
+  event.preventDefault();
+  event.returnValue = "";
+});
 
 // During boot the workflow buttons stay disabled so early clicks are not
 // swallowed by the initial load.
@@ -3326,6 +3721,8 @@ function setBootBusy(busy) {
     elements.imagegenRefreshButton,
     elements.exportReportButton,
     elements.applyLocksButton,
+    elements.saveStructuredEditButton,
+    elements.undoStructuredEditButton,
     elements.loadDemoButton,
     elements.loadFolderButton
   ];
@@ -3384,5 +3781,6 @@ async function bootWorkspace() {
 }
 
 setFlowStep("load");
+setWorkspaceTab(readSavedWorkspaceTab(), { persist: false });
 renderReferenceQualityPanel();
 bootWorkspace();

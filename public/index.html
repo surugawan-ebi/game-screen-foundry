@@ -3,6 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; base-uri 'self'; connect-src 'self'; img-src 'self' data: blob:; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; object-src 'none'; form-action 'none'"
+    />
     <title>ゲーム用クリエイティブ生成ツール ベータ</title>
     <link rel="stylesheet" href="./app.css" />
   </head>
@@ -18,26 +22,38 @@
         </div>
       </header>
 
-      <section class="toolbar">
-        <button id="loadDemoButton" class="primary">デモを読み込む</button>
-        <label class="file-import">
-          <span>Bundle JSON を読み込む</span>
-          <input id="bundleFileInput" type="file" accept=".json,application/json" />
-        </label>
-        <input id="folderPathInput" class="path-input" type="text" placeholder="/path/to/creative または /path/to/creative#home" />
-        <button id="loadFolderButton">フォルダから読み込む</button>
-        <select id="projectScreenSelect" class="screen-select" aria-label="プロジェクト画面選択" disabled>
-          <option value="">画面選択</option>
-        </select>
-        <button id="imagegenJobButton">対話用imagegenジョブ作成</button>
-        <button id="imagegenRefreshButton">生成済みPNGを再取り込み</button>
-        <button id="draftButton">仮組み確認</button>
-        <button id="structureButton">構造プレビュー</button>
-        <button id="generateButton" class="primary">生成後を表示</button>
-        <button id="validateButton">仕様チェック</button>
-        <button id="reviewButton">AI で画面レビュー</button>
-        <button id="exportReportButton">実装レポート作成</button>
-        <button id="applyLocksButton">固定候補を反映</button>
+      <section class="toolbar command-bar" aria-label="主要操作">
+        <div class="command-group command-group-project">
+          <span class="command-group-label">Project</span>
+          <button id="loadDemoButton" class="primary">デモ</button>
+          <label class="file-import">
+            <span>Bundle</span>
+            <input id="bundleFileInput" type="file" accept=".json,application/json" />
+          </label>
+          <input id="folderPathInput" class="path-input" type="text" placeholder="/path/to/creative または /path/to/creative#home" />
+          <button id="loadFolderButton">読み込み</button>
+          <select id="projectScreenSelect" class="screen-select" aria-label="プロジェクト画面選択" disabled>
+            <option value="">画面選択</option>
+          </select>
+        </div>
+        <div class="command-group">
+          <span class="command-group-label">View</span>
+          <button id="draftButton">仮組み</button>
+          <button id="structureButton">ワイヤーフレーム</button>
+          <button id="generateButton" class="primary">生成後</button>
+        </div>
+        <div class="command-group">
+          <span class="command-group-label">Generate</span>
+          <button id="imagegenJobButton">Job作成</button>
+          <button id="imagegenRefreshButton">PNG再取込</button>
+        </div>
+        <div class="command-group">
+          <span class="command-group-label">Review</span>
+          <button id="validateButton">仕様チェック</button>
+          <button id="reviewButton">AIレビュー</button>
+          <button id="exportReportButton">実装レポート</button>
+          <button id="applyLocksButton">固定反映</button>
+        </div>
       </section>
       <section class="source-bar">
         <div id="sourceStatus" class="source-status">読み込み元: 未読み込み</div>
@@ -59,8 +75,8 @@
           <div class="flow-link" aria-hidden="true"></div>
           <div class="flow-step" data-flow-step="draft">
             <span class="flow-index">2</span>
-            <strong>仮組み確認</strong>
-            <small>構造と配置を見る</small>
+            <strong>ワイヤーフレーム作成</strong>
+            <small>配置・余白・重なりを調整</small>
           </div>
           <div class="flow-link" aria-hidden="true"></div>
           <div class="flow-step" data-flow-step="show">
@@ -101,9 +117,17 @@
         </div>
       </section>
 
-      <section class="layout">
+      <nav id="workspaceTabs" class="workspace-tabs" aria-label="作業領域タブ">
+        <button class="workspace-tab-button is-active" type="button" data-workspace-tab-button="preview" aria-pressed="true">プレビュー</button>
+        <button class="workspace-tab-button" type="button" data-workspace-tab-button="json" aria-pressed="false">JSON</button>
+        <button class="workspace-tab-button" type="button" data-workspace-tab-button="assets" aria-pressed="false">素材</button>
+        <button class="workspace-tab-button" type="button" data-workspace-tab-button="review" aria-pressed="false">レビュー</button>
+        <button class="workspace-tab-button" type="button" data-workspace-tab-button="generate" aria-pressed="false">生成</button>
+      </nav>
+
+      <section id="workspaceLayout" class="layout">
         <aside class="sidebar">
-          <div class="sidebar-overview">
+          <div class="sidebar-overview" data-workspace-tab-panel="json">
             <article class="panel kv-panel">
               <div class="panel-header">
                 <h2>KV 参照</h2>
@@ -129,21 +153,21 @@
               </div>
             </div>
           </div>
-          <article class="panel">
+          <article class="panel" data-workspace-tab-panel="json">
             <div class="panel-header">
               <h2>画面 KV</h2>
               <span class="panel-note">編集可能な JSON</span>
             </div>
             <textarea id="screenKvInput" spellcheck="false"></textarea>
           </article>
-          <article class="panel">
+          <article class="panel" data-workspace-tab-panel="json">
             <div class="panel-header">
               <h2>素材仕様書</h2>
               <span class="panel-note">組み立て仕様</span>
             </div>
             <textarea id="specInput" spellcheck="false"></textarea>
           </article>
-          <article class="panel">
+          <article class="panel" data-workspace-tab-panel="json">
             <div class="panel-header">
               <h2>世界観プリセット</h2>
               <span class="panel-note">スタイル基準</span>
@@ -153,7 +177,7 @@
         </aside>
 
         <section class="workspace">
-          <article class="panel preview-panel">
+          <article class="panel preview-panel" data-workspace-tab-panel="preview">
             <div class="panel-header">
               <h2>組み立て画面</h2>
               <span class="panel-note">素材カードを見ながら調整</span>
@@ -164,9 +188,9 @@
             </div>
           </article>
 
-          <article id="specEditorPanel" class="panel spec-editor-panel">
+          <article id="specEditorPanel" class="panel spec-editor-panel" data-workspace-tab-panel="preview">
             <div class="panel-header">
-              <h2>構造化編集</h2>
+              <h2>ワイヤーフレーム作成</h2>
               <span id="specEditorStatus" class="panel-note">未読み込み</span>
             </div>
             <div class="spec-editor-grid">
@@ -196,7 +220,7 @@
                     <span>z</span>
                     <input id="placementZInput" type="number" step="1" />
                   </label>
-                  <label>
+                  <label class="field-span-full">
                     <span>parent</span>
                     <input id="placementParentInput" type="text" />
                   </label>
@@ -253,9 +277,19 @@
                 <button id="applyCompositionInsetButton">Insetを反映</button>
               </section>
             </div>
+            <section class="spec-save-section">
+              <div class="spec-save-actions">
+                <button id="saveStructuredEditButton" type="button">画面JSONを保存</button>
+                <button id="undoStructuredEditButton" type="button">直前状態へ戻す</button>
+              </div>
+              <div id="structuredEditStatus" class="structured-edit-status">未読み込み</div>
+              <div id="structuredEditHistory" class="structured-edit-history empty">
+                保存前プレビューの操作履歴はまだありません。
+              </div>
+            </section>
           </article>
 
-          <article id="compositionPanel" class="panel composition-panel">
+          <article id="compositionPanel" class="panel composition-panel" data-workspace-tab-panel="preview">
             <div class="panel-header">
               <h2>構成グループ</h2>
               <span id="compositionCountLabel" class="panel-note">0 件</span>
@@ -268,7 +302,7 @@
             </div>
           </article>
 
-          <article id="referenceQualityPanel" class="panel reference-quality-panel">
+          <article id="referenceQualityPanel" class="panel reference-quality-panel" data-workspace-tab-panel="generate">
             <div class="panel-header">
               <h2>参照品質プロファイル</h2>
               <span id="referenceQualityStatus" class="panel-note">未作成</span>
@@ -285,7 +319,7 @@
             </div>
           </article>
 
-          <article class="panel review-panel">
+          <article class="panel review-panel" data-workspace-tab-panel="review">
             <div class="panel-header">
               <h2>AI レビュー</h2>
               <span class="panel-note">指摘、固定、調整方針</span>
@@ -295,7 +329,7 @@
             </div>
           </article>
 
-          <article id="regenQueuePanel" class="panel regen-queue-panel">
+          <article id="regenQueuePanel" class="panel regen-queue-panel" data-workspace-tab-panel="generate">
             <div class="panel-header">
               <h2>再生成キュー</h2>
               <span id="regenQueueCountLabel" class="panel-note">0 件</span>
@@ -318,7 +352,7 @@
             ></textarea>
           </article>
 
-          <article id="handoffPanel" class="panel handoff-panel">
+          <article id="handoffPanel" class="panel handoff-panel" data-workspace-tab-panel="generate">
             <div class="panel-header">
               <h2>Codex Handoff</h2>
               <span id="handoffSummary" class="panel-note">未作成</span>
@@ -331,7 +365,7 @@
             </div>
           </article>
 
-          <article id="implementationReportPanel" class="panel implementation-report-panel">
+          <article id="implementationReportPanel" class="panel implementation-report-panel" data-workspace-tab-panel="review">
             <div class="panel-header">
               <h2>実装レポート</h2>
               <span id="implementationReportStatus" class="panel-note">未作成</span>
@@ -345,7 +379,7 @@
             ></textarea>
           </article>
 
-          <article id="validationPanel" class="panel validation-panel">
+          <article id="validationPanel" class="panel validation-panel" data-workspace-tab-panel="review">
             <div class="panel-header">
               <h2>仕様チェック</h2>
               <span id="validationStatus" class="panel-note">未実行</span>
@@ -355,7 +389,7 @@
             </div>
           </article>
 
-          <article id="assetPanel" class="panel asset-panel">
+          <article id="assetPanel" class="panel asset-panel" data-workspace-tab-panel="assets">
             <div class="panel-header">
               <h2>素材一覧</h2>
               <span id="assetCountLabel" class="panel-note">素材ごとにコメントしてキュー追加</span>

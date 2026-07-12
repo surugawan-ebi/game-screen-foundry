@@ -9,7 +9,13 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 
-const { dispatchApi, resolveSourceFileRequest } = require("../server");
+const {
+  MAX_JSON_BODY_BYTES,
+  createServer,
+  dispatchApi,
+  resolveSourceFileRequest,
+  writeJsonFilesAtomically
+} = require("../server");
 const { getDemoProject } = require("../lib/sample-data");
 const { prepareInput } = require("../lib/spec");
 const { generateRenderModel } = require("../lib/generator");
@@ -57,6 +63,20 @@ function getBlankProject() {
     worldPreset: JSON.parse(fs.readFileSync(path.join(screenDir, "world-preset.json"), "utf8")),
     revisionMap: {}
   };
+}
+
+async function withHttpServer(run) {
+  const server = createServer();
+  await new Promise((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", resolve);
+  });
+  const address = server.address();
+  try {
+    return await run(`http://127.0.0.1:${address.port}`);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
 }
 
 test("source-file only serves repository or explicitly loaded project images", async () => {
@@ -1084,13 +1104,87 @@ test("save-screen-files persists edited screen contract json for loaded folders"
   }
 });
 
+test("atomic screen contract writes restore every old file when promotion fails", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "gcgt-atomic-save-"));
+  const filePaths = ["screen-kv.json", "material-spec.json", "world-preset.json"]
+    .map((fileName) => path.join(tempDir, fileName));
+  const oldValues = [{ version: "old-screen" }, { version: "old-spec" }, { version: "old-preset" }];
+  const newValues = [{ version: "new-screen" }, { version: "new-spec" }, { version: "new-preset" }];
+
+  filePaths.forEach((filePath, index) => {
+    fs.writeFileSync(filePath, `${JSON.stringify(oldValues[index])}\n`);
+  });
+
+  const fileSystem = Object.create(fs);
+  fileSystem.renameSync = (sourcePath, destinationPath) => {
+    if (destinationPath === filePaths[1] && sourcePath.endsWith(".tmp")) {
+      throw new Error("simulated promotion failure");
+    }
+    return fs.renameSync(sourcePath, destinationPath);
+  };
+
+  try {
+    assert.throws(() => {
+      writeJsonFilesAtomically(
+        filePaths.map((filePath, index) => [filePath, newValues[index]]),
+        { fileSystem, transactionId: "rollback-test" }
+      );
+    }, /simulated promotion failure/u);
+
+    filePaths.forEach((filePath, index) => {
+      assert.deepEqual(JSON.parse(fs.readFileSync(filePath, "utf8")), oldValues[index]);
+    });
+    assert.deepEqual(
+      fs.readdirSync(tempDir).filter((fileName) => /\.rollback-test\.(tmp|bak)$/u.test(fileName)),
+      []
+    );
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+test("http api rejects invalid, unsupported, and oversized JSON bodies", async () => {
+  await withHttpServer(async (baseUrl) => {
+    const invalidResponse = await fetch(`${baseUrl}/api/load-from-folder`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{"
+    });
+    assert.equal(invalidResponse.status, 400);
+    assert.match((await invalidResponse.json()).error, /Invalid JSON request body/u);
+
+    const unsupportedResponse = await fetch(`${baseUrl}/api/load-from-folder`, {
+      method: "POST",
+      body: "{}"
+    });
+    assert.equal(unsupportedResponse.status, 415);
+
+    const oversizedResponse = await fetch(`${baseUrl}/api/load-from-folder`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ payload: "x".repeat(MAX_JSON_BODY_BYTES + 1) })
+    });
+    assert.equal(oversizedResponse.status, 413);
+    assert.match((await oversizedResponse.json()).error, /exceeds/u);
+  });
+});
+
 test("frontend exposes the image generation flow tracker", () => {
   const html = fs.readFileSync(path.join(__dirname, "..", "public", "index.html"), "utf8");
   const js = fs.readFileSync(path.join(__dirname, "..", "public", "app.js"), "utf8");
   const css = fs.readFileSync(path.join(__dirname, "..", "public", "app.css"), "utf8");
 
   assert.match(html, /画像生成フロー/u);
+  assert.match(html, /Content-Security-Policy/u);
+  assert.match(html, /script-src 'self'/u);
+  assert.match(html, /class="toolbar command-bar"/u);
+  assert.match(html, /class="command-group command-group-project"/u);
+  assert.match(html, />Project</u);
+  assert.match(html, />View</u);
+  assert.match(html, />Generate</u);
+  assert.match(html, />Review</u);
   assert.match(html, /id="draftButton"/u);
+  assert.match(html, /id="structureButton">ワイヤーフレーム</u);
   assert.match(html, /id="projectScreenSelect"/u);
   assert.match(html, /id="exportReportButton"/u);
   assert.match(html, /id="implementationReportOutput"/u);
@@ -1098,6 +1192,16 @@ test("frontend exposes the image generation flow tracker", () => {
   assert.match(html, /id="validationOutput"/u);
   assert.match(html, /id="saveRegenQueueButton"/u);
   assert.match(html, /id="loadRegenQueueButton"/u);
+  assert.match(html, /id="workspaceTabs"/u);
+  assert.match(html, /data-workspace-tab-button="preview"/u);
+  assert.match(html, /data-workspace-tab-button="json"/u);
+  assert.match(html, /data-workspace-tab-button="assets"/u);
+  assert.match(html, /data-workspace-tab-button="review"/u);
+  assert.match(html, /data-workspace-tab-button="generate"/u);
+  assert.match(html, /data-workspace-tab-panel="preview"/u);
+  assert.match(html, /data-workspace-tab-panel="json"/u);
+  assert.match(html, /class="sidebar-overview" data-workspace-tab-panel="json"/u);
+  assert.doesNotMatch(html, /class="sidebar-overview" data-workspace-tab-panel="preview"/u);
   assert.match(html, /class="asset-inspector"/u);
   assert.match(html, /id="specEditorPanel"/u);
   assert.match(html, /id="placementEditorSelect"/u);
@@ -1108,6 +1212,10 @@ test("frontend exposes the image generation flow tracker", () => {
   assert.match(html, /id="placementFollowToggle"/u);
   assert.match(html, /id="placementNudgeUp"/u);
   assert.match(html, /id="placementGrowWidth"/u);
+  assert.match(html, /id="saveStructuredEditButton"/u);
+  assert.match(html, /id="undoStructuredEditButton"/u);
+  assert.match(html, /id="structuredEditStatus"/u);
+  assert.match(html, /id="structuredEditHistory"/u);
   assert.match(html, /placement-edit-logic\.js/u);
   assert.match(html, /構成グループ/u);
   assert.match(html, /id="compositionSummary"/u);
@@ -1117,7 +1225,10 @@ test("frontend exposes the image generation flow tracker", () => {
   assert.match(html, /id="buildReferenceProfileButton"/u);
   assert.match(html, /id="applyReferenceProfileButton"/u);
   assert.match(html, /id="auditReferenceQualityButton"/u);
-  assert.match(html, /仮組み確認/u);
+  assert.match(html, /<strong>ワイヤーフレーム作成<\/strong>/u);
+  assert.match(html, /<h2>ワイヤーフレーム作成<\/h2>/u);
+  assert.doesNotMatch(html, />構造<\/button>/u);
+  assert.doesNotMatch(html, /<h2>構造化編集<\/h2>/u);
   assert.match(html, /id="flowCurrentLabel"/u);
   assert.match(html, /data-flow-step="load"/u);
   assert.match(html, /data-flow-step="draft"/u);
@@ -1128,6 +1239,9 @@ test("frontend exposes the image generation flow tracker", () => {
   assert.match(html, /data-flow-step="dialogue"/u);
   assert.match(html, /data-flow-step="import"/u);
   assert.match(js, /function setFlowStep/u);
+  assert.match(js, /WORKSPACE_TAB_STORAGE_KEY/u);
+  assert.match(js, /function setWorkspaceTab/u);
+  assert.match(js, /function readSavedWorkspaceTab/u);
   assert.match(js, /function renderGeneratedWorkspace/u);
   assert.match(js, /function renderProjectNavigator/u);
   assert.match(js, /function switchProjectScreen/u);
@@ -1142,6 +1256,15 @@ test("frontend exposes the image generation flow tracker", () => {
   assert.match(js, /function adjustSelectedPlacementGeometry/u);
   assert.match(js, /function startPlacementPointerEdit/u);
   assert.match(js, /function renderPlacementEditOverlay/u);
+  assert.match(js, /function captureStructuredSnapshot/u);
+  assert.match(js, /function hasUnsavedWorkspaceChanges/u);
+  assert.match(js, /function confirmDiscardUnsavedChanges/u);
+  assert.match(js, /window\.addEventListener\("beforeunload"/u);
+  assert.match(js, /state\.regenerationQueue = cloneJson\(snapshot\.regenerationQueue/u);
+  assert.match(js, /function recordStructuredEdit/u);
+  assert.match(js, /function saveStructuredEdits/u);
+  assert.match(js, /function undoLastStructuredEdit/u);
+  assert.match(js, /function renderStructuredEditHistory/u);
   assert.match(js, /readStartupFolderSourceFromUrl/u);
   assert.match(js, /\/api\/startup-source/u);
   assert.match(js, /showEmptyStartupWorkspace/u);
@@ -1162,11 +1285,18 @@ test("frontend exposes the image generation flow tracker", () => {
   assert.match(js, /setFlowStep\("dialogue"\)/u);
   assert.match(css, /\.flow-step\.is-current/u);
   assert.match(css, /\.flow-step\.is-complete/u);
+  assert.match(css, /\.command-bar/u);
+  assert.match(css, /\.command-group-project/u);
+  assert.match(css, /\.workspace-tabs/u);
+  assert.match(css, /\.workspace-tab-button\.is-active/u);
+  assert.match(css, /\.layout\.is-single-column/u);
   assert.match(css, /\.screen-select/u);
   assert.match(css, /\.implementation-report-output/u);
   assert.match(css, /\.validation-item/u);
   assert.match(css, /\.asset-inspector-row/u);
   assert.match(css, /\.spec-editor-grid/u);
+  assert.match(css, /\.spec-save-section/u);
+  assert.match(css, /\.structured-edit-history/u);
   assert.match(css, /\.screen-layer\.is-selected-placement/u);
   assert.match(css, /\.placement-tune-row/u);
   assert.match(css, /\.placement-edit-overlay/u);
@@ -1179,6 +1309,64 @@ test("frontend exposes the image generation flow tracker", () => {
 
   const bootBlock = js.slice(js.indexOf("async function bootWorkspace"), js.indexOf("setFlowStep(\"load\")"));
   assert.doesNotMatch(bootBlock, /loadDemo/u);
+  const structuredRefreshBlock = js.slice(js.indexOf("async function refreshAfterStructuredSpecEdit"), js.indexOf("async function applyPlacementEditor"));
+  assert.match(structuredRefreshBlock, /recordStructuredEdit/u);
+  assert.doesNotMatch(structuredRefreshBlock, /saveScreenFilesFromCurrentEditors/u);
+  const loadDemoBlock = js.slice(js.indexOf("async function loadDemo"), js.indexOf("async function renderGeneratedWorkspace"));
+  const loadFolderBlock = js.slice(js.indexOf("async function loadFolder"), js.indexOf("async function switchProjectScreen"));
+  const switchScreenBlock = js.slice(js.indexOf("async function switchProjectScreen"), js.indexOf("async function importBundleFile"));
+  const importBundleStart = js.indexOf("async function importBundleFile");
+  const importBundleBlock = js.slice(importBundleStart, js.indexOf("elements.loadDemoButton.addEventListener", importBundleStart));
+  assert.match(loadDemoBlock, /confirmDiscardUnsavedChanges/u);
+  assert.match(loadFolderBlock, /confirmDiscardUnsavedChanges/u);
+  assert.match(switchScreenBlock, /confirmDiscardUnsavedChanges/u);
+  assert.match(importBundleBlock, /confirmDiscardUnsavedChanges/u);
+});
+
+test("electron shell wraps the local server without exposing node integration", () => {
+  const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "package.json"), "utf8"));
+  const main = fs.readFileSync(path.join(__dirname, "..", "electron", "main.js"), "utf8");
+  const runner = fs.readFileSync(path.join(__dirname, "..", "scripts", "start-electron.js"), "utf8");
+
+  assert.equal(pkg.main, "electron/main.js");
+  assert.equal(pkg.scripts.desktop, "node scripts/start-electron.js");
+  assert.equal(pkg.scripts["desktop:dev"], "node scripts/start-electron.js --devtools");
+  assert.equal(pkg.devDependencies.electron, "^43.0.0");
+  assert.ok(fs.existsSync(path.join(__dirname, "..", "package-lock.json")));
+  assert.match(main, /createServer/u);
+  assert.match(main, /serverInstance\.listen\(port, HOST/u);
+  assert.match(main, /DEFAULT_WINDOW_WIDTH = 1720/u);
+  assert.match(main, /DEFAULT_WINDOW_HEIGHT = 1080/u);
+  assert.match(main, /screen\.getPrimaryDisplay/u);
+  assert.match(main, /width: initialBounds\.width/u);
+  assert.match(main, /new BrowserWindow/u);
+  assert.match(main, /nodeIntegration: false/u);
+  assert.match(main, /contextIsolation: true/u);
+  assert.match(main, /sandbox: true/u);
+  assert.match(main, /dialog\.showOpenDialog/u);
+  assert.match(main, /Open Project Folder/u);
+  assert.match(main, /ERR_ABORTED/u);
+  assert.match(runner, /require\("electron"\)/u);
+  assert.match(runner, /Run `npm install` first/u);
+});
+
+test("desktop launchers support double-click startup", () => {
+  const macLauncherPath = path.join(__dirname, "..", "Game Screen Foundry.command");
+  const winLauncherPath = path.join(__dirname, "..", "Game Screen Foundry.cmd");
+  const macLauncher = fs.readFileSync(macLauncherPath, "utf8");
+  const winLauncher = fs.readFileSync(winLauncherPath, "utf8");
+
+  assert.ok((fs.statSync(macLauncherPath).mode & 0o111) !== 0);
+  assert.match(macLauncher, /node_modules\/electron/u);
+  assert.match(macLauncher, /Node\.js 22\.12 or newer/u);
+  assert.match(macLauncher, /npm install/u);
+  assert.match(macLauncher, /nohup npm run desktop/u);
+  assert.match(macLauncher, /\/opt\/homebrew\/bin:\/usr\/local\/bin/u);
+  assert.match(winLauncher, /node_modules\\electron/u);
+  assert.match(winLauncher, /Node\.js 22\.12 or newer/u);
+  assert.match(winLauncher, /call npm install/u);
+  assert.match(winLauncher, /npm run desktop/u);
+  assert.match(winLauncher, /start "Game Screen Foundry"/u);
 });
 
 test("ai review returns findings and suggestions", async () => {
@@ -1334,6 +1522,34 @@ test("external imagegen prompts derive style from the loaded world preset withou
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
+});
+
+test("external regeneration requests derive style from the loaded preset without demo leakage", async () => {
+  const project = getBlankProject();
+  project.screenKv.screenName = "Forest Puzzle Home";
+  project.worldPreset.genre = "cozy puzzle";
+  project.worldPreset.moodKeywords = ["forest", "soft glow", "friendly"];
+  project.worldPreset.materialKeywords = ["leaf enamel", "painted wood", "warm glass"];
+  project.worldPreset.shapeLanguage = "rounded_leaf_ui";
+  project.worldPreset.lightingStyle = "dappled_morning_light";
+
+  const response = await dispatchApi("POST", "/api/build-regeneration-request", {
+    ...project,
+    regenerationQueue: [{
+      queueId: "regen_btn_start",
+      assetId: "btn_start",
+      userComment: "Improve the tactile edge treatment."
+    }]
+  });
+  const markdown = response.payload.markdown;
+
+  assert.equal(response.statusCode, 200);
+  assert.match(markdown, /cozy puzzle/u);
+  assert.match(markdown, /forest, soft glow, friendly/u);
+  assert.match(markdown, /leaf enamel, painted wood, warm glass/u);
+  assert.match(markdown, /rounded_leaf_ui/u);
+  assert.match(markdown, /dappled_morning_light/u);
+  assert.doesNotMatch(markdown, /青空港湾|真鍮|濃紺|羊皮紙|空島ファンタジー|sky-port/u);
 });
 
 test("external heuristic reviews only reference current screen assets", async () => {

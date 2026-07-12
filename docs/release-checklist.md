@@ -27,7 +27,13 @@ z-order consistency.
 - Run `npm test`.
 - Run `npm run dev`.
 - Open `http://127.0.0.1:4311`.
-- Confirm the bundled demo loads automatically.
+- Confirm the app attempts URL/last/default project startup and does not auto-load the bundled demo.
+- Confirm project/screen/demo/Bundle switches and window close warn before discarding unsaved wireframe edits or regeneration queues.
+- Confirm a failed multi-file screen save restores all three previous contract JSON files without leaving active `.tmp` or `.bak` files.
+- Confirm invalid, unsupported, and oversized API request bodies return 400, 415, and 413 respectively.
+- Run `npm install` and `npm run desktop` when validating desktop builds.
+- Double-click `Game Screen Foundry.command` on macOS or `Game Screen Foundry.cmd` on Windows.
+- Confirm the Electron File menu can open a project folder.
 - Confirm generated PNG previews are visible.
 - Load `templates/blank-project/creative` through the folder input.
 - Confirm the blank template renders a draft screen.

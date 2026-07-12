@@ -4,8 +4,8 @@ This file is the handoff note for the public beta. The current repository is usa
 
 ## Current Status
 
-- Local Node/browser app with no external web service.
-- Demo screen loads on startup.
+- Local Node/browser app with an Electron desktop shell and no external web service.
+- Startup restores a URL/last/default project source; the demo loads only when explicitly requested.
 - Screen assembly supports layered assets, runtime text overlays, z-order, layout safety tests, generated PNG adoption, and wireframe preview.
 - Multi-screen project folders are supported through `game-creative-project.json`.
 - Codex/imagegen integration is currently a prompt/job-file workflow, not a fully automated hosted generation pipeline.
@@ -31,6 +31,7 @@ This file is the handoff note for the public beta. The current repository is usa
 - Modal/bottom-sheet templates: add explicit screen templates for fixed-height and content-following modal behavior.
 - Runtime style assets: distinguish `imageAsset`, `runtimeStyleToken`, and `proceduralEffect` so scrims/barriers are not forced into PNG assets.
 - State variants: validate representative overlay sets per `stateVariant` so shared screens reveal density differences.
+- Desktop packaging: add a packager, macOS notarization/signing notes, Windows code-signing notes, and update strategy after the Electron shell stabilizes.
 
 ## Technical TODO
 
@@ -55,13 +56,20 @@ This file is the handoff note for the public beta. The current repository is usa
 - Added `exportRequirements.renderIntent` (`raster_art`/`translucent_effect`) and the `asset_interior_translucent` audit: raster bodies that are largely semi-transparent (ghost blobs, un-flattened effects) fail, while declared scrims/glows are exempt from the translucency and craft audits. Prompts state the render intent explicitly.
 - Added small-part craft guidance: assets placed at ≤72px get a minimum-tactile-treatment prompt clause per craft style.
 - Added `craft_style_unset` suggestion: when designRules.craftStyle is undeclared, validate:project and the spec check sample adopted PNGs and suggest the matching style with measured evidence.
-- Added the structure preview (`lib/structure-preview.js`): placements render as flat colored rectangles whose lightness rises with stacking depth, runtime overlays stay real text, placement ids are labeled. Available as a third browser view mode (構造プレビュー) and via `npm run structure:preview` (composite SVG output). Roots with a declared `contentInset` show the decorative frame band as diagonal hatching and the content surface as a dashed box. Runtime overlays render their declared text region as a dashed box that turns red (with a red tint) when the sample text overflows the region width, using the same CJK-aware estimation as the layout checker.
+- Added the structure preview (`lib/structure-preview.js`): placements render as flat colored rectangles whose lightness rises with stacking depth, runtime overlays stay real text, placement ids are labeled. Available in the browser as ワイヤーフレーム作成 and via `npm run structure:preview` (composite SVG output). Roots with a declared `contentInset` show the decorative frame band as diagonal hatching and the content surface as a dashed box. Runtime overlays render their declared text region as a dashed box that turns red (with a red tint) when the sample text overflows the region width, using the same CJK-aware estimation as the layout checker.
 - Added `compositionGroups.frameInset` (painted decorative frame band, distinct from the child-content `contentInset`): drives the structure preview hatching, the imagegen decoration budget, and per-side layer frame checks. `frame_inset_exceeds_content` warns when the painted frame is wider than the content inset.
 - The browser now restores the last loaded folder + screen id after a reload (localStorage), disables workflow buttons during boot so early clicks are not swallowed, and the PNG re-import rescans folder-loaded projects and appends newly found PNGs to `imagegen-assets.json` (`persistAutoRegistered` on `/api/load-from-folder`).
 - Added `overlay_xy_slot_mismatch`: overlays declaring both slot and absolute geometry warn when the two disagree, with recomputed absolute values in the suggestion.
 - Added dependent-following placement edits: a "載っている素材も一緒に動かす" toggle (default on) makes drags, nudges, and numeric edits carry the base's parentId descendants, composition-group layers/children, and stacked higher-z placements along (translation only; resizes stay on the target). Overlay absolute geometry is recomputed from slots after every structured edit so it never drifts from the renderer.
 - Added startup source priority: URL `folder`/`screen`, last loaded folder, then default project path (`GAME_SCREEN_FOUNDRY_PROJECT`, falling back to nearby `creative/` folders). The bundled demo no longer loads automatically and is shown only through the explicit demo button.
 - Made composition group canvas focus opt-in: the default canvas shows the whole screen; the 表示 button spotlights a group and 表示中 toggles the focus off (was: first group auto-focused on load, dimming everything else).
+- Added save-before-preview handling for structured edits: placement/inset changes update JSON and the draft preview without auto-saving, keep an in-session change history, support `直前状態へ戻す`, and write screen JSON only through the explicit `画面JSONを保存` action.
+- Added a first Electron desktop shell: it starts the existing local server on an available loopback port, opens a hardened BrowserWindow, and provides native menu actions for opening a project folder or demo.
+- Added double-click desktop launchers: `Game Screen Foundry.command` for macOS and `Game Screen Foundry.cmd` for Windows install desktop dependencies on first launch and then open the Electron shell.
+- Added workspace tabs for Preview, JSON, Assets, Review, and Generation so the browser/Electron workbench is no longer one long page; output actions switch to the result tab automatically.
+- Hardened screen contract saving: all three JSON files are durably staged before promotion, failed multi-file saves restore the previous files, and API JSON bodies now enforce content type and a 5 MB limit with 400/413/415 responses.
+- Added unsaved-work protection across project, screen, demo, Bundle, reload, and window-close transitions; structured Undo now restores regeneration-queue and prompt side effects as well as geometry.
+- Removed the remaining Sky Port style leak from regeneration handoff Markdown; style direction is now derived only from the loaded world preset.
 
 - Added a shared layout quality checker (`lib/layout-quality.js`): overlap padding between stacked assets, undeclared sibling overlap detection, parent-overflow warnings, font-size-aware text slot fit with CJK-aware width estimation, overlay slot padding, and horizontal/vertical guide-line alignment near-miss detection. Wired into the render model, `/api/composition-quality`, the browser spec check panel, `npm run validate`, and `npm run validate:project`.
 - Injected layout context into imagegen jobs and prompts: per-asset stacking clearances, open layout findings, an explicit canvas coverage rule (fill edge-to-edge, never spill past the canvas), and a decoration budget computed from composition `contentInset` so frame ornament stays in the outer band and the content surface stays calm.

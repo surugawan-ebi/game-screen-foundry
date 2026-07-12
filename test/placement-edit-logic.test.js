@@ -4,9 +4,41 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const {
+  captureStructuredEditSnapshot,
   collectDependentPlacementIds,
+  getStructuredContractSnapshotKey,
   syncOverlayAbsoluteGeometryForSpec
 } = require("../public/placement-edit-logic");
+
+test("structured edit snapshots retain regeneration queue side effects without polluting contract dirty checks", () => {
+  const workspaceState = {
+    screenKv: { screenId: "home" },
+    materialSpecSheet: { placements: [{ placementId: "button", width: 100 }] },
+    worldPreset: { presetId: "default" },
+    revisionMap: {},
+    regenerationQueue: [{ queueId: "regen_button", assetId: "button" }],
+    regenerationQueueDirty: true,
+    regenerationPrompt: "regenerate button"
+  };
+
+  const snapshot = captureStructuredEditSnapshot(workspaceState);
+  workspaceState.regenerationQueue[0].assetId = "changed";
+
+  assert.deepEqual(snapshot.regenerationQueue, [{ queueId: "regen_button", assetId: "button" }]);
+  assert.equal(snapshot.regenerationQueueDirty, true);
+  assert.equal(snapshot.regenerationPrompt, "regenerate button");
+
+  const queueOnlyChange = {
+    ...snapshot,
+    regenerationQueue: [],
+    regenerationQueueDirty: false,
+    regenerationPrompt: ""
+  };
+  assert.equal(
+    getStructuredContractSnapshotKey(snapshot),
+    getStructuredContractSnapshotKey(queueOnlyChange)
+  );
+});
 
 test("placement edit dependents include children, group members, and stacked riders", () => {
   const placements = [

@@ -29,6 +29,11 @@ imagegen-status/
 coverage/
 .nyc_output/
 
+# Desktop packaging output
+dist/
+release/
+out/
+
 # OS/editor noise
 .DS_Store
 Thumbs.db

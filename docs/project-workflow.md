@@ -174,7 +174,7 @@ npm run profile:reference -- /path/to/assets/purchased/organized --out /path/to/
 1. `creative/game-creative-project.json` に画面を追加する。
 2. `creative/screens/<screenId>/` を作り、3つの正本JSONと `key-visual.png` を置く。
 3. ブラウザで `creative` を読み込み、画面セレクトから対象 screen を選ぶ。
-4. 初期表示の生成済み画面と `仮組み確認` を切り替え、仕様の粒度を確認する。
+4. 初期表示の生成済み画面と `ワイヤーフレーム` を切り替え、配置・余白・重なりを確認する。
 5. `AI で画面レビュー` と人間のコメントで、修正対象素材を再生成キューに溜める。
 6. `Codex依頼文を作成` で対話用プロンプトを作る。
 7. Codex / imagegen で PNG を生成し、同じ画面フォルダの `generated-assets/` に保存する。

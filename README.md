@@ -25,10 +25,10 @@ The project is currently beta-quality. It is useful for validating a production 
   Loads a screen KV, material spec, and world preset.
 - パネル、ボタン、アイコン、背景、バッジ、runtime text、overlay などをレイヤーとして組み立てます。  
   Assembles the screen from separate layers such as panels, buttons, icons, backgrounds, badges, runtime text, and overlays.
-- 生成済み PNG 版を表示し、構造確認用の wireframe preview も確認できます。  
+- 生成済み PNG 版を表示し、生成前の「ワイヤーフレーム作成」で配置・余白・重なりも確認できます。
   Shows the generated PNG version, with a structural wireframe-style preview for layout checks.
-- 画像生成前に「構造プレビュー」で画面を仮素材(色付き矩形)として確認できます。重なりが上のレイヤーほど明るく表示され、runtime テキストは実テキストで載るため、レイヤー構造・padding・スロットの破綻が生成前に見えます。`compositionGroups.contentInset` を宣言したベース素材は、装飾フレーム帯が斜線の網掛け、地(コンテンツ面)が点線枠で描き分けられます。runtime テキストは宣言済みのテキスト領域(slot)が点線枠で表示され、sampleText が領域幅を超える場合は赤枠+赤網掛けで警告されます。CLI では `npm run structure:preview -- <folder> [screen] --out file.svg` で同じ構造図をSVG出力できます。
-  Before generating any images, the structure preview renders every placement as a flat colored rectangle — lighter the higher it sits in the stack — with runtime text as real text, so layering, padding, and slot problems are visible pre-generation. Foundation assets with a declared `compositionGroups.contentInset` show their decorative frame band as diagonal hatching and the content surface as a dashed box. Runtime text renders inside its declared region (slot) as a dashed box, turning red when the sample text overflows the region width. The CLI equivalent is `npm run structure:preview`.
+- 画像生成前に「ワイヤーフレーム作成」で画面を仮素材(色付き矩形)として確認・調整できます。重なりが上のレイヤーほど明るく表示され、runtime テキストは実テキストで載るため、レイヤー構造・padding・スロットの破綻が生成前に見えます。`compositionGroups.contentInset` を宣言したベース素材は、装飾フレーム帯が斜線の網掛け、地(コンテンツ面)が点線枠で描き分けられます。runtime テキストは宣言済みのテキスト領域(slot)が点線枠で表示され、sampleText が領域幅を超える場合は赤枠+赤網掛けで警告されます。CLI では `npm run structure:preview -- <folder> [screen] --out file.svg` で同じワイヤーフレームをSVG出力できます。
+  Before generating images, use Wireframe Creation to inspect and adjust the screen as flat colored placements. Higher layers render lighter and runtime text stays visible, exposing layering, padding, and slot issues before generation. Foundation assets with a declared `compositionGroups.contentInset` show their decorative frame band as diagonal hatching and the content surface as a dashed box. Runtime text renders inside its declared region (slot) as a dashed box, turning red when the sample text overflows the region width. The CLI equivalent remains `npm run structure:preview`.
 - エディタ内JSON、レンダリング可能性、composition quality、layout quality をブラウザ内でチェックできます。layout quality は、素材が重なる際の padding 十分性、フォントサイズを考慮したテキストスロットの収まり、素材同士の横/縦ガイドラインの整列を検証します。
   Checks editor JSON, renderability, composition quality, and layout quality in the browser. Layout quality validates overlap padding between stacked assets, font-size-aware text slot fit, horizontal/vertical guide-line alignment, and icon+text center-line matching.
 - `world-preset.json` の `designRules`(スペーシンググリッド、装飾フレーム幅、引き伸ばし禁止など)をバリデータと imagegen prompt の両方に適用します。生成PNGは実寸監査され、非等倍の引き伸ばしは fail、9-slice は `exportRequirements.scalingPolicy` の明示宣言時のみ許容されます。
@@ -37,8 +37,8 @@ The project is currently beta-quality. It is useful for validating a production 
   Batch-trims transparent gutters and normalizes generated PNGs to their final pixel size via `npm run postprocess:assets`.
 - `designRules.craftStyle`(`outlined_cel` / `flat_minimal` / `painterly`)を宣言すると、市販素材パック水準のクラフト仕様(シルエットの一貫アウトライン、セル調シェーディング段数、パレット節度、ファミリー統一)をプロンプトへ注入し、生成PNGを実測監査します。フラットなプレースホルダー出力(imagegen不使用の疑い)やマッディな軟階調も検出します。
   Declaring `designRules.craftStyle` injects a commercial-asset-pack craft spec into prompts and audits each generated PNG for weak outlines, flat placeholder fills (suspected non-imagegen output), muddy gradients, and busy interiors.
-- placement と composition inset をフォームやプレビュー上の微調整で編集し、JSON と仮組みプレビューへ反映できます。土台を移動する際は「載っている素材も一緒に動かす」トグル(既定ON)で、子・構成グループのレイヤー・上に載っている素材をまとめて追従させられます(リサイズは対象のみ)。移動後は overlay の絶対座標も slot から自動再同期されます。
-  Edits placements and composition insets through structured controls and preview fine-tuning, then syncs JSON and draft preview. When moving a base, the "move riders together" toggle (default on) carries its children, composition-group layers, and stacked higher-z placements along (resize affects only the target), and overlay absolute geometry is re-synced from slots after every edit.
+- placement と composition inset をフォームやプレビュー上の微調整で編集し、保存前プレビューとして JSON と仮組みへ反映できます。変更履歴と「直前状態へ戻す」を使って確認し、問題なければ `画面JSONを保存` で画面フォルダへ書き込みます。Undo は編集に伴う再生成キューも復元し、未保存の編集やキューがある状態で画面・プロジェクトを切り替える場合は破棄確認を表示します。3つの画面JSONは一時ファイルへ書き切ってから置換され、途中失敗時は旧ファイルへロールバックされます。土台を移動する際は「載っている素材も一緒に動かす」トグル(既定ON)で、子・構成グループのレイヤー・上に載っている素材をまとめて追従させられます(リサイズは対象のみ)。移動後は overlay の絶対座標も slot から自動再同期されます。
+  Edits placements and composition insets through structured controls and preview fine-tuning, applying them first as an unsaved preview in JSON and draft view. Undo also restores regeneration-queue side effects, and source changes prompt before discarding unsaved edits or queues. `画面JSONを保存` stages all three screen contracts before replacing them and rolls back on a failed promotion. When moving a base, the "move riders together" toggle (default on) carries its children, composition-group layers, and stacked higher-z placements along (resize affects only the target), and overlay absolute geometry is re-synced from slots after every edit.
 - 素材ごとのコメント、固定、履歴、再生成キューを扱います。  
   Tracks per-asset comments, locks, history, and regeneration queues.
 - 選択した素材の Codex/imagegen 向け依頼文を作ります。  
@@ -47,6 +47,8 @@ The project is currently beta-quality. It is useful for validating a production 
   Re-imports generated PNGs from a project folder. For folder-loaded projects, re-import rescans the folder and appends newly found PNGs to `imagegen-assets.json` automatically.
 - 最後に読み込んだフォルダと画面IDを記憶し、リロード後も同じプロジェクトを復元します。
   Remembers the last loaded folder and screen id, restoring the same project after a reload.
+- プレビュー、JSON、素材、レビュー、生成を作業領域タブで切り替えられます。出力系操作は結果が見えるタブへ自動移動します。
+  Splits the workbench into Preview, JSON, Assets, Review, and Generation tabs. Output-producing actions switch to the tab where their result is visible.
 - layer order、runtime overlay、採用PNG、composition quality を実装レポートとして出力します。  
   Exports an implementation handoff report with layer order, runtime overlays, adopted PNGs, and composition quality.
 - `game-creative-project.json` による複数画面プロジェクトを扱えます。  
@@ -65,8 +67,8 @@ The project is currently beta-quality. It is useful for validating a production 
 
 ## クイックスタート / Quick Start
 
-前提: Node.js 20 以上。  
-Prerequisite: Node.js 20 or newer.
+前提: ブラウザ版は Node.js 20 以上。デスクトップ版は Electron 43 の都合で Node.js 22.12 以上。
+Prerequisite: Node.js 20 or newer for the browser workflow. The desktop shell requires Node.js 22.12 or newer because it uses Electron 43.
 
 ```sh
 git clone https://github.com/surugawan-ebi/game-screen-foundry.git
@@ -80,6 +82,29 @@ Open:
 
 ```text
 http://127.0.0.1:4311
+```
+
+デスクトップ版として開く場合は Electron を入れてから起動します。macOS / Windows / Linux で同じコードを使います。
+To open the desktop shell, install Electron first. The same app code runs on macOS, Windows, and Linux.
+
+```sh
+npm install
+npm run desktop
+```
+
+macOS / Windows では、repo直下の launcher をダブルクリックしても起動できます。Node.js 22.12 以上が入っていれば、初回だけ desktop 依存を自動インストールします。
+On macOS and Windows, you can also double-click the launcher at the repository root. With Node.js 22.12 or newer installed, the first launch installs desktop dependencies automatically.
+
+```text
+Game Screen Foundry.command  # macOS
+Game Screen Foundry.cmd      # Windows
+```
+
+開発者ツール付きで起動する場合:
+To launch with DevTools:
+
+```sh
+npm run desktop:dev
 ```
 
 起動時は、サンプルではなく作業プロジェクトを読み込みます。読み込み順は次の通りです。
@@ -441,6 +466,8 @@ Additional check scripts:
 - `npm run validate`: JSON parse and loadable project validation.
 - `npm run check`: lint, validation, and tests.
 - `npm run release:check`: full release gate, including local path and tracked imagegen output checks.
+- `npm run desktop`: launches the Electron desktop shell after `npm install`.
+- `npm run desktop:dev`: launches the Electron shell with DevTools open.
 
 ## ライセンス / License
 
