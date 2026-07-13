@@ -185,6 +185,33 @@ npm run profile:reference -- /path/to/assets/purchased/organized --out /path/to/
 12. 採用したPNG、`imagegen-assets.json`、実装レポートをゲームリポジトリ側で確認・コミットする。
 13. 次の画面に移る。共通素材はコピーではなく、後続で shared asset registry として切り出す。
 
+## App-Guided / Autonomous / Hybrid
+
+3つのモードは別のファイル形式ではなく、同じ project manifest、screen contract、generated assets を操作する別の入口として扱う。
+
+- `guided`: Electron / browser UIで細かな位置、寸法、inset、コメント、lockを操作する。
+- `autonomous`: AIがCLIと標準imagegen Skillを使い、アプリを表示せずに一定回数まで改善する。
+- `hybrid`: AIが自律フローで初稿を作り、ユーザーが同じprojectをアプリで仕上げる。
+
+自律セッションの最小フロー:
+
+```sh
+npm run agent:session -- start /path/to/creative home --mode autonomous --max-iterations 3
+npm run validate:project -- /path/to/creative home
+npm run structure:preview -- /path/to/creative home --out /tmp/home-structure.svg
+npm run imagegen:handoff -- /path/to/creative home
+# AI/imagegenがjob JSONのoutputPathへPNGを保存する
+npm run imagegen:handoff -- /path/to/creative home --adopt
+npm run screen:snapshot -- /path/to/creative home --session SESSION_ID --iteration 1
+npm run agent:session -- review /path/to/creative SESSION_ID --iteration 1 --file /tmp/review.json
+```
+
+`screen:snapshot` はhidden Electron windowでブラウザと同じ合成画面をPNG化し、safe areaや編集用outlineは除外する。生成素材が存在しないlayerはSVG fallbackで表示されるため、隣接する `snapshot.json` の `coverage.fallbackAssetIds` を必ず確認する。fallbackを含む重要layerを「視覚確認済みの本生成素材」と誤認してはいけない。
+
+各sessionはproject rootの `.game-creative-generation/agent-sessions/<sessionId>/` に保存する。`session.json` が反復上限とguardrail、`iterations/<NNN>/screen.png` が合成画面、`snapshot.json` が機械検証、`review.json` がAIの判断を持つ。このフォルダは作業履歴なのでGit管理から除外する。
+
+AIレビューは、合成PNGの視覚確認とvalidatorの両方を必要とする。layout変更が許可されていないsessionでは、見た目の指摘を理由にplacement座標を変更しない。合格済みまたはlock済み素材は、findingで明示された場合だけ対象限定handoffへ入れる。
+
 ## Responsibility Rules
 
 - ツール本体は正本を持たない。`examples/` はデモだけ。

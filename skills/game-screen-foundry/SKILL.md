@@ -1,6 +1,6 @@
 ---
 name: game-screen-foundry
-description: Build, modify, validate, and review Game Screen Foundry projects and screen folders. Use when an AI agent (Codex or Claude Code) needs to create or edit `screen-kv.json`, `material-spec.json`, `world-preset.json`, `imagegen-assets.json`, `game-creative-project.json`, generated asset workflows, imagegen handoff jobs, regeneration prompts, or quality checks for this local game UI asset workbench.
+description: Build, modify, validate, generate, and visually review Game Screen Foundry projects in app-guided, autonomous conversational, or hybrid workflows. Use when an AI agent needs to create or edit screen contracts, run imagegen handoffs, iterate on assembled game UI screens without opening the app, or perform quality and release checks.
 ---
 
 # Game Screen Foundry
@@ -18,11 +18,16 @@ Use this skill for Game Screen Foundry project work: creating screen folders, ed
 
 ## Task Routing
 
+- Choosing app-guided, autonomous, or hybrid operation: read `references/operating-modes.md`.
+- Running without opening the app: read `references/autonomous-workflow.md`.
+- Performing detailed edits with the Electron/browser app: read `references/app-guided-workflow.md`.
 - Creating a new project or screen: read `references/project-setup.md`.
 - Editing schema files or assembly specs: read `references/file-contract.md`.
 - Reviewing generated assets or building regeneration requests: read `references/review-and-regeneration.md`.
 - Preparing public release or repo handoff: read `references/release-quality.md`.
 - Deriving quality criteria from reference UI assets: read `docs/quality-rubric.md` in the repository, then use `npm run profile:reference -- <reference-root>`.
+
+Default to `hybrid` when the user does not choose a mode: build and validate the first pass autonomously, then offer the same project for detailed app editing. Use `autonomous` when the user asks the AI to proceed independently, and `guided` when they want direct control over geometry or individual settings.
 
 ## Non-Negotiable Rules
 
@@ -41,6 +46,9 @@ Use this skill for Game Screen Foundry project work: creating screen folders, ed
 - Do not move layout coordinates while responding to visual feedback unless the task explicitly asks for layout changes.
 - Do not commit proprietary external game assets into this tool repository.
 - Do not commit full reference profiles that contain machine-local source paths; commit only compact `qualityProfile.referenceDerived` data when needed.
+- Do not run an unbounded improvement loop. Autonomous sessions default to three iterations and must stop on `complete`, `needs_user`, or the configured maximum.
+- Do not call a screen visually reviewed until the assembled `screen.png` has been inspected. JSON-only AI review is not a visual review.
+- Do not regenerate accepted or locked assets unless a recorded finding names them and the generation contract preserves their unaffected invariants.
 
 ## Design Rules
 
@@ -92,6 +100,7 @@ Do not copy model-specific CLI commands into project JSON. They belong to the im
 
 ## Imagegen Handoff Execution
 
+- Create a headless handoff with `npm run imagegen:handoff -- /path/to/creative [screen-id]`. Use `--assets asset_a,asset_b` for targeted retries and `--adopt` after writing outputs to run the deterministic acceptance gate and update `imagegen-assets.json`.
 - Handoff jobs under `imagegen-jobs/<jobId>.json` are agent-neutral: Codex CLI and Claude Code can both process them. Follow `<jobId>.prompt.md`, generate each asset with the available image generation path, and save each accepted PNG exactly to its `outputPath`.
 - Each job asset carries a shared `generationContract` used by both initial generation and regeneration. It includes operation, input-image roles, requested changes, invariants, transparency/postprocess policy, acceptance checks, `qualityPlan`, `compositionContexts`, and `layoutContext`.
 - Respect the canvas coverage rule: fill the asset canvas edge-to-edge and never let artwork spill past it.
@@ -116,6 +125,14 @@ npm run validate:project -- /path/to/creative [screen-id]
 ```
 
 This validates renderability, composition groups, and layout quality: overlap padding between stacked assets, text slot fit at the declared font size, and horizontal/vertical guide-line alignment. Fix `fail` checks; treat `warn` checks as review items.
+
+Render an assembled screen for visual review without opening the app:
+
+```sh
+npm run screen:snapshot -- /path/to/creative [screen-id] --out screen.png
+```
+
+For autonomous iterations, pass `--session <session-id>`. The command records the PNG, generated-asset coverage, and mechanical review under `.game-creative-generation/agent-sessions/`. Inspect the PNG with the environment's image viewer, then store the structured review with `npm run agent:session -- review ...`; see `references/autonomous-workflow.md` for the exact sequence.
 
 For code, docs, schema, template, or workflow changes, run:
 

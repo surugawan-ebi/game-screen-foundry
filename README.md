@@ -148,6 +148,37 @@ npm run validate:project -- /path/to/game-repo/creative shop
 - `validate:project` は任意の project / screen folder を読み込み、renderability と composition quality を確認します。
   `validate:project` checks renderability and composition quality for any project or screen folder.
 
+## AI 作業モード / AI Operating Modes
+
+同じプロジェクト形式のまま、操作方法を3つから選べます。細かな調整はアプリ、ある程度任せる場合は対話型の自律モード、初稿だけAIに任せる場合はハイブリッドを使います。
+The same project format supports three operating modes: use the app for detailed control, autonomous conversation for AI-led iteration, or hybrid for an AI-built first pass followed by app tuning.
+
+- `guided`: Electron / ブラウザで位置、サイズ、content inset、素材設定を直接調整します。<br>Adjust geometry, content insets, and asset settings directly in Electron or the browser.
+- `autonomous`: アプリを開かず、AIが検証、imagegen handoff、完成画面レビュー、対象限定の再生成を反復します。<br>Without opening the app, AI validates, generates through imagegen handoffs, reviews assembled screenshots, and performs targeted retries.
+- `hybrid`: AIが検証済みの初稿まで作り、その後同じプロジェクトをアプリで仕上げます。標準の推奨モードです。<br>AI produces a validated first pass, then the same project is finished in the app. This is the recommended default.
+
+自律作業は無制限には実行されません。セッションに最大反復数、承認方針、固定素材保持を記録し、各反復の `screen.png` とレビューを `creative/.game-creative-generation/agent-sessions/` に保存します。この作業フォルダはGit管理から除外してください。
+Autonomous work is bounded. Each session records its iteration limit, approval policy, and lock-preservation guardrails, with every `screen.png` and review stored under `creative/.game-creative-generation/agent-sessions/`. Keep this working directory out of Git.
+
+```sh
+# セッション開始 / Start a bounded session
+npm run agent:session -- start /path/to/game-repo/creative home \
+  --mode autonomous --max-iterations 3 --approval major_changes
+
+# アプリ非表示で完成画面をPNG化 / Capture the assembled screen without opening the app
+npm run screen:snapshot -- /path/to/game-repo/creative home \
+  --session SESSION_ID --iteration 1
+
+# imagegen用の構造化handoff作成 / Create a structured imagegen handoff
+npm run imagegen:handoff -- /path/to/game-repo/creative home
+
+# 出力PNGを品質検証して採用 / Validate and adopt generated PNGs
+npm run imagegen:handoff -- /path/to/game-repo/creative home --adopt
+```
+
+`screen:snapshot` は画面を表示しないElectron rendererを使うため、最初に `npm install` が必要です。AIは完成PNGを実際に画像として確認し、JSONメタデータだけのレビューで完了扱いにしません。
+`screen:snapshot` uses a hidden Electron renderer, so run `npm install` first. AI must inspect the actual assembled PNG; metadata-only review is not sufficient for completion.
+
 ## 外部プロジェクト構成 / External Project Layout
 
 実運用では、このツール本体とゲーム側の成果物を分けて管理する想定です。  
@@ -425,8 +456,9 @@ npm run skill:install
 npm run skill:install:claude
 ```
 
-この skill は、画面フォルダ作成、素材仕様編集、再生成レビュー、release check の手順を AI に渡すための最小ガイドです。  
-The skill gives AI agents the minimum workflow guidance for screen folder creation, material spec edits, regeneration review, and release checks.
+この skill は、画面フォルダ作成、素材仕様編集、再生成レビュー、release checkに加えて、`guided` / `autonomous` / `hybrid` の選択と、アプリを開かない完成画面レビュー手順をAIへ渡します。
+
+The skill covers project creation, spec editing, regeneration review, release checks, mode selection, and assembled-screen iteration without opening the app.
 
 ## テスト / Tests
 
@@ -458,6 +490,8 @@ The test suite covers:
 - source file allow/deny behavior
 - blank project template loading
 - portable relative imagegen asset paths
+- bounded autonomous agent sessions and review persistence
+- headless assembled-screen snapshot workflow
 
 追加の check script:  
 Additional check scripts:
@@ -468,6 +502,9 @@ Additional check scripts:
 - `npm run release:check`: full release gate, including local path and tracked imagegen output checks.
 - `npm run desktop`: launches the Electron desktop shell after `npm install`.
 - `npm run desktop:dev`: launches the Electron shell with DevTools open.
+- `npm run imagegen:handoff`: creates or adopts a structured headless imagegen handoff.
+- `npm run screen:snapshot`: captures the assembled screen through a hidden Electron renderer.
+- `npm run agent:session`: starts, inspects, and records reviews for bounded AI sessions.
 
 ## ライセンス / License
 
