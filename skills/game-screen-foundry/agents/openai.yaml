@@ -1,4 +1,4 @@
 interface:
   display_name: "Game Screen Foundry"
-  short_description: "Build and review Game Screen Foundry projects"
-  default_prompt: "Use $game-screen-foundry to create or review a Game Screen Foundry screen project."
+  short_description: "Build and iterate game UI screens with or without the app"
+  default_prompt: "Use $game-screen-foundry to build and visually iterate a game screen in hybrid mode from my project path."

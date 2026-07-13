@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://game-screen-foundry.local/schemas/agent-review.schema.json",
+  "title": "Game Screen Foundry Agent Review",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "decision",
+    "summary",
+    "findings",
+    "preserve",
+    "change",
+    "nextActions"
+  ],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "sessionId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "screenId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reviewedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "iteration": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "decision": {
+      "enum": ["continue", "complete", "needs_user"]
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["severity", "scope", "message", "action"],
+        "properties": {
+          "severity": {
+            "enum": ["fail", "warn", "note"]
+          },
+          "scope": {
+            "type": "string",
+            "minLength": 1
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1
+          },
+          "action": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "preserve": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "change": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "nextActions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "mechanicalChecks": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "failCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "warnCount": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "lockedAssetIds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}
