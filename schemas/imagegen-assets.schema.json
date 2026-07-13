@@ -55,6 +55,18 @@
         "jobId": {
           "type": "string"
         },
+        "generationContract": {
+          "type": "object"
+        },
+        "acceptance": {
+          "type": "object"
+        },
+        "postprocess": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
         "notes": {
           "type": "string"
         },
@@ -65,4 +77,3 @@
     }
   }
 }
-

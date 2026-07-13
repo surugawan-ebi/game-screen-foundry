@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 "use strict";
 
-// Batch postprocess for generated PNGs: trims transparent gutters and
-// resizes each asset to its intended final pixel size so the artwork fills
-// its placement box instead of rendering smaller than its slot.
+// Batch postprocess for generated PNGs: removes a safely detected flat green
+// chroma key, validates alpha, trims transparent gutters, and resizes each
+// asset to its intended final pixel size.
 //
 // Usage:
 //   npm run postprocess:assets -- /path/to/screen-folder [--apply]
@@ -13,11 +13,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const { parsePng } = require("../lib/png-metrics");
-const { alphaBounds, cropRgba, encodePng, fitRgba, resizeRgba } = require("../lib/png-write");
-
-const FOUNDATION_ASSET_TYPES = ["panel", "card_frame", "button"];
-const FLOAT_COVERAGE_FLOOR = 0.7;
+const { processGeneratedAsset } = require("../lib/generated-asset-quality");
 const { getAssetScalingPolicy, getDesignRules } = require("../lib/design-rules");
 const { resolveBundleFromFolder } = require("../lib/folder-loader");
 const { prepareInput } = require("../lib/spec");
@@ -26,9 +22,9 @@ function usage() {
   process.stdout.write([
     "Usage: npm run postprocess:assets -- /path/to/screen-or-project-folder [screen-id] [--apply]",
     "",
-    "Trims transparent gutters from registered generated PNGs and resizes each",
-    "asset to its target size (primary placement size, or the declared",
-    "exportRequirements size for nine_slice assets). Dry-run by default."
+    "Removes a detected flat green chroma key, validates required alpha, trims",
+    "transparent gutters, and resizes each asset to its target size (primary",
+    "placement size, or the declared nine-slice base size). Dry-run by default."
   ].join("\n"));
   process.stdout.write("\n");
 }
@@ -98,48 +94,29 @@ function main() {
       continue;
     }
 
-    let image;
-    try {
-      image = parsePng(fs.readFileSync(filePath));
-    } catch (error) {
-      process.stderr.write(`skip ${entry.assetId}: ${error.message}\n`);
+    const report = processGeneratedAsset({
+      filePath,
+      asset,
+      target,
+      apply,
+      allowChromaKey: true,
+      normalizeSize: true
+    });
+
+    if (!report.ok) {
+      const failures = report.checks
+        .filter((check) => check.status === "fail")
+        .map((check) => `${check.code}: ${check.message}`)
+        .join(" / ");
+      process.stderr.write(`reject ${entry.assetId}: ${failures}\n`);
       skipped += 1;
       continue;
     }
-    const bounds = alphaBounds(image);
-    if (!bounds) {
-      skipped += 1;
+    if (!report.actions.length) {
       continue;
     }
-
-    const isFoundation = FOUNDATION_ASSET_TYPES.includes(asset.assetType);
-    const resizeNeeded = image.width !== target.width || image.height !== target.height;
-    const coverageW = bounds.width / image.width;
-    const coverageH = bounds.height / image.height;
-    // Foundation surfaces must fill their box on both axes; other assets are
-    // only reworked when they float small on both axes or need a new size.
-    const gutterProblem = isFoundation
-      ? bounds.width < image.width - 2 || bounds.height < image.height - 2
-      : coverageW < FLOAT_COVERAGE_FLOOR && coverageH < FLOAT_COVERAGE_FLOOR;
-    if (!resizeNeeded && !gutterProblem) {
-      continue;
-    }
-
-    // Foundation surfaces stretch edge-to-edge; icons and decor keep their
-    // glyph aspect and are centered in the target canvas.
-    const mode = isFoundation ? "stretch" : "fit";
-    const label = `${entry.assetId}: ${image.width}x${image.height} (art ${bounds.width}x${bounds.height}) -> trim + ${mode} to ${target.width}x${target.height}`;
-    if (!apply) {
-      process.stdout.write(`would change ${label}\n`);
-      changed += 1;
-      continue;
-    }
-    const trimmed = gutterProblem || isFoundation ? cropRgba(image, bounds) : image;
-    const resized = mode === "stretch"
-      ? resizeRgba(trimmed, target.width, target.height)
-      : fitRgba(trimmed, target.width, target.height);
-    fs.writeFileSync(filePath, encodePng(resized));
-    process.stdout.write(`changed ${label}\n`);
+    const actions = report.actions.map((action) => action.action).join(" + ");
+    process.stdout.write(`${apply ? "changed" : "would change"} ${entry.assetId}: ${actions} -> ${report.finalSize}\n`);
     changed += 1;
   }
 

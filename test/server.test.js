@@ -20,6 +20,7 @@ const { getDemoProject } = require("../lib/sample-data");
 const { prepareInput } = require("../lib/spec");
 const { generateRenderModel } = require("../lib/generator");
 const { buildImagegenJob } = require("../lib/imagegen-workflow");
+const { encodePng } = require("../lib/png-write");
 
 function estimateTextWidth(value, fontSize) {
   return [...String(value || "")].reduce((total, char) => {
@@ -332,6 +333,41 @@ test("imagegen jobs carry layout context, canvas coverage rules, and agent-neutr
   assert.ok(job.commandHints.codex);
   assert.match(job.commandHints.claudeCode, /claude -p/u);
   assert.match(job.productBoundary.expectedProcessor, /Claude Code/u);
+});
+
+test("creating an imagegen job does not postprocess an existing adopted PNG", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "gcgt-job-no-adopt-"));
+  const imagePath = path.join(tempDir, "btn_start.png");
+  const rgba = Buffer.alloc(8 * 8 * 4);
+  for (let y = 1; y < 7; y += 1) {
+    for (let x = 1; x < 7; x += 1) {
+      const offset = (y * 8 + x) * 4;
+      rgba[offset] = 150;
+      rgba[offset + 1] = 90;
+      rgba[offset + 2] = 30;
+      rgba[offset + 3] = 255;
+    }
+  }
+  fs.writeFileSync(imagePath, encodePng({ width: 8, height: 8, rgba }));
+  const before = fs.readFileSync(imagePath);
+  const project = getBlankProject();
+  project.worldPreset.imagegenAssets = {
+    btn_start: { assetId: "btn_start", path: imagePath }
+  };
+  project.worldPreset.imagegenWorkflow = {
+    jobDir: path.join(tempDir, "jobs"),
+    outputDir: path.join(tempDir, "generated"),
+    targetAssetIds: ["btn_start"]
+  };
+
+  try {
+    const response = await dispatchApi("POST", "/api/imagegen-job", project);
+    assert.equal(response.statusCode, 200);
+    assert.deepEqual(response.payload.imagegenReport.adoptedAssetIds, []);
+    assert.deepEqual(fs.readFileSync(imagePath), before);
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
 });
 
 test("persistAutoRegistered appends scanned PNGs to imagegen-assets.json", async () => {
@@ -1002,6 +1038,13 @@ test("regeneration request endpoint builds codex-ready markdown from queued asse
   assert.equal(response.payload.ok, true);
   assert.equal(response.payload.itemCount, 1);
   assert.equal(response.payload.queue[0].assetId, "card_gift_cta_shell");
+  assert.ok(response.payload.queue[0].generationContract);
+  assert.equal(response.payload.queue[0].generationContract.source, "regeneration_queue");
+  assert.deepEqual(response.payload.queue[0].generationContract.change, [
+    "ギフト箱と文字レーンの距離を保ちつつ、土台の装飾をKVに寄せたい",
+    "右側に不要な丸座を作らず、runtimeテキストの余白を確保する"
+  ]);
+  assert.ok(response.payload.queue[0].generationContract.preserve.includes("runtime text lanes and child-content slots"));
   assert.match(response.payload.queue[0].outputPath, /generated-assets\/card_gift_cta_shell\.png/u);
   assert.match(response.payload.markdown, /# Codex imagegen再生成依頼/u);
   assert.match(response.payload.markdown, /card_gift_cta_shell/u);
@@ -1010,6 +1053,9 @@ test("regeneration request endpoint builds codex-ready markdown from queued asse
   assert.match(response.payload.markdown, /notification_badge/u);
   assert.match(response.payload.markdown, /ギフト箱と文字レーン/u);
   assert.match(response.payload.markdown, /不要な丸座/u);
+  assert.match(response.payload.markdown, /共通imagegenプロンプト/u);
+  assert.match(response.payload.markdown, /Decoration\/content separation:/u);
+  assert.match(response.payload.markdown, /Change only:/u);
 });
 
 test("regeneration queue endpoints persist queue files per loaded folder screen", async () => {
@@ -1440,7 +1486,7 @@ test("imagegen job endpoint creates codex-ready asset prompts", async () => {
     assert.ok(fs.existsSync(report.job.jobPath));
     assert.ok(fs.existsSync(report.job.promptPath));
     assert.ok(fs.existsSync(report.job.statusPath));
-    assert.equal(report.job.schema, "game-screen-foundry.imagegen-handoff.v2");
+    assert.equal(report.job.schema, "game-screen-foundry.imagegen-handoff.v3");
     assert.equal(report.job.kind, "game-screen-foundry.imagegen-handoff");
     assert.equal(report.job.workflowMode, "game-screen-asset-generation");
     assert.equal(report.handoff.state, "waiting");
@@ -1453,6 +1499,11 @@ test("imagegen job endpoint creates codex-ready asset prompts", async () => {
     assert.ok(sortieButtonJob);
     assert.match(backgroundJob.blockerPath, /bg_sky_port_home\.blocked\.json$/u);
     assert.equal(backgroundJob.qualityGate.placeholderPolicy, "blocked-sidecar-only");
+    assert.equal(backgroundJob.qualityGate.rejectBeforeAdoption, true);
+    assert.equal(backgroundJob.generationContract.operation, "generate");
+    assert.ok(Array.isArray(backgroundJob.generationContract.preserve));
+    assert.ok(Array.isArray(backgroundJob.generationContract.acceptanceChecks));
+    assert.equal(backgroundJob.generationContract.postprocessPlan.rejectBeforeAdoptionOnFailure, true);
     assert.match(backgroundJob.prompt, /Use case: stylized-concept/u);
     assert.match(backgroundJob.prompt, /Quality target: commercial-grade Japanese mobile game UI asset/u);
     assert.match(backgroundJob.prompt, /Reference policy: Use licensed or purchased assets only to derive quality criteria/u);
@@ -1596,7 +1647,10 @@ test("imagegen job reports blocker sidecars without adopting placeholders", asyn
       suggestion: "Run again with a Codex imagegen-capable session."
     }, null, 2));
 
-    const response = await dispatchApi("POST", "/api/imagegen-job", project);
+    const response = await dispatchApi("POST", "/api/imagegen-job", {
+      ...project,
+      adoptOutputs: true
+    });
     const report = response.payload.imagegenReport;
 
     assert.equal(response.statusCode, 200);
@@ -1609,6 +1663,47 @@ test("imagegen job reports blocker sidecars without adopting placeholders", asyn
     assert.equal(report.job.assets[0].status, "blocked");
     assert.equal(report.job.assets[0].blocker.reasonKind, "imagegen_unavailable");
     assert.match(fs.readFileSync(report.job.statusPath, "utf8"), /imagegen_unavailable/u);
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+test("imagegen re-import rejects an opaque PNG for a transparent asset", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "gcgt-imagegen-reject-"));
+  const project = getBlankProject();
+  const outputDir = path.join(tempDir, "generated");
+  const outputPath = path.join(outputDir, "btn_start.png");
+  project.worldPreset.imagegenWorkflow = {
+    jobDir: path.join(tempDir, "jobs"),
+    outputDir,
+    targetAssetIds: ["btn_start"]
+  };
+  project.worldPreset.imagegenAssets = {};
+  fs.mkdirSync(outputDir, { recursive: true });
+  const rgba = Buffer.alloc(8 * 8 * 4);
+  for (let offset = 0; offset < rgba.length; offset += 4) {
+    rgba[offset] = 40;
+    rgba[offset + 1] = 80;
+    rgba[offset + 2] = 180;
+    rgba[offset + 3] = 255;
+  }
+  fs.writeFileSync(outputPath, encodePng({ width: 8, height: 8, rgba }));
+  const before = fs.readFileSync(outputPath);
+
+  try {
+    const response = await dispatchApi("POST", "/api/imagegen-job", {
+      ...project,
+      adoptOutputs: true
+    });
+    const report = response.payload.imagegenReport;
+
+    assert.equal(response.statusCode, 200);
+    assert.equal(report.handoff.state, "rejected");
+    assert.deepEqual(report.rejectedAssetIds, ["btn_start"]);
+    assert.deepEqual(report.adoptedAssetIds, []);
+    assert.equal(response.payload.input.worldPreset.imagegenAssets.btn_start, undefined);
+    assert.ok(report.qualityReports[0].checks.some((check) => check.code === "transparent_alpha_missing"));
+    assert.deepEqual(fs.readFileSync(outputPath), before);
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
@@ -1656,10 +1751,17 @@ test("mock imagegen runner can create files that generate-all adopts", async () 
 test("manual image import adopts a local imagegen PNG for one asset", async () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "gcgt-import-image-"));
   const imagePath = path.join(tempDir, "btn_start_sortie.png");
-  fs.writeFileSync(imagePath, Buffer.from(
-    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+P+/HgAEtAJJXIDTjwAAAABJRU5ErkJggg==",
-    "base64"
-  ));
+  const rgba = Buffer.alloc(8 * 8 * 4);
+  for (let y = 1; y < 7; y += 1) {
+    for (let x = 1; x < 7; x += 1) {
+      const offset = (y * 8 + x) * 4;
+      rgba[offset] = 200;
+      rgba[offset + 1] = 140;
+      rgba[offset + 2] = 50;
+      rgba[offset + 3] = 255;
+    }
+  }
+  fs.writeFileSync(imagePath, encodePng({ width: 8, height: 8, rgba }));
 
   try {
     const importResponse = await dispatchApi("POST", "/api/import-asset-image", {

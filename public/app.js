@@ -1573,8 +1573,9 @@ function renderImagegenStatus() {
   const handoff = report.handoff || {};
   const adopted = Array.isArray(report.adoptedAssetIds) ? report.adoptedAssetIds.length : 0;
   const missing = Array.isArray(report.missingAssetIds) ? report.missingAssetIds.length : 0;
+  const rejected = Array.isArray(report.rejectedAssetIds) ? report.rejectedAssetIds.length : 0;
   const blockers = Array.isArray(report.blockerReports) ? report.blockerReports.length : 0;
-  const total = Array.isArray(job.assets) ? job.assets.length : adopted + missing;
+  const total = Array.isArray(job.assets) ? job.assets.length : adopted + missing + rejected;
   const mode = runner.mode || "off";
   const compositionQuality = report.compositionQuality
     || (state.renderModel ? state.renderModel.compositionQuality : null);
@@ -1587,7 +1588,8 @@ function renderImagegenStatus() {
 
   const handoffLabel = handoff.state ? ` / handoff ${handoff.state}` : "";
   const blockerLabel = blockers ? ` / blocker ${blockers}` : "";
-  elements.imagegenStatus.textContent = `imagegen: ${stateLabel} / mode ${mode} / 採用 ${adopted}/${total} / 未生成 ${missing}${blockerLabel}${handoffLabel}${compositionLabel}`;
+  const rejectedLabel = rejected ? ` / 不採用 ${rejected}` : "";
+  elements.imagegenStatus.textContent = `imagegen: ${stateLabel} / mode ${mode} / 採用 ${adopted}/${total} / 未生成 ${missing}${rejectedLabel}${blockerLabel}${handoffLabel}${compositionLabel}`;
   elements.imagegenStatus.title = [
     job.jobPath ? `job: ${job.jobPath}` : "",
     job.promptPath ? `prompt: ${job.promptPath}` : "",
@@ -1604,7 +1606,9 @@ function handoffStateLabel(stateName) {
   const labels = {
     no_targets: "対象なし",
     ready: "完了",
+    rejected: "品質ゲート不合格",
     blocked: "ブロック",
+    partial_rejected: "一部不合格",
     partial_blocked: "一部ブロック",
     partial: "一部採用",
     runner_failed: "runner失敗",
@@ -1646,14 +1650,17 @@ function renderHandoffPanel() {
   const handoff = report.handoff || {};
   const counts = handoff.counts || {};
   const blockers = Array.isArray(report.blockerReports) ? report.blockerReports : [];
+  const qualityFailures = (Array.isArray(report.qualityReports) ? report.qualityReports : [])
+    .filter((qualityReport) => !qualityReport.ok);
   const total = counts.total ?? (Array.isArray(job.assets) ? job.assets.length : 0);
   const adopted = counts.adopted ?? (Array.isArray(report.adoptedAssetIds) ? report.adoptedAssetIds.length : 0);
   const missing = counts.missing ?? (Array.isArray(report.missingAssetIds) ? report.missingAssetIds.length : 0);
+  const rejected = counts.rejected ?? (Array.isArray(report.rejectedAssetIds) ? report.rejectedAssetIds.length : 0);
   const stateName = handoff.state || "created";
 
   elements.handoffPanel.classList.add("has-handoff");
-  elements.handoffPanel.classList.toggle("has-blockers", blockers.length > 0);
-  elements.handoffSummary.textContent = `${handoffStateLabel(stateName)} / 採用 ${adopted}/${total} / 未生成 ${missing}`;
+  elements.handoffPanel.classList.toggle("has-blockers", blockers.length > 0 || qualityFailures.length > 0);
+  elements.handoffSummary.textContent = `${handoffStateLabel(stateName)} / 採用 ${adopted}/${total} / 未生成 ${missing} / 不採用 ${rejected}`;
   elements.handoffDetailList.className = "handoff-detail-list";
   appendHandoffDetail("job", job.jobPath);
   appendHandoffDetail("prompt", job.promptPath);
@@ -1661,7 +1668,7 @@ function renderHandoffPanel() {
   appendHandoffDetail("output", job.outputDir);
   appendHandoffDetail("command", job.commandHint);
 
-  if (!blockers.length) {
+  if (!blockers.length && !qualityFailures.length) {
     elements.handoffBlockerList.className = "handoff-blocker-list empty";
     elements.handoffBlockerList.textContent = "blocker sidecar はまだありません。";
     return;
@@ -1685,6 +1692,20 @@ function renderHandoffPanel() {
       item.appendChild(suggestion);
     }
     item.appendChild(pathLine);
+    elements.handoffBlockerList.appendChild(item);
+  });
+  qualityFailures.forEach((qualityReport) => {
+    const item = document.createElement("article");
+    item.className = "handoff-blocker-item";
+    const title = document.createElement("strong");
+    title.textContent = `${qualityReport.assetId}: PNG品質ゲート不合格`;
+    const message = document.createElement("p");
+    message.textContent = qualityReport.checks
+      .filter((check) => check.status === "fail")
+      .map((check) => `${check.code}: ${check.message}`)
+      .join(" / ");
+    item.appendChild(title);
+    item.appendChild(message);
     elements.handoffBlockerList.appendChild(item);
   });
 }
@@ -3180,9 +3201,10 @@ async function prepareImagegenJob() {
     const runner = report.runner || {};
     const adopted = Array.isArray(report.adoptedAssetIds) ? report.adoptedAssetIds.length : 0;
     const missing = Array.isArray(report.missingAssetIds) ? report.missingAssetIds.length : 0;
+    const rejected = Array.isArray(report.rejectedAssetIds) ? report.rejectedAssetIds.length : 0;
     const message = runner.ran
-      ? `imagegen runner ${runner.ok ? "完了" : "失敗"}。採用 ${adopted} / 未生成 ${missing} ${nowLabel()}`
-      : `imagegenジョブを作成しました。採用 ${adopted} / 未生成 ${missing}。生成後に「生成後を表示」を押してください ${nowLabel()}`;
+      ? `imagegen runner ${runner.ok ? "完了" : "失敗"}。採用 ${adopted} / 未生成 ${missing} / 不採用 ${rejected} ${nowLabel()}`
+      : `imagegenジョブを作成しました。採用 ${adopted} / 未生成 ${missing} / 不採用 ${rejected}。生成後に「生成後を表示」を押してください ${nowLabel()}`;
     setFlowStep(runner.ran ? "import" : "dialogue");
     setWorkspaceTab("generate");
     setActivityStatus(message);
@@ -3234,7 +3256,10 @@ async function refreshImagegenOutputs() {
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify(getPayloadFromEditors())
+      body: JSON.stringify({
+        ...getPayloadFromEditors(),
+        adoptOutputs: true
+      })
     });
     const payload = await response.json();
     if (!payload.ok) {
@@ -3261,11 +3286,12 @@ async function refreshImagegenOutputs() {
     const report = state.imagegenReport || {};
     const adopted = Array.isArray(report.adoptedAssetIds) ? report.adoptedAssetIds.length : 0;
     const missing = Array.isArray(report.missingAssetIds) ? report.missingAssetIds.length : 0;
+    const rejected = Array.isArray(report.rejectedAssetIds) ? report.rejectedAssetIds.length : 0;
     setFlowStep("import");
     setViewMode("generated");
     const autoLabel = autoRegisteredCount ? ` / manifest自動追記 ${autoRegisteredCount}` : "";
     setWorkspaceTab("assets");
-    setActivityStatus(`生成済みPNGを再取り込みしました。採用 ${adopted} / 未生成 ${missing}${autoLabel} ${nowLabel()}`);
+    setActivityStatus(`生成済みPNGを再取り込みしました。採用 ${adopted} / 未生成 ${missing} / 不採用 ${rejected}${autoLabel} ${nowLabel()}`);
   } catch (error) {
     window.alert(error.message);
     setActivityStatus(`再取り込み失敗: ${error.message}`);

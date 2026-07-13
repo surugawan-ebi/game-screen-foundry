@@ -8,7 +8,7 @@ This file is the handoff note for the public beta. The current repository is usa
 - Startup restores a URL/last/default project source; the demo loads only when explicitly requested.
 - Screen assembly supports layered assets, runtime text overlays, z-order, layout safety tests, generated PNG adoption, and wireframe preview.
 - Multi-screen project folders are supported through `game-creative-project.json`.
-- Codex/imagegen integration is currently a prompt/job-file workflow, not a fully automated hosted generation pipeline.
+- Codex/imagegen integration uses a shared structured generation contract, prefers the installed Codex imagegen Skill when available, and retains agent-neutral job-file handoff for standalone or non-Codex environments.
 - Public repo has MIT license, README, product notes, test suite, and demo fixtures.
 
 ## Near-Term Cleanup
@@ -26,7 +26,7 @@ This file is the handoff note for the public beta. The current repository is usa
 - Shared assets: support a project-level shared registry for common nav buttons, resource icons, and panel families.
 - Safer local file permissions: move from process-level allowlist to project session allowlist with explicit UI feedback.
 - UI polish: make the workbench usable on smaller laptop screens and add clearer loading/progress states.
-- Image postprocess: batch trim transparent gutters, normalize alpha edges, resize to declared final pixel size, and write adoption notes.
+- Complex alpha postprocess: add native-transparency fallback guidance and stronger matte inspection for hair, smoke, glass, liquids, and reflective effects.
 - 9-slice specs: separate generation base size from placement size, and validate fixed-size vs stretchable UI parts.
 - Modal/bottom-sheet templates: add explicit screen templates for fixed-height and content-following modal behavior.
 - Runtime style assets: distinguish `imageAsset`, `runtimeStyleToken`, and `proceduralEffect` so scrims/barriers are not forced into PNG assets.
@@ -41,6 +41,10 @@ This file is the handoff note for the public beta. The current repository is usa
 - Add a clean-start/reset generated assets command for applying the tool to repos that already contain manually produced assets.
 
 ## Completed Handoff Cleanup
+
+- Added `generationContract` shared by initial generation and regeneration: operation, input-image roles, requested changes, preserved invariants, transparency/postprocess policy, acceptance checks, quality plan, composition context, and layout context now travel together.
+- Composed the bundled Game Screen Foundry Skill with Codex's installed `imagegen` Skill: Codex uses imagegen for raster generation/editing and targeted inspection/retry, while the existing job handoff remains the fallback for other environments.
+- Added a deterministic PNG acceptance gate: generated outputs can remove a detected flat green chroma key, normalize to the declared generation size, and are rejected before adoption when required alpha, transparent corners, clean chroma removal, readable PNG data, or final dimensions fail.
 
 - Added `worldPreset.designRules` (spacing unit, frame thickness, icon+text center tolerance, min touch target, scaling policy default, free-form principles) enforced by validators and injected into imagegen prompts.
 - Added the asset scaling audit (`lib/asset-scaling.js`): PNG native size vs placement comparison (non-uniform stretch fails; uniform @2x downscale passes; upscale warns), explicit `exportRequirements.scalingPolicy` (`fixed`/`nine_slice`/`tile`) with `nineSliceInsets` slice-band validation, and transparent-gutter coverage checks (foundation assets must fill their canvas; icons must not float small).
@@ -111,7 +115,7 @@ This file is the handoff note for the public beta. The current repository is usa
 ## Public Beta Boundaries
 
 - Do not present this as a general AI image generator.
-- Do not promise automated image generation. The stable workflow is currently "create prompt/job files, generate externally, re-import PNGs."
+- Do not promise hosted image generation. Codex can execute the shared contract with its installed imagegen Skill; standalone environments use the agent-neutral handoff and re-import workflow.
 - Do not treat bundled demo assets as a reusable production asset pack.
 - Keep the tool local-first until the local file and project permission model is mature.
 
