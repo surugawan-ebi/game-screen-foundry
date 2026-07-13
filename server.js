@@ -15,6 +15,7 @@ const { prepareImagegenWorkflow } = require("./lib/imagegen-workflow");
 const { buildRegenerationRequest } = require("./lib/regeneration-queue");
 const { buildImplementationReport } = require("./lib/implementation-report");
 const { auditAssetScaling, suggestCraftStyleForInput } = require("./lib/asset-scaling");
+const { processGeneratedAsset } = require("./lib/generated-asset-quality");
 const {
   UI_CATEGORIES,
   auditGeneratedAssetsWithProfile,
@@ -969,6 +970,25 @@ function handleImportAssetImage(body) {
   if (!asset) {
     throw new Error(`Unknown assetId: ${body.assetId}`);
   }
+  const exportRequirements = asset.exportRequirements || {};
+  let acceptance = null;
+  if (exportRequirements.transparent || String(exportRequirements.format || "").toLowerCase() === "png") {
+    acceptance = processGeneratedAsset({
+      filePath: imagePath,
+      asset,
+      apply: false,
+      allowChromaKey: true,
+      normalizeSize: false
+    });
+    const failures = acceptance.checks.filter((check) => check.status === "fail");
+    if (failures.length || acceptance.actions.length) {
+      const messages = [
+        ...failures.map((check) => `${check.code}: ${check.message}`),
+        ...acceptance.actions.map((action) => `${action.action} is required before import`)
+      ];
+      throw new Error(`PNG acceptance gate rejected ${body.assetId}: ${messages.join(" / ")}`);
+    }
+  }
 
   const importedAt = new Date().toISOString();
   const revisionMap = clone(input.revisionMap || {});
@@ -1004,6 +1024,13 @@ function handleImportAssetImage(body) {
     backend: body.backend || "manual_imagegen_import",
     usesImagegen: true,
     prompt: body.prompt || "",
+    ...(acceptance ? {
+      acceptance: {
+        acceptedAt: importedAt,
+        checks: acceptance.checks
+      }
+    } : {}),
+    postprocess: [],
     notes: "Imported manually from a local imagegen PNG."
   };
 
@@ -1040,12 +1067,13 @@ async function handleAiReview(body) {
   };
 }
 
-function handleImagegenJob(body, { run = false } = {}) {
+function handleImagegenJob(body, { run = false, adoptOutputs = false } = {}) {
   const payload = Object.keys(body).length ? body : getDemoProject();
   const input = prepareInput(payload);
   const { nextInput, report } = prepareImagegenWorkflow(input, {
     run,
-    writeFiles: true
+    writeFiles: true,
+    adoptOutputs
   });
   const renderModel = generateRenderModel(nextInput);
   return {
@@ -1077,7 +1105,8 @@ function handleBuildRegenerationRequest(body) {
       status: entry.status,
       outputPath: entry.outputPath,
       userComment: entry.userComment,
-      aiReviewComment: entry.aiReviewComment
+      aiReviewComment: entry.aiReviewComment,
+      generationContract: entry.generationContract
     })),
     itemCount: queue.length,
     markdown
@@ -1499,7 +1528,7 @@ async function dispatchApi(method, pathname, body = {}) {
   if (method === "POST" && pathname === "/api/imagegen-job") {
     return {
       statusCode: 200,
-      payload: handleImagegenJob(body, { run: false })
+      payload: handleImagegenJob(body, { run: false, adoptOutputs: body.adoptOutputs === true })
     };
   }
 

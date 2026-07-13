@@ -33,8 +33,8 @@ The project is currently beta-quality. It is useful for validating a production 
   Checks editor JSON, renderability, composition quality, and layout quality in the browser. Layout quality validates overlap padding between stacked assets, font-size-aware text slot fit, horizontal/vertical guide-line alignment, and icon+text center-line matching.
 - `world-preset.json` の `designRules`(スペーシンググリッド、装飾フレーム幅、引き伸ばし禁止など)をバリデータと imagegen prompt の両方に適用します。生成PNGは実寸監査され、非等倍の引き伸ばしは fail、9-slice は `exportRequirements.scalingPolicy` の明示宣言時のみ許容されます。
   Applies `designRules` from `world-preset.json` (spacing grid, frame budget, no-stretch policy) to both validators and imagegen prompts. Generated PNGs are audited at native size: non-uniform stretching fails, and 9-slice is only allowed with an explicit `exportRequirements.scalingPolicy` declaration.
-- `npm run postprocess:assets -- <screen-folder> --apply` で、生成PNGの透明ガター除去と最終ピクセルサイズへの正規化を一括実行できます。
-  Batch-trims transparent gutters and normalizes generated PNGs to their final pixel size via `npm run postprocess:assets`.
+- `npm run postprocess:assets -- <screen-folder> --apply` で、フラットな緑クロマキーの除去、alpha検査、透明ガター除去、最終ピクセルサイズへの正規化を一括実行できます。imagegen jobの出力は同じ品質ゲートを自動通過し、alpha・クロマ残留・サイズが不正なPNGは採用されません。
+  Batch-removes a detected flat green chroma key, validates alpha, trims transparent gutters, and normalizes generated PNGs to their final pixel size. Imagegen job outputs pass through the same acceptance gate automatically; invalid alpha, chroma residue, or dimensions prevent adoption.
 - `designRules.craftStyle`(`outlined_cel` / `flat_minimal` / `painterly`)を宣言すると、市販素材パック水準のクラフト仕様(シルエットの一貫アウトライン、セル調シェーディング段数、パレット節度、ファミリー統一)をプロンプトへ注入し、生成PNGを実測監査します。フラットなプレースホルダー出力(imagegen不使用の疑い)やマッディな軟階調も検出します。
   Declaring `designRules.craftStyle` injects a commercial-asset-pack craft spec into prompts and audits each generated PNG for weak outlines, flat placeholder fills (suspected non-imagegen output), muddy gradients, and busy interiors.
 - placement と composition inset をフォームやプレビュー上の微調整で編集し、保存前プレビューとして JSON と仮組みへ反映できます。変更履歴と「直前状態へ戻す」を使って確認し、問題なければ `画面JSONを保存` で画面フォルダへ書き込みます。Undo は編集に伴う再生成キューも復元し、未保存の編集やキューがある状態で画面・プロジェクトを切り替える場合は破棄確認を表示します。3つの画面JSONは一時ファイルへ書き切ってから置換され、途中失敗時は旧ファイルへロールバックされます。土台を移動する際は「載っている素材も一緒に動かす」トグル(既定ON)で、子・構成グループのレイヤー・上に載っている素材をまとめて追従させられます(リサイズは対象のみ)。移動後は overlay の絶対座標も slot から自動再同期されます。
@@ -294,8 +294,8 @@ The recommended beta workflow is intentionally conversational:
 8. `生成済みPNGを再取り込み` を押す。  
    Click `生成済みPNGを再取り込み`.
 
-ジョブ作成時には、Codex / imagegen 向けの JSON と prompt に加えて status sidecar も書きます。
-When a job is created, the tool writes a Codex/imagegen JSON job, a prompt file, and a status sidecar:
+ジョブ作成時には、Codex / imagegen 向けの JSON と prompt に加えて status sidecar も書きます。各素材には初回生成と再生成で共通の `generationContract` が入り、`operation`、入力画像の役割、変更対象、維持項目、透過処理、採用条件を構造化して渡します。
+When a job is created, the tool writes a Codex/imagegen JSON job, a prompt file, and a status sidecar. Every asset carries one shared `generationContract` for initial generation and regeneration, including operation, input-image roles, requested changes, preserved invariants, transparency handling, and acceptance checks:
 
 ```text
 creative/
@@ -343,14 +343,14 @@ Environment variables:
 - `BETA_IMAGEGEN_TIMEOUT_MS=120000`
 - `PORT=4311`
 
-デフォルトでは imagegen 実行は off です。アプリは job file と prompt text を作り、画像生成自体は外部で行う想定です。  
-By default, imagegen execution is off. The app creates job files and prompt text, then expects you to generate PNGs externally.
+デフォルトでは imagegen 実行は off です。Codex環境では標準`imagegen` Skillを使うことを推奨し、Electron単体や他エージェントでは同じjob fileをhandoffとして使います。`BETA_IMAGEGEN_MODE=codex`を設定した環境ではローカルCodex runnerを起動できます。
+By default, imagegen execution is off. In Codex, the recommended path uses the installed `imagegen` Skill; standalone Electron and other agents use the same job file as a handoff. An environment configured with `BETA_IMAGEGEN_MODE=codex` can launch the local Codex runner.
 
 handoff job はエージェント中立です。job JSON の `commandHints` に Codex CLI 用と Claude Code 用の実行例が入ります。Claude Code から使う場合は `<jobId>.prompt.md` をそのまま渡すか、`BETA_IMAGEGEN_MODE=claude` で `claude -p` を起動できます(Claude 側に画像生成手段、例: imagegen MCP ツールが必要です)。
 Handoff jobs are agent-neutral. The job JSON `commandHints` includes both a Codex CLI and a Claude Code invocation. From Claude Code, pass `<jobId>.prompt.md` directly, or set `BETA_IMAGEGEN_MODE=claude` to launch `claude -p` (Claude needs an image generation path, such as an imagegen MCP tool).
 
-各 job asset には `qualityPlan` に加えて `layoutContext`(重なり相手とのクリアランス、未解決のレイアウト指摘)が入り、プロンプトには「キャンバスを端まで使い、はみ出さない」canvas coverage ルールと、contentInset から計算した装飾バジェット(装飾は外周◯pxまで、内側はカームな地)が注入されます。
-Each job asset carries `layoutContext` (stacking clearances and open layout findings) in addition to `qualityPlan`. Prompts include a canvas coverage rule (fill the canvas edge-to-edge, never spill past it) and a decoration budget computed from `contentInset` (ornament stays within the outer band; the interior stays a calm surface).
+各 job asset の `generationContract` には `qualityPlan` と `layoutContext`(重なり相手とのクリアランス、未解決のレイアウト指摘)が入り、プロンプトには「キャンバスを端まで使い、はみ出さない」canvas coverage ルールと、contentInset から計算した装飾バジェット(装飾は外周◯pxまで、内側はカームな地)が注入されます。
+Each job asset's `generationContract` carries `qualityPlan` and `layoutContext` (stacking clearances and open layout findings). Prompts include a canvas coverage rule (fill the canvas edge-to-edge, never spill past it) and a decoration budget computed from `contentInset` (ornament stays within the outer band; the interior stays a calm surface).
 
 ## 参照品質プロファイル / Reference Quality Profile
 

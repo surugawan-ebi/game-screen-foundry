@@ -27,7 +27,7 @@ Use this skill for Game Screen Foundry project work: creating screen folders, ed
 ## Non-Negotiable Rules
 
 - Do not treat this as a general-purpose image generator.
-- Do not promise hosted or fully automated image generation. The stable workflow is prompt/job file creation, external image generation, and PNG re-import.
+- Do not promise hosted image generation. In a Codex environment, prefer the installed `imagegen` Skill for raster generation and editing; otherwise use the agent-neutral prompt/job handoff and PNG re-import workflow.
 - Do not bake runtime text, values, labels, timers, or notification counts into generated PNGs unless `textHandling.ownership` is explicitly `baked_in_asset`.
 - Do not collapse parent frames and child UI into one image when the material spec separates them.
 - Do not bake functional surfaces (world maps, boards, list surfaces, tap targets) into background assets. Split the backdrop and the functional surface into separate assets, give the functional surface its own frame, and place tokens/markers on the surface asset.
@@ -73,12 +73,28 @@ Rules of thumb:
 
 For richer, project-specific targets, run `npm run profile:reference -- <purchased-asset-root>` and apply the compact profile to `worldPreset.qualityProfile.referenceDerived`; the profile now also captures outline coverage/contrast and luminance band counts from the reference set.
 
-After importing generated PNGs, run `npm run postprocess:assets -- <screen-folder> --apply` to trim transparent gutters and normalize each PNG to its target pixel size (foundation surfaces are stretched edge-to-edge; icons are uniform-fitted and centered).
+After importing generated PNGs, run `npm run postprocess:assets -- <screen-folder> --apply` to remove a detected flat green chroma key, validate required alpha, trim transparent gutters, and normalize each PNG to its target pixel size (foundation surfaces are stretched edge-to-edge; icons are uniform-fitted and centered). A transparent asset without usable alpha or a removable chroma-key border must not be adopted.
+
+## Compose With The Imagegen Skill
+
+Game Screen Foundry owns the domain specification and acceptance criteria. The installed `imagegen` Skill owns raster generation, raster editing, transparent-image handling, output inspection, and targeted retries.
+
+When processing a handoff job in Codex:
+
+1. Read each asset's `generationContract` instead of treating `prompt` as an unstructured request.
+2. Pass every `inputImages` path to image generation with its declared role. `edit_target` is the current asset to modify; `style_reference` guides visual consistency.
+3. For edits, change only the `change` items and preserve every `preserve` invariant.
+4. Use the built-in imagegen path first. For simple transparent assets, follow the imagegen Skill's chroma-key workflow and remove the key before acceptance.
+5. Inspect the isolated asset after generation. If one invariant fails visually, make one targeted retry rather than rewriting the whole prompt.
+6. Save the inspected PNG exactly to `outputPath`. Game Screen Foundry then runs its deterministic PNG acceptance gate and rejects invalid alpha, chroma residue, or final dimensions.
+
+Do not copy model-specific CLI commands into project JSON. They belong to the imagegen Skill and may change independently from the Foundry contract.
 
 ## Imagegen Handoff Execution
 
 - Handoff jobs under `imagegen-jobs/<jobId>.json` are agent-neutral: Codex CLI and Claude Code can both process them. Follow `<jobId>.prompt.md`, generate each asset with the available image generation path, and save each accepted PNG exactly to its `outputPath`.
-- Each job asset carries `qualityPlan`, `compositionContexts`, and `layoutContext` (overlap clearances, stacking partners, open layout issues). Respect the canvas coverage rule: fill the asset canvas edge-to-edge and never let artwork spill past it.
+- Each job asset carries a shared `generationContract` used by both initial generation and regeneration. It includes operation, input-image roles, requested changes, invariants, transparency/postprocess policy, acceptance checks, `qualityPlan`, `compositionContexts`, and `layoutContext`.
+- Respect the canvas coverage rule: fill the asset canvas edge-to-edge and never let artwork spill past it.
 - If generation is unavailable, write the blocker sidecar described in the job JSON. Never save placeholder or wireframe images.
 
 ## Structure Preview (before generating images)

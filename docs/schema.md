@@ -529,11 +529,33 @@ This trims transparent gutters and normalizes each PNG to its target size
 - `assetTypeRules`: overrides keyed by `assetType`.
 - `roleRules`: overrides keyed by `role`.
 
-Imagegen job assets also include a computed `qualityPlan` when the asset is a
-foundation/shell asset or has runtime overlays/child placements. The plan lists
-reserved content-model slots, protected text slots, inferred inner content
-regions, and child-placement zones so generation and review can keep those
-areas empty instead of baking fake UI into the PNG.
+Imagegen handoff v3 job assets include one computed `generationContract` shared
+by initial generation and regeneration. Its fields are:
+
+JSON Schema: [schemas/imagegen-handoff.schema.json](../schemas/imagegen-handoff.schema.json)
+
+- `operation`: `generate` or `edit`.
+- `inputImages`: local paths with roles such as `edit_target` and
+  `style_reference`.
+- `change`: the only requested visual changes.
+- `preserve`: invariants that must survive generation or editing.
+- `generationSize` and `outputPath`.
+- `transparencyPlan` and `postprocessPlan`.
+- `acceptanceChecks`: deterministic and visual checks required before adoption.
+- `qualityPlan`, `compositionContexts`, and `layoutContext`.
+- `prompt`: the normalized imagegen prompt built from the contract.
+
+`qualityPlan` is populated when the asset is a foundation/shell asset or has
+runtime overlays/child placements. It lists reserved content-model slots,
+protected text slots, inferred inner content regions, and child-placement zones
+so generation and review can keep those areas empty instead of baking fake UI
+into the PNG.
+
+Before a generated job output is added to `imagegenAssets`, the local
+acceptance gate decodes the PNG, removes a flat green chroma key when safely
+detected, normalizes the image to `generationSize`, and checks required alpha,
+transparent corners, chroma residue, and final dimensions. Failed files remain
+on disk for diagnosis but are reported as `rejected` and are not adopted.
 
 See [docs/quality-rubric.md](quality-rubric.md) for the full quality rubric.
 
@@ -563,7 +585,13 @@ Shape:
       "path": "generated-assets/btn_start.png",
       "backend": "codex_cli_imagegen",
       "usesImagegen": true,
-      "prompt": "Prompt or adoption notes"
+      "prompt": "Prompt or adoption notes",
+      "generationContract": {},
+      "acceptance": {
+        "acceptedAt": "2026-07-14T00:00:00.000Z",
+        "checks": []
+      },
+      "postprocess": []
     }
   ]
 }

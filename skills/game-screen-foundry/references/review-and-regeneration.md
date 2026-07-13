@@ -75,7 +75,7 @@ Avoid vague full-screen redraw feedback:
 
 ## Codex/Imagegen Request Shape
 
-A useful request should include:
+A useful request uses the same structured `generationContract` as initial generation. It should include:
 
 - screen id, screen name, canvas size
 - world preset and reference image paths
@@ -88,6 +88,8 @@ A useful request should include:
 - related text overlays
 - protected slot / child-zone anatomy for foundation assets
 - user comment and AI review comment
+- operation (`generate` or `edit`), input-image roles, `change`, and `preserve`
+- deterministic postprocess policy and acceptance checks
 - explicit "do not change layout" instruction
 
 The app can generate this markdown through `/api/build-regeneration-request`; prefer using that endpoint or the UI button rather than hand-writing a request from scratch.
@@ -96,8 +98,9 @@ The app can generate this markdown through `/api/build-regeneration-request`; pr
 
 After PNGs are generated:
 
-1. Save each image to the requested `generated-assets/<assetId>.png` path.
-2. Use `生成済みPNGを再取り込み`.
-3. Run `生成後を表示`.
-4. Review major overlaps and runtime text lanes.
-5. Run `npm run release:check` before committing repository changes.
+1. Inspect the isolated generated asset and make at most one targeted retry for a visible invariant failure.
+2. Save each image to the requested `generated-assets/<assetId>.png` path.
+3. Use `生成済みPNGを再取り込み`. The app removes a detected green chroma key, normalizes size, and rejects invalid alpha or residue before adoption.
+4. Run `生成後を表示`.
+5. Review major overlaps and runtime text lanes.
+6. Run `npm run release:check` before committing repository changes.
